@@ -42,13 +42,49 @@ int main(void)
         CL_ERR_FAIL_COND_MSG(true, clStatus, buffer);
     }
 
-    cl_kernel kernel1 = clCreateKernel(program, "vecadd", &clStatus);
+    cl_kernel kernel1 = clCreateKernel(program, "doubled", &clStatus);
     CL_ERR_FAIL_COND_MSG(!kernel1, clStatus, "Couldn't create kernel.");
 
-    // Buffers, etc.
+    size_t max_work_group_size;
+    clStatus = clGetKernelWorkGroupInfo(kernel1, selected_device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &max_work_group_size, nullptr);
+    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't get kernel work group info.");
+    std::cout << "Max work group size: " << max_work_group_size << std::endl;
 
+    // Initialize buffers.
+
+    int length = 1000;
+    int* R = new int[length];
+    for (int i = 0; i < length; i++)
+        R[i] =  rand() % 10;
+
+    cl_mem d_arr = clCreateBuffer(ctx, CL_MEM_READ_WRITE, sizeof(int) * length, nullptr, &clStatus);
+    clStatus = clEnqueueWriteBuffer(queue, d_arr, CL_TRUE, 0, sizeof(int) * length, R, 0, nullptr, nullptr);
+    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't enqueue buffer.");
+
+    clStatus = clSetKernelArg(kernel1, 0, sizeof(cl_mem), &d_arr);
+    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't set argument to buffer.");
+
+    // Start kernel.
+
+    size_t global_work_size = length;
+    size_t local_work_size = 100;
+    clStatus = clEnqueueNDRangeKernel(queue, kernel1, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
+    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
+
+    clStatus = clFinish(queue);
+
+    int *result = new int[length];
+    memset(result, 0, sizeof(int) * length);
+    clEnqueueReadBuffer(queue, d_arr, CL_TRUE, 0, sizeof(int) * length, result, 0, NULL, NULL);
+    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
+
+    for (int i = 0; i < length-1; i++)
+        std::cout << result[i] << ", ";
+
+    std::cout << result[length-1] << std::endl;
 
     // Free resources
+    clReleaseMemObject(d_arr);
     clReleaseKernel(kernel1);
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);

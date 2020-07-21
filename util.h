@@ -64,7 +64,7 @@ std::string cl_error_string(int err) {
 }
 
 #define ERR_FAIL_COND_MSG(m_cond, m_msg)                                                                                 \
-	if (m_cond) {                                                                                              \
+	if (m_cond) {                                                                                                        \
 		_err_print_error(FUNCTION_STR, __FILE__, __LINE__, "Condition \"" _STR(m_cond) "\" is true.", DEBUG_STR(m_msg)); \
 		return;                                                                                                          \
 	} else                                                                                                               \

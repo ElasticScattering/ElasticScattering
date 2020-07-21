@@ -1,4 +1,4 @@
-kernel void vecadd( global int* A, global int* B, global int* C ) {
+kernel void doubled(global int* A) {
     const int idx = get_global_id(0);
-    C[idx] = A[idx] + B[idx];
+    A[idx] = A[idx] * 10;
 }
