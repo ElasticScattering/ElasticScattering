@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include <CL/cl.h>
+#include <CL/cl_gl.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -124,7 +125,18 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
         }
     }
 
-    ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &cl_status);
+    cl_context_properties props[] =
+    {
+        CL_GL_CONTEXT_KHR,
+        (cl_context_properties)wglGetCurrentContext(),
+        CL_WGL_HDC_KHR,
+        (cl_context_properties)wglGetCurrentDC(),
+        CL_CONTEXT_PLATFORM,
+        (cl_context_properties)selected_platform,
+        0
+    };
+
+    ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_ERR_FAIL_COND_MSG(!ctx, cl_status, "Couldn't create context.");
 
     queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &cl_status);
@@ -227,6 +239,11 @@ void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contex
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_long), &max_mem_alloc_size, &num_bytes);
     CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
+    size_t info_size;
+    auto p_info = clGetDeviceInfo(device_id, CL_DEVICE_EXTENSIONS, 0, nullptr, &info_size);
+    char* info = (char*)_malloca(sizeof(char) * info_size);
+    clGetDeviceInfo(device_id, CL_DEVICE_EXTENSIONS, info_size, info, nullptr);
+
     /* Doesn't work
     cl_uint	uMaxImage2DWidth;
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(cl_uint), &uMaxImage2DWidth, &uNumBytes);
@@ -249,6 +266,7 @@ void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contex
     std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
     std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
     std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
+    std::cout << "Device extensions:              " << info << std::endl;
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
 }
 

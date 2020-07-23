@@ -52,8 +52,9 @@ void GPUElasticScattering(OCLResources *p_ocl, size_t size)
     clStatus = clEnqueueNDRangeKernel(p_ocl->queue, p_ocl->kernel, 1, nullptr, &size, &local_work_size, 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
 
-    clStatus = clFinish(p_ocl->queue);
+    //clStatus = clFinish(p_ocl->queue);
 
+    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
     result = new double[size];
     memset(result, 0, sizeof(double) * size);
     clEnqueueReadBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(double) * size, result, 0, nullptr, nullptr);
@@ -118,7 +119,7 @@ int main(int argc, char* argv[])
     const char* source_file = "program.cl";
 
     uint startHeight = 32, startWidth = 32;
-    uint particleCount = 10'000'000;
+    uint particleCount = 1'000'000;
     uint impurityCount = 1000;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
@@ -155,7 +156,6 @@ int main(int argc, char* argv[])
 
     PrepareOpenCLKernels(&ocl, particleCount, data);
     
-    // Launch kernel
     QueryPerformanceCounter(&beginClock);
     GPUElasticScattering(&ocl, particleCount);
     QueryPerformanceCounter(&endClock);
