@@ -31,14 +31,7 @@ cl_platform_id selected_platform;
 cl_device_id selected_device;
 
 cl_int clStatus;
-
-
-void usage() {
-    std::cout << "Start the program with one of the following arguments:" << std::endl;
-    std::cout << "[empty]  " << "Run the program." << std::endl;
-    std::cout << "--show   " << "Print all avaialable platforms and devices." << std::endl;
-    std::cout << "--test   " << "Run all unit tests." << std::endl;
-}
+double *result;
 
 void GPUElasticScattering(OCLResources *p_ocl, size_t size)
 {
@@ -49,19 +42,13 @@ void GPUElasticScattering(OCLResources *p_ocl, size_t size)
 
     clStatus = clFinish(p_ocl->queue);
 
-    double* result = new double[size];
+    result = new double[size];
     memset(result, 0, sizeof(double) * size);
     clEnqueueReadBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(double) * size, result, 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
-
-    std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
-    for (int i = 0; i < size - 1; i++)
-        std::cout << result[i] << ", ";
-
-    std::cout << result[size - 1] << std::endl;
 }
 
-void parse_args(OCLResources* p_ocl, int argc, char** argv) {
+void ParseArgs(OCLResources* p_ocl, int argc, char** argv) {
     if (argc != 2) {
         std::cout << "Usage: ElasticScattering [lifetime | distance | stats | conductivity] [show | no-show]" << std::endl;
         exit(0);
@@ -103,12 +90,13 @@ int main(int argc, char* argv[])
 
     uint startHeight = 32, startWidth = 32;
     uint impurityCount = 100;
-    uint particleCount = 1000; // batch size
+    uint particleCount = 10000; //100'000'000; // batch size
+    uint impurityCount = 1000;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    //parse_args(ocl, );
+    //parse_args(ocl, argc, argv);
 
     std::cout << "\n\n-----------------------------------------------" << std::endl;
     std::cout << "Initial field size: " << startHeight << ", " << startWidth << std::endl;
@@ -144,6 +132,14 @@ int main(int argc, char* argv[])
     QueryPerformanceCounter(&endClock);
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
+
+    /*
+    std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
+    for (int i = 0; i < size - 1; i++)
+        std::cout << result[i] << ", ";
+
+    std::cout << result[size - 1] << std::endl;
+    */
 
     Cleanup(&ocl);
 
