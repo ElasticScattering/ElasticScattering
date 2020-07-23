@@ -5,6 +5,6 @@ kernel void doubled(global int* A) {
 
 
 kernel void double_precision(global double* A) {
-    const int idx = get_global_id(0) % 1000;
+    const int idx = get_global_id(0);
     A[idx] = A[idx] * 10.03;
 }

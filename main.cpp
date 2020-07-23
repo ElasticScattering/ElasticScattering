@@ -107,7 +107,7 @@ void Cleanup(OCLResources* p_ocl)
     clReleaseCommandQueue(p_ocl->queue);
     clReleaseContext(p_ocl->context);
 
-    std::cout << "-----------------------------------------------" << std::endl;
+    std::cout << "+---------------------------------------------------+" << std::endl;
 }
 
 int main(int argc, char* argv[]) 
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
     const char* source_file = "program.cl";
 
     uint startHeight = 32, startWidth = 32;
-    uint particleCount = 10000; //100'000'000; // batch size
+    uint particleCount = 10'000'000;
     uint impurityCount = 1000;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     InitParameters init;
     ParseArgs(&ocl, argc, argv, &init);
 
-    std::cout << "\n\n-----------------------------------------------" << std::endl;
+    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Initial field size: " << startHeight << ", " << startWidth << std::endl;
 
     // Initialize buffers.
@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
     int size = particleCount;
     double* data = new double[size];
     for (int i = 0; i < size; i++)
-        data[i] = unif(re);
+        data[i] = pow(10, 200); // unif(re);
 
 #ifdef RUN_CPU_SIM
 #endif
@@ -162,13 +162,11 @@ int main(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    /*
     std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
-    for (int i = 0; i < size - 1; i++)
+    for (int i = 0; i < min(size -1, 100); i++)
         std::cout << result[i] << ", ";
 
     std::cout << result[size - 1] << std::endl;
-    */
 
     Cleanup(&ocl);
 

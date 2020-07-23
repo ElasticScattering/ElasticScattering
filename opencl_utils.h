@@ -59,18 +59,18 @@ std::string CLErrorString(int err) {
     }
 }
 
-#define CL_ERR_FAIL_COND_MSG(err, msg)                                                                                                         \
-    if (err != CL_SUCCESS) {                                                                                                                                          \
-        std::cout << "\x1B[31mError [" << CLErrorString(err) << "]\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl; \
-        exit(0);                                                                                                                                     \
-    } else                                                                                                                                               \
+#define CL_ERR_FAIL_COND_MSG(err, msg)                                                                                                                                                          \
+    if (err != CL_SUCCESS) {                                                                                                                                                                    \
+        std::cout << "\x1B[31mError [" << CLErrorString(err) << "]\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;   \
+        exit(0);                                                                                                                                                                                \
+    } else                                                                                                                                                                                      \
         ((void)0);
 
-#define ERR_FAIL_COND_MSG(cond, msg)                                                                               \
-	if (cond) {                                                                                           \
-		std::cout << "\x1B[31mError\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl; \
-		exit(0);                                                                                        \
-	} else                                                                                                \
+#define ERR_FAIL_COND_MSG(cond, msg)                                                                                                                            \
+	if (cond) {                                                                                                                                                 \
+		std::cout << "\x1B[31mError\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;  \
+		exit(0);                                                                                                                                                \
+	} else                                                                                                                                                      \
 		((void)0);
 
 void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue) 
@@ -78,44 +78,41 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
     *p_deviceID = nullptr;
     *p_ctx      = nullptr;
 
-    cl_int clStatus;
     cl_uint num_platforms = 0;
-
-    clStatus = clGetPlatformIDs(0, nullptr, &num_platforms);
-    CL_ERR_FAIL_COND_MSG(clStatus, "No platforms found.");
+    cl_int  cl_status = clGetPlatformIDs(0, nullptr, &num_platforms);
+    CL_ERR_FAIL_COND_MSG(cl_status, "No platforms found.");
     ERR_FAIL_COND_MSG(num_platforms == 0, "No platforms found.");
 
-    char platform_vendor[256];
-    char device_version[256];
-    char lang_version[256];
-    
-    cl_context ctx = nullptr;
+    char             platform_vendor[256];
+    char             device_version[256];
+    char             lang_version[256];
+    cl_context       ctx = nullptr;
     cl_command_queue queue = nullptr;
 
     std::vector<cl_platform_id> platform_ids(num_platforms);
     clGetPlatformIDs(num_platforms, platform_ids.data(), nullptr);
 
-    float best_device_score = 0;
+    float          best_device_score = 0;
     cl_platform_id selected_platform = nullptr;
-    cl_device_id selected_device = nullptr;
-
+    cl_device_id   selected_device = nullptr;
+     
     for (int i = 0; i < num_platforms; i++)
     {
         float score = 1.0f;
         cl_platform_id platform_id = platform_ids[i];
 
-        clStatus = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, sizeof(platform_vendor), platform_vendor, nullptr);
-        CL_ERR_FAIL_COND_MSG(clStatus, "Could not get platform info.");
+        cl_status = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, sizeof(platform_vendor), platform_vendor, nullptr);
+        CL_ERR_FAIL_COND_MSG(cl_status, "Could not get platform info.");
 
         bool is_intel = strncmp("Intel", platform_vendor, strlen("Intel")) == 0;
         score *= is_intel ? 0.1f : 1;
 
         cl_device_id device_id = nullptr;
         cl_device_type device_type = CL_DEVICE_TYPE_GPU;
-        clStatus = clGetDeviceIDs(platform_id, device_type, 1, &device_id, nullptr);
-        if (clStatus != CL_SUCCESS) {
+        cl_status = clGetDeviceIDs(platform_id, device_type, 1, &device_id, nullptr);
+        if (cl_status != CL_SUCCESS) {
             device_type = CL_DEVICE_TYPE_CPU;
-            clStatus = clGetDeviceIDs(platform_id, device_type, 1, &device_id, nullptr);
+            cl_status = clGetDeviceIDs(platform_id, device_type, 1, &device_id, nullptr);
         }
 
         score *= device_type == CL_DEVICE_TYPE_GPU ? 1 : 0.3f;
@@ -127,11 +124,11 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
         }
     }
 
-    ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &clStatus);
-    CL_ERR_FAIL_COND_MSG(!ctx, clStatus, "Couldn't create context.");
+    ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &cl_status);
+    CL_ERR_FAIL_COND_MSG(!ctx, cl_status, "Couldn't create context.");
 
-    queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &clStatus);
-    CL_ERR_FAIL_COND_MSG(!queue, clStatus, "Couldn't create command queue.");
+    queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &cl_status);
+    CL_ERR_FAIL_COND_MSG(!queue, cl_status, "Couldn't create command queue.");
 
     *p_deviceID = selected_device;
     *p_ctx = ctx;
@@ -163,99 +160,96 @@ void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl
 }
 
 
-void PrintOpenCLDeviceInfo(cl_device_id device_id, cl_context contextHdl)
+void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contextHdl)
 {
-    cl_uint		uMaxComputeUnits = 0;
-    cl_uint		uMaxWorkItemDim = 0;
-    size_t		uMaxWorkItemSizes[3];
-    cl_uint		uMaxNumSamplers = 0;
-    cl_uint		uMinBaseAddrAlignSizeBits = 0;
-    cl_uint		uMinBaseAddrAlignSizeBytes = 0;
-    size_t		uNumBytes = 0;
-    char		pDeviceVendorString[512];
-    char		pDeviceNameString[512];
-    char		pDriverVersionString[512];
-    char		pDeviceProfileString[512];
-    char		pDeviceVersionString[512];
-    char		pOpenCLCVersionString[512];
-    cl_int		clStatus;
+    char        device_vendor[512];
+    char        device_name[512];
+    char        driver_version[512];
+    char        device_profile[512];
+    char        device_version[512];
+    char        oclc_version[512];
+    cl_uint     max_compute_units = 0;
+    cl_uint     max_work_items_dim = 0;
+    size_t      max_work_item_sizes[3];
+    size_t      max_work_group_size;
+    cl_uint     max_device_frequency;
+    cl_uint     max_num_samplers = 0;
+    cl_uint     min_base_addr_align_size_bits = 0;
+    cl_uint     min_base_addr_align_size_bytes = 0;
+    cl_ulong    local_mem_size;
+    cl_long	    max_mem_alloc_size;
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_VENDOR, sizeof(pDeviceVendorString), &pDeviceVendorString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    size_t      num_bytes = 0;
+    cl_int      cl_status;
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_NAME, sizeof(pDeviceNameString), &pDeviceNameString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_VENDOR, sizeof(device_vendor), &device_vendor, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    clStatus = clGetDeviceInfo(device_id, CL_DRIVER_VERSION, sizeof(pDriverVersionString), &pDriverVersionString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_NAME, sizeof(device_name), &device_name, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_PROFILE, sizeof(pDeviceProfileString), &pDeviceProfileString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DRIVER_VERSION, sizeof(driver_version), &driver_version, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
+
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_PROFILE, sizeof(device_profile), &device_profile, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_VERSION, sizeof(pDeviceVersionString), &pDeviceVersionString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_VERSION, sizeof(device_version), &device_version, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_OPENCL_C_VERSION, sizeof(pOpenCLCVersionString), &pOpenCLCVersionString, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_OPENCL_C_VERSION, sizeof(oclc_version), &oclc_version, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &uMaxComputeUnits, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &max_compute_units, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &uMaxWorkItemDim, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &max_work_items_dim, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(uMaxWorkItemSizes), &uMaxWorkItemSizes, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(max_work_item_sizes), &max_work_item_sizes, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    size_t	uMaxWorkGroupSize;
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &uMaxWorkGroupSize, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &max_work_group_size, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof(cl_uint), &uMinBaseAddrAlignSizeBits, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof(cl_uint), &min_base_addr_align_size_bits, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, sizeof(cl_uint), &uMinBaseAddrAlignSizeBytes, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, sizeof(cl_uint), &min_base_addr_align_size_bytes, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     
-    cl_uint	uMaxDeviceFrequency;
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &uMaxDeviceFrequency, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &max_device_frequency, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
+
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_mem_size, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
+
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_long), &max_mem_alloc_size, &num_bytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
 
     /* Doesn't work
     cl_uint	uMaxImage2DWidth;
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(cl_uint), &uMaxImage2DWidth, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(cl_uint), &uMaxImage2DWidth, &uNumBytes);
+    CL_ERR_FAIL_COND_MSG(cl_status, "clGetDeviceInfo() query failed.");
     */
 
-    cl_ulong	uLocalMemSize;
-    float		fLocalMemSize;
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &uLocalMemSize, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
-    fLocalMemSize = (float)uLocalMemSize;
-
-    cl_long	uMaxMemAllocSize;
-    float fMaxMemAllocSize;
-    clStatus = clGetDeviceInfo(device_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_long), &uMaxMemAllocSize, &uNumBytes);
-    CL_ERR_FAIL_COND_MSG(clStatus, "clGetDeviceInfo() query failed.");
-    fMaxMemAllocSize = (float)uMaxMemAllocSize;
-
     std::cout << "OpenCL device info:"              << std::endl;
-    std::cout << "Device vendor:                  " << pDeviceVendorString << std::endl;
-    std::cout << "Device name:                    " << pDeviceNameString << std::endl;
-    std::cout << "Driver version:                 " << pDriverVersionString << std::endl;
-    std::cout << "Device profile:                 " << pDeviceProfileString << std::endl;
-    std::cout << "Device version:                 " << pDeviceVersionString << std::endl;
-    std::cout << "Device OpenCL C version:        " << pOpenCLCVersionString << std::endl;
-    std::cout << "Device max compute units:       " << uMaxComputeUnits << std::endl;
-    std::cout << "Device max work item dim.:      " << uMaxWorkItemDim << std::endl;
-    std::cout << "Device max work item sizes:     " << uMaxWorkItemSizes[0] << ", " << uMaxWorkItemSizes[1] << ", " << uMaxWorkItemSizes[2] << std::endl;
-    std::cout << "Device max work group size:     " << uMaxWorkGroupSize << std::endl;
-    std::cout << "Device mem. base addr. align:   " << uMinBaseAddrAlignSizeBits << " (bits)" << std::endl;
-    std::cout << "Device min datatype align size: " << uMinBaseAddrAlignSizeBytes << " (bytes)" << std::endl;
-    std::cout << "Device max clock frequency:     " << uMaxDeviceFrequency << std::endl;
+    std::cout << "Device vendor:                  " << device_vendor << std::endl;
+    std::cout << "Device name:                    " << device_name << std::endl;
+    std::cout << "Driver version:                 " << driver_version << std::endl;
+    std::cout << "Device profile:                 " << device_profile << std::endl;
+    std::cout << "Device version:                 " << device_version << std::endl;
+    std::cout << "Device OpenCL C version:        " << oclc_version << std::endl;
+    std::cout << "Device max compute units:       " << max_compute_units << std::endl;
+    std::cout << "Device max work item dim.:      " << max_work_items_dim << std::endl;
+    std::cout << "Device max work item sizes:     " << max_work_item_sizes[0] << ", " << max_work_item_sizes[1] << ", " << max_work_item_sizes[2] << std::endl;
+    std::cout << "Device max work group size:     " << max_work_group_size << std::endl;
+    std::cout << "Device mem. base addr. align:   " << min_base_addr_align_size_bits << " (bits)" << std::endl;
+    std::cout << "Device min datatype align size: " << min_base_addr_align_size_bytes << " (bytes)" << std::endl;
+    std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
+    std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
+    std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
-    std::cout << "Device local mem. size:         " << fLocalMemSize << std::endl;
-    std::cout << "Device max mem alloc size:      " << fMaxMemAllocSize << std::endl;
 }
 
 #endif // UTIL_H
