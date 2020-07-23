@@ -154,7 +154,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="util.h" />
+    <ClInclude Include="opencl_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="program.cl" />
