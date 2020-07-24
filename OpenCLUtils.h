@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef OPENCL_UTIL_H
+#define OPENCL_UTIL_H
 
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
@@ -10,6 +10,8 @@
 #include <fstream>
 
 #include "glew.h"
+#include <wglew.h>
+#include <cl/cl_gl_ext.h>
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -275,4 +277,4 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
 }
 
-#endif // UTIL_H
+#endif // OPENCL_UTIL_H

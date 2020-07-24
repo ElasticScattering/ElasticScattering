@@ -9,5 +9,7 @@
 #include <string>
 
 #include "ElasticScattering.h"
+#include "OpenCLUtils.h"
+#include "OpenGLUtils.h"
 
 #endif // MAIN_H

@@ -30,13 +30,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
         case WM_CLOSE: 
-        case WM_DESTROY: {
+        case WM_DESTROY: 
+        {
             PostQuitMessage(0);
         } break;
-        case WM_KEYDOWN: {
+        case WM_KEYDOWN: 
+        {
             if (wParam == VK_ESCAPE) should_quit = true;
         } break;
-        default: {
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+            FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+            EndPaint(hWnd, &ps);
+        } break;
+        default: 
+        {
             break;
         }
     }
@@ -46,7 +56,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    const char *title = "Elastic Scattering"; 
+    const wchar_t title[] = L"Elastic Scattering";
+
     RedirectIO();
 
     RECT rect;
@@ -57,31 +68,43 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     windowClass.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW;
     windowClass.lpfnWndProc = WndProc;
     windowClass.hInstance = hInstance;
-    windowClass.lpszClassName = (LPCWSTR)title;
+    windowClass.lpszClassName = title;
     RegisterClassEx(&windowClass);
 
     int width = 600, height = 600;
 
-    HWND windowHandle = CreateWindowEx(WS_EX_APPWINDOW, (LPCWSTR)title, (LPCWSTR)title, WS_VISIBLE,
+    HWND windowHandle = CreateWindowEx(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE, title, title, WS_OVERLAPPEDWINDOW,
                                        rect.right/2 - width/2, rect.bottom/2 - height/2, width, height,
                                        nullptr, nullptr, hInstance, nullptr);
     
+    InitializeOpenGL(windowHandle);
+    ShowWindow(windowHandle, SW_SHOW);
+    UpdateWindow(windowHandle);
 
     ElasticScattering *es = new ElasticScattering();
     es->Init(0, nullptr);
 
     MSG msg;
     while (!should_quit) {
-        PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT) {
-            should_quit = true;
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) 
+        {
+            if (msg.message == WM_QUIT) 
+            {
+                should_quit = true;
+            }
+            else 
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
-        else {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        else
+        {
+            DrawQuad();
+            DrawScreen();
         }
 
-        RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
+        //RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
     }
 
     es->Cleanup();
