@@ -43,7 +43,7 @@ typedef struct
 } OCLResources;
 
 cl_int clStatus;
-double *result; // @Temporary
+cl_double2 *result; // @Temporary
 
 void GPUElasticScattering(OCLResources *p_ocl, size_t size)
 {
@@ -55,9 +55,9 @@ void GPUElasticScattering(OCLResources *p_ocl, size_t size)
     //clStatus = clFinish(p_ocl->queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-    result = new double[size];
-    memset(result, 0, sizeof(double) * size);
-    clEnqueueReadBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(double) * size, result, 0, nullptr, nullptr);
+    result = new cl_double2[size];
+    memset(result, 0, sizeof(cl_double2) * size);
+    clEnqueueReadBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(cl_double2) * size, result, 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
 }
 
@@ -85,15 +85,15 @@ void ParseArgs(OCLResources* p_ocl, int argc, char** argv, InitParameters *p_ini
     p_init->show_info = strcmp(argv[3], "show");
 }
 
-void PrepareOpenCLKernels(OCLResources* p_ocl, size_t size, double *data)
+void PrepareOpenCLKernels(OCLResources* p_ocl, size_t size, cl_double2 *data)
 {
     p_ocl->kernel = clCreateKernel(p_ocl->program, "double_precision", &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create kernel.");
 
-    p_ocl->db = clCreateBuffer(p_ocl->context, CL_MEM_READ_WRITE, sizeof(double) * size, nullptr, &clStatus);
+    p_ocl->db = clCreateBuffer(p_ocl->context, CL_MEM_READ_WRITE, sizeof(cl_double2) * size, nullptr, &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create buffer.");
 
-    clStatus = clEnqueueWriteBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(double) * size, data, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(cl_double2) * size, data, 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't enqueue buffer.");
     
     clStatus = clSetKernelArg(p_ocl->kernel, 0, sizeof(cl_mem), (void *)&p_ocl->db);
@@ -135,9 +135,12 @@ int main(int argc, char* argv[])
     std::uniform_real_distribution<double> unif(0, 1000);
     std::default_random_engine re;
     int size = particleCount;
-    double* data = new double[size];
-    for (int i = 0; i < size; i++)
-        data[i] = pow(10, 200); // unif(re);
+    cl_double2* data = new cl_double2[size];
+    for (int i = 0; i < size; i++) 
+    {
+        data[i].x = unif(re);
+        data[i].y = unif(re);
+    }
 
 #ifdef RUN_CPU_SIM
 #endif
@@ -164,10 +167,10 @@ int main(int argc, char* argv[])
 
     std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
     for (int i = 0; i < min(size -1, 100); i++)
-        std::cout << result[i] << ", ";
+        std::cout << "(" << result[i].x << ", " << result[i].y << "), ";
 
-    std::cout << result[size - 1] << std::endl;
-
+    std::cout << "(" << result[size - 1].x << ", " << result[size - 1].y << + ")" << std::endl;
+    
     Cleanup(&ocl);
 
     return 0;

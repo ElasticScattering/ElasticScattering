@@ -125,6 +125,7 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
         }
     }
 
+    /*
     cl_context_properties props[] =
     {
         CL_GL_CONTEXT_KHR,
@@ -135,8 +136,9 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
         (cl_context_properties)selected_platform,
         0
     };
+    */
 
-    ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
+    ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_ERR_FAIL_COND_MSG(!ctx, cl_status, "Couldn't create context.");
 
     queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &cl_status);
