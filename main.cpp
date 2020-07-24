@@ -1,177 +1,90 @@
-#include <math.h>
-#include <windows.h>
-#include <fstream>
-#include <sstream>
+#include "Main.h"
 
-#include <random>
-#include <limits>
-#include <vector>
-#include <unordered_map>
+bool should_quit = false;
 
-#include "opencl_utils.h"
-
-typedef unsigned int uint;
-
-#define RUN_CPU_SIM
-
-enum class Mode {
-    LIFETIME,
-    STATS,
-    AVG_DISTANCE,
-    CONDUCTIVITY
-}; 
-
-typedef struct
+void RedirectIO() 
 {
-    int num_iterations;
-    Mode mode;
-    bool show_info;
-} InitParameters;
+    CONSOLE_SCREEN_BUFFER_INFO coninfo;
+    AllocConsole();
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
+    coninfo.dwSize.Y = 500;
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
+    HANDLE h1 = GetStdHandle(STD_OUTPUT_HANDLE);
+    int h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    FILE* fp = _fdopen(h2, "w");
+    *stdout = *fp;
+    setvbuf(stdout, NULL, _IONBF, 0);
+    h1 = GetStdHandle(STD_INPUT_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    fp = _fdopen(h2, "r"), * stdin = *fp;
+    setvbuf(stdin, NULL, _IONBF, 0);
+    h1 = GetStdHandle(STD_ERROR_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    fp = _fdopen(h2, "w"), * stderr = *fp;
+    setvbuf(stderr, NULL, _IONBF, 0);
+    std::ios::sync_with_stdio();
 
-typedef struct
-{
-    // CL platform handles:
-    cl_device_id deviceID;
-    cl_context context;
-    cl_program program;
-    cl_command_queue queue;
-    cl_kernel kernel;
-    
-    // CL memory buffers
-    cl_mem db;
-    cl_mem impb;
-} OCLResources;
-
-cl_int clStatus;
-cl_double2 *result; // @Temporary
-
-void GPUElasticScattering(OCLResources *p_ocl, size_t size)
-{
-    size_t local_work_size = 20;
-
-    clStatus = clEnqueueNDRangeKernel(p_ocl->queue, p_ocl->kernel, 1, nullptr, &size, &local_work_size, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
-
-    //clStatus = clFinish(p_ocl->queue);
-
-    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-    result = new cl_double2[size];
-    memset(result, 0, sizeof(cl_double2) * size);
-    clEnqueueReadBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(cl_double2) * size, result, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
+    freopen_s(&fp, "CON", "w", stdout);
+    freopen_s(&fp, "CON", "w", stderr);
 }
 
-void ParseArgs(OCLResources* p_ocl, int argc, char** argv, InitParameters *p_init) {
-    if (argc != 4) {
-        std::cout << "Usage: ElasticScattering [num iterations] [lifetime | distance | stats | conductivity] [show | no-show]" << std::endl;
-        exit(0);
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message) {
+        case WM_CLOSE: 
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+        } break;
+        case WM_KEYDOWN: {
+            if (wParam == VK_ESCAPE) should_quit = true;
+        } break;
+        default: {
+            break;
+        }
     }
 
-    p_init->num_iterations = atoi(argv[1]);
+    return DefWindowProc(hWnd, message, wParam, lParam);
+}
 
-    std::unordered_map<std::string, Mode> modes
-    {
-        {"lifetime",     Mode::LIFETIME},
-        {"distance",     Mode::AVG_DISTANCE},
-        {"stats",        Mode::STATS},
-        {"conductivity", Mode::CONDUCTIVITY}
-    };
-    std::string key;
-    key.assign(argv[2], strlen(argv[2]));
-    auto iterator = modes.find(key);
-    ERR_FAIL_COND_MSG(iterator == modes.end(), "Couldn't understand second command line argument.");
-    p_init->mode = iterator->second;
+int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    const char *title = "Elastic Scattering"; 
+    RedirectIO();
+
+    RECT rect;
+    GetClientRect(GetDesktopWindow(), &rect);
+
+    WNDCLASSEX windowClass = {};
+    windowClass.cbSize = sizeof(WNDCLASSEX);
+    windowClass.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW;
+    windowClass.lpfnWndProc = WndProc;
+    windowClass.hInstance = hInstance;
+    windowClass.lpszClassName = (LPCWSTR)title;
+    RegisterClassEx(&windowClass);
+
+    int width = 600, height = 600;
+
+    HWND windowHandle = CreateWindowEx(WS_EX_APPWINDOW, (LPCWSTR)title, (LPCWSTR)title, WS_VISIBLE,
+                                       rect.right/2 - width/2, rect.bottom/2 - height/2, width, height,
+                                       nullptr, nullptr, hInstance, nullptr);
     
-    p_init->show_info = strcmp(argv[3], "show");
-}
 
-void PrepareOpenCLKernels(OCLResources* p_ocl, size_t size, cl_double2 *data)
-{
-    p_ocl->kernel = clCreateKernel(p_ocl->program, "double_precision", &clStatus);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create kernel.");
+    ElasticScattering *es = new ElasticScattering();
+    es->Init(0, nullptr);
 
-    p_ocl->db = clCreateBuffer(p_ocl->context, CL_MEM_READ_WRITE, sizeof(cl_double2) * size, nullptr, &clStatus);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create buffer.");
+    MSG msg;
+    while (!should_quit) {
+        PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
+        if (msg.message == WM_QUIT) {
+            should_quit = true;
+        }
+        else {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
 
-    clStatus = clEnqueueWriteBuffer(p_ocl->queue, p_ocl->db, CL_TRUE, 0, sizeof(cl_double2) * size, data, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't enqueue buffer.");
-    
-    clStatus = clSetKernelArg(p_ocl->kernel, 0, sizeof(cl_mem), (void *)&p_ocl->db);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't set argument to buffer.");
-}
-
-void Cleanup(OCLResources* p_ocl)
-{
-    clReleaseMemObject(p_ocl->db);
-    clReleaseKernel(p_ocl->kernel);
-    clReleaseProgram(p_ocl->program);
-    clReleaseCommandQueue(p_ocl->queue);
-    clReleaseContext(p_ocl->context);
-
-    std::cout << "+---------------------------------------------------+" << std::endl;
-}
-
-int main(int argc, char* argv[]) 
-{
-    OCLResources ocl;
-    char		deviceStr[256];
-    char		vendorStr[256];
-    const char* source_file = "program.cl";
-
-    uint startHeight = 32, startWidth = 32;
-    uint particleCount = 1'000'000;
-    uint impurityCount = 1000;
-
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
-    QueryPerformanceFrequency(&clockFrequency);
-
-    InitParameters init;
-    ParseArgs(&ocl, argc, argv, &init);
-
-    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
-    std::cout << "Initial field size: " << startHeight << ", " << startWidth << std::endl;
-
-    // Initialize buffers.
-    std::uniform_real_distribution<double> unif(0, 1000);
-    std::default_random_engine re;
-    int size = particleCount;
-    cl_double2* data = new cl_double2[size];
-    for (int i = 0; i < size; i++) 
-    {
-        data[i].x = unif(re);
-        data[i].y = unif(re);
+        RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
     }
 
-#ifdef RUN_CPU_SIM
-#endif
-    
-    // Setup
-    InitializeOpenCL(deviceStr, vendorStr, &ocl.deviceID, &ocl.context, &ocl.queue);
+    es->Cleanup();
 
-    PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
-
-    QueryPerformanceCounter(&beginClock);
-    CompileOpenCLProgram(ocl.deviceID, ocl.context, source_file, &ocl.program);
-    QueryPerformanceCounter(&endClock);
-
-    double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
-
-    PrepareOpenCLKernels(&ocl, particleCount, data);
-    
-    QueryPerformanceCounter(&beginClock);
-    GPUElasticScattering(&ocl, particleCount);
-    QueryPerformanceCounter(&endClock);
-    total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
-
-    std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
-    for (int i = 0; i < min(size -1, 100); i++)
-        std::cout << "(" << result[i].x << ", " << result[i].y << "), ";
-
-    std::cout << "(" << result[size - 1].x << ", " << result[size - 1].y << + ")" << std::endl;
-    
-    Cleanup(&ocl);
-
-    return 0;
+    return msg.wParam;
 }

@@ -7,8 +7,11 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
 
-std::string CLErrorString(int err) {
+#include "glew.h"
+
+static std::string CLErrorString(int err) {
     switch (err) {
         case CL_SUCCESS:                            return "Success!";
         case CL_DEVICE_NOT_FOUND:                   return "Device not found.";
@@ -63,18 +66,18 @@ std::string CLErrorString(int err) {
 #define CL_ERR_FAIL_COND_MSG(err, msg)                                                                                                                                                          \
     if (err != CL_SUCCESS) {                                                                                                                                                                    \
         std::cout << "\x1B[31mError [" << CLErrorString(err) << "]\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;   \
+        system("pause");                                                                                                                                          \
         exit(0);                                                                                                                                                                                \
-    } else                                                                                                                                                                                      \
-        ((void)0);
+    }
 
 #define ERR_FAIL_COND_MSG(cond, msg)                                                                                                                            \
 	if (cond) {                                                                                                                                                 \
 		std::cout << "\x1B[31mError\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;  \
+        system("pause");                                                                                                                                          \
 		exit(0);                                                                                                                                                \
-	} else                                                                                                                                                      \
-		((void)0);
+	}
 
-void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue) 
+static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue) 
 {
     *p_deviceID = nullptr;
     *p_ctx      = nullptr;
@@ -149,7 +152,7 @@ void InitializeOpenCL(char *p_device_str, char *p_vender_str, cl_device_id *p_de
     *p_queue = queue;
 }
 
-void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl_context, const char * p_soure_file, cl_program *p_ocl_program)
+static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl_context, const char * p_soure_file, cl_program *p_ocl_program)
 {
     cl_int clStatus;
     
@@ -174,7 +177,7 @@ void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl
 }
 
 
-void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contextHdl)
+static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contextHdl)
 {
     char        device_vendor[512];
     char        device_name[512];

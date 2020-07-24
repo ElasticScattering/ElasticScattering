@@ -1,4 +1,10 @@
-kernel void double_precision(global double2* A) {
+__kernel void scatter(__global double2 *imps, 
+                               double   imp_radius,
+                      __global bool    *alive) 
+{
     const int idx = get_global_id(0);
-    A[idx].x = A[idx].x * 10.03;
+
+    for (int i = 0; i < 1000; i++) {
+        alive[idx] = true;
+    }
 }
