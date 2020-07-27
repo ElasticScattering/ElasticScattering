@@ -11,8 +11,57 @@ typedef unsigned int uint;
 
 #define RUN_CPU_SIM
 
-cl_int clStatus;
-bool* result; // @Temporary
+void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const cl_double2 *imp_pos, cl_double *lifetime_results) 
+{
+    const int particles_in_row = sqrt(sp.particle_count);
+
+    for (int j = 0; j < particles_in_row; j++) 
+    {
+        for (int i = 0; i < particles_in_row; i++)
+        {
+            cl_double2 pos;
+            pos.x = sp.region_size * (double(i) / particles_in_row);
+            pos.y = sp.region_size * (double(j) / particles_in_row);
+
+            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+            
+            double lifetime = sp.tau;
+
+            for (int k = 0; k < impurity_count; k++)
+            {
+                const cl_double2 ip = imp_pos[k];
+                const cl_double2 unit = { vel.x / sp.particle_speed, vel.y / sp.particle_speed };
+                const cl_double2 projected = { pos.x + (ip.x - pos.x) * unit.x, pos.y + (ip.y - pos.y) * unit.y };
+
+                const double a = pow(projected.x - ip.x, 2.0) + pow(projected.y - ip.y, 2.0);
+                if (a > sp.impurity_radius_sq) {
+                    continue;
+                }
+
+                double L = sqrt(sp.impurity_radius_sq - a);
+
+                cl_double2 time_taken;
+                if (vel.x != 0) time_taken = { ((projected.x - L * unit.x) - pos.x) / vel.x, ((projected.x + L * unit.x) - pos.x) / vel.x };
+                else            time_taken = { ((projected.y - L * unit.y) - pos.y) / vel.y, ((projected.y + L * unit.y) - pos.y) / vel.y };
+
+
+                if ((time_taken.s0 * time_taken.s1) < 0) {
+                    lifetime = 0;
+                    break;
+                }
+
+                if (time_taken.s0 > 0 && time_taken.s0 < lifetime) {
+                    lifetime = time_taken.s0;
+                }
+                if (time_taken.s1 > 0 && time_taken.s1 < lifetime) {
+                    lifetime = time_taken.s1;
+                }
+            }
+
+            lifetime_results[j * particles_in_row + i] = lifetime;
+        }
+    }
+}
 
 void ElasticScattering::GPUElasticScattering(size_t size)
 {
@@ -24,10 +73,11 @@ void ElasticScattering::GPUElasticScattering(size_t size)
     //clStatus = clFinish(ocl.queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-    result = new bool[size];
+    /*result = new bool[size];
     memset(result, 0, sizeof(bool) * size);
     clEnqueueReadBuffer(ocl.queue, ocl.db, CL_TRUE, 0, sizeof(bool) * size, result, 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
+    */
 }
 
 void ElasticScattering::ParseArgs(int argc, char** argv, InitParameters* p_init) {
@@ -105,9 +155,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     char		vendorStr[256];
     const char* source_file = "program.cl";
 
-    uint startHeight = 32, startWidth = 32;
-    particle_count = 1'000'000;
-    impurity_count = 1000;
+    double total_time;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
@@ -115,12 +163,34 @@ void ElasticScattering::Init(int argc, char* argv[])
     InitParameters init;
     ParseArgs(argc, argv, &init);
 
+    SimulationParameters sp;
+    sp.region_size        = 5e-6;
+    sp.particle_count     = 10'000; //100'000'000;
+    sp.particle_speed     = 7e5;
+    sp.impurity_count     = 1000;
+    sp.impurity_radius    = 1.5e-8;
+    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+    sp.tau                = 1e-12;
+    sp.particle_mass      = 5 * 9.1e-31; 
+    sp.alpha              = 3.14159 / 4.0;
+    sp.phi                = sp.alpha;
+
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
-    std::cout << "Initial field size: " << startHeight << ", " << startWidth << std::endl;
+    std::cout << "Simulation parameters:" << std::endl;
+    std::cout << "Start region size: (" << sp.region_size << ", " << sp.region_size << ")" << std::endl;
+    std::cout << "Particles        : " << sp.particle_count << std::endl;
+    std::cout << "Particle speed   : " << sp.particle_speed << std::endl;
+    std::cout << "Particle mass    : " << sp.particle_mass << std::endl;
+    std::cout << "Impurities       : " << sp.impurity_count << std::endl;
+    std::cout << "Impurity radius  : " << sp.impurity_radius << std::endl;
+    std::cout << "Tau              : " << sp.tau << std::endl;
+    std::cout << "Alpha            : " << sp.alpha << std::endl;
+    std::cout << "Phi              : " << sp.phi << std::endl;
 
     // Initialize buffers.
-    std::uniform_real_distribution<double> unif(0, 1000);
-    std::default_random_engine re;
+    std::uniform_real_distribution<double> unif(0, 5e-6);
+    std::random_device r;
+    std::default_random_engine re(r());
     imp_data = new cl_double2[impurity_count];
     for (int i = 0; i < impurity_count; i++)
     {
@@ -128,11 +198,34 @@ void ElasticScattering::Init(int argc, char* argv[])
         imp_data[i].y = unif(re);
     }
 
-    alive_data = (bool*)malloc(particle_count * sizeof(bool));
+    double *lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
+    ERR_FAIL_COND_MSG(!lifetime_results, "Could not init arrays.")
+    memset(lifetime_results, 0, sp.particle_count * sizeof(double));
+
+    alive_data = (bool*)malloc(sp.particle_count * sizeof(bool));
     ERR_FAIL_COND_MSG(!alive_data, "Could not init arrays.")
-    memset(alive_data, false, particle_count * sizeof(bool));
+    memset(alive_data, false, sp.particle_count * sizeof(bool));
 
 #ifdef RUN_CPU_SIM
+    std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
+
+    QueryPerformanceCounter(&beginClock);
+    CPUElasticScattering(sp, imp_data, lifetime_results);
+    QueryPerformanceCounter(&endClock);
+    
+    double total = 0;
+    for (int i = 0; i < sp.particle_count; i++) {
+        total += lifetime_results[i];
+    }
+    std::cout << "Average lifetime:     " << total/ sp.particle_count << " s" << std::endl;
+    
+    total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+    std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
+
+    for (int i = 0; i < min(sp.particle_count - 1, 100); i++)
+        std::cout << lifetime_results[i] << ", ";
+    return;
+    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
 #endif
 
     // Setup
@@ -144,7 +237,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     CompileOpenCLProgram(ocl.deviceID, ocl.context, source_file, &ocl.program);
     QueryPerformanceCounter(&endClock);
 
-    double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+    total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
 
     PrepareOpenCLKernels();
@@ -155,9 +248,11 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
+    /*std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
     for (int i = 0; i < min(particle_count - 1, 100); i++)
         std::cout << "(" << result[i] << "), ";
+
+        */
 
     //std::cout << "(" << result[particle_count - 1].x << ", " << result[particle_count - 1].y << + ")" << std::endl;
 }

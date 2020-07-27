@@ -102,13 +102,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         else
         {
             //DrawQuad();
-            DrawScreen();
+            //DrawScreen();
         }
 
         //RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
     }
 
-    es->Cleanup();
+    //es->Cleanup();
 
     return msg.wParam;
 }

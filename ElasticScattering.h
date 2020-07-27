@@ -13,6 +13,21 @@ class ElasticScattering {
 
 	typedef struct
 	{
+		double region_size;
+		int particle_count;
+		double particle_speed;
+		double particle_mass;
+		int impurity_count;
+		double impurity_radius;
+		double impurity_radius_sq;
+		double tau;
+
+		double alpha;
+		double phi;
+	} SimulationParameters;
+
+	typedef struct
+	{
 		int num_iterations;
 		Mode mode;
 		bool show_info;
@@ -32,12 +47,14 @@ class ElasticScattering {
 	} OCLResources;
 
 	OCLResources ocl;
+	cl_int clStatus;
 
 	size_t impurity_count, particle_count;
 	cl_double2* imp_data;
 	bool* alive_data;
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
+	void CPUElasticScattering(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
 	void GPUElasticScattering(size_t size);
 	void PrepareOpenCLKernels();
 
