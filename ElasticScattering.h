@@ -15,15 +15,17 @@ class ElasticScattering {
 	{
 		double region_size;
 		int particle_count;
-		double particle_speed;
-		double particle_mass;
+		double particle_speed;      // v
+		double particle_mass;       // m
 		int impurity_count;
-		double impurity_radius;
-		double impurity_radius_sq;
+		double impurity_radius;     // r
+		double impurity_radius_sq;  // r^2
 		double tau;
 
 		double alpha;
 		double phi;
+		double magnetic_field;      // B
+		double angular_speed;       // w
 	} SimulationParameters;
 
 	typedef struct
@@ -55,6 +57,7 @@ class ElasticScattering {
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
 	void CPUElasticScattering(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
+	void CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
 	void GPUElasticScattering(size_t size);
 	void PrepareOpenCLKernels();
 

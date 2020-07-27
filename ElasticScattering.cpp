@@ -9,7 +9,47 @@
 
 typedef unsigned int uint;
 
+const double PI = 3.141592653589793238463;
 #define RUN_CPU_SIM
+
+
+void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results)
+{
+    const int particles_in_row = sqrt(sp.particle_count);
+
+    const bool clockwise = true;
+
+    // Map phi to the interval[-alpha, 2pi - alpha).
+    double phi2 = fmod(sp.phi + sp.alpha, (PI * 2.0)) - sp.alpha;
+
+    // Map to the lower bound, so -alpha + n pi/2
+    double low_bound = floor((phi2 + sp.alpha) / (PI * 0.5)) * (PI * 0.5);
+
+    // Remaining is the distance to this boundary in rad.
+    double remaining = phi2 - low_bound + sp.alpha;
+
+    double dphi;
+    if (!clockwise && false) dphi = remaining;
+    else if (!clockwise)     dphi = 2*sp.alpha - remaining;
+    else if (!false)         dphi = 2 * sp.alpha - remaining;
+    else                     dphi = remaining;
+    
+    double bound_time = max(sp.tau, dphi / sp.angular_speed);
+    
+    for (int j = 0; j < particles_in_row; j++)
+    {
+        for (int i = 0; i < particles_in_row; i++)
+        {
+            cl_double2 pos;
+            pos.x = sp.region_size * (double(i) / particles_in_row);
+            pos.y = sp.region_size * (double(j) / particles_in_row);
+
+            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+
+            double lifetime = bound_time;
+        }
+    }
+}
 
 void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const cl_double2 *imp_pos, cl_double *lifetime_results) 
 {
@@ -35,7 +75,7 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
 
                 const double a = pow(projected.x - ip.x, 2.0) + pow(projected.y - ip.y, 2.0);
                 if (a > sp.impurity_radius_sq) {
-                    continue;
+                    continue; //@Speedup, if distance is greater than current min continue as well.
                 }
 
                 double L = sqrt(sp.impurity_radius_sq - a);
@@ -174,18 +214,21 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.particle_mass      = 5 * 9.1e-31; 
     sp.alpha              = 3.14159 / 4.0;
     sp.phi                = sp.alpha;
+    sp.magnetic_field     = 0.3;
+    sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
 
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
     std::cout << "Start region size: (" << sp.region_size << ", " << sp.region_size << ")" << std::endl;
-    std::cout << "Particles        : " << sp.particle_count << std::endl;
-    std::cout << "Particle speed   : " << sp.particle_speed << std::endl;
-    std::cout << "Particle mass    : " << sp.particle_mass << std::endl;
-    std::cout << "Impurities       : " << sp.impurity_count << std::endl;
-    std::cout << "Impurity radius  : " << sp.impurity_radius << std::endl;
-    std::cout << "Tau              : " << sp.tau << std::endl;
-    std::cout << "Alpha            : " << sp.alpha << std::endl;
-    std::cout << "Phi              : " << sp.phi << std::endl;
+    std::cout << "Particles:         " << sp.particle_count << std::endl;
+    std::cout << "Particle speed:    " << sp.particle_speed << std::endl;
+    std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
+    std::cout << "Impurities:        " << sp.impurity_count << std::endl;
+    std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
+    std::cout << "Tau:               " << sp.tau << std::endl;
+    std::cout << "Alpha:             " << sp.alpha << std::endl;
+    std::cout << "Phi:               " << sp.phi << std::endl;
+    std::cout << "-----------------------------------------------------" << std::endl;
 
     // Initialize buffers.
     std::uniform_real_distribution<double> unif(0, 5e-6);
@@ -193,10 +236,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::default_random_engine re(r());
     imp_data = new cl_double2[impurity_count];
     for (int i = 0; i < impurity_count; i++)
-    {
-        imp_data[i].x = unif(re);
-        imp_data[i].y = unif(re);
-    }
+        imp_data[i] = { unif(re), unif(re) };
 
     double *lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
     ERR_FAIL_COND_MSG(!lifetime_results, "Could not init arrays.")
@@ -210,7 +250,8 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
     QueryPerformanceCounter(&beginClock);
-    CPUElasticScattering(sp, imp_data, lifetime_results);
+    if (sp.angular_speed == 0) CPUElasticScattering(sp, imp_data, lifetime_results);
+    else                       CPUElasticScattering2(sp, imp_data, lifetime_results);
     QueryPerformanceCounter(&endClock);
     
     double total = 0;
