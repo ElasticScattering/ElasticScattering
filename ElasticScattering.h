@@ -56,8 +56,16 @@ class ElasticScattering {
 	bool* alive_data;
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
+
 	void CPUElasticScattering(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
 	void CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
+	double GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const;
+	cl_double2 GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const;
+	bool CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const;
+	cl_double4 GetCrossPoints(const cl_double2 p, const double radius, const cl_double2 p2, const double r2) const;
+	double GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir) const;
+
+
 	void GPUElasticScattering(size_t size);
 	void PrepareOpenCLKernels();
 

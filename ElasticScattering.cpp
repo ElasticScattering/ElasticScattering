@@ -12,30 +12,88 @@ typedef unsigned int uint;
 const double PI = 3.141592653589793238463;
 #define RUN_CPU_SIM
 
+double ElasticScattering::GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const
+{
+    // Map phi to the interval[-alpha, 2pi - alpha).
+    double phi2 = fmod(phi + alpha, (PI * 2.0)) - alpha;
+
+    // Map to the lower bound, so -alpha + n pi/2
+    double low_bound = floor((phi2 + alpha) / (PI * 0.5)) * (PI * 0.5);
+
+    // Remaining is the distance to this boundary in rad.
+    double remaining = phi2 - low_bound + alpha;
+
+    double dphi;
+    if (!is_electron && is_future) dphi = remaining;
+    else if (!is_electron)         dphi = 2 * alpha - remaining;
+    else if (!is_future)           dphi = 2 * alpha - remaining;
+    else                           dphi = remaining;
+
+    return dphi / w;
+}
+
+cl_double2 ElasticScattering::GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const
+{
+    double xshift = radius * velocity.x / vf; //@Incorrect, code says velocity.y?
+    double yshift = -radius * velocity.y / vf;
+
+    cl_double2 center;
+    if (is_electron)
+    {
+        center.x = p.x - xshift;
+        center.y = p.y - yshift;
+    }
+    else
+    {
+        center.x = p.x + xshift;
+        center.y = p.y + yshift;
+    }
+
+    return center;
+}
+
+bool ElasticScattering::CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const
+{
+    double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
+    if (dist_squared >= pow(r1 + r2, 2)) return false;
+    if (dist_squared <= pow(r1 - r2, 2)) return false;
+
+    return true;
+}
+
+cl_double4 ElasticScattering::GetCrossPoints(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const
+{
+    const double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
+    const double dist = sqrt(dist_squared);
+    const double xs = (dist_squared + r1 * r1 - r2 * r2) / (2 * dist);
+    const double ys = sqrt(r1 * r1 + xs * xs);
+
+    cl_double2 u = { (p2.x - p1.x) / dist, (p2.y - p1.y) / dist };
+
+    cl_double4 z = { 
+        p1.x + u.x * xs + u.x * ys,  
+        p1.y + u.y * xs + -u.y * xs, 
+
+        p1.x + u.x * xs - u.x * ys,
+        p1.y + u.y * xs + u.y * xs 
+    };
+
+    return z;
+}
+
+double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir) const
+{
+    auto cross_points = GetCrossPoints(center, r, ip, ir);
+
+}
 
 void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results)
 {
+    const bool clockwise = true;
+    double bound_time = max(sp.tau, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false));
+
     const int particles_in_row = sqrt(sp.particle_count);
 
-    const bool clockwise = true;
-
-    // Map phi to the interval[-alpha, 2pi - alpha).
-    double phi2 = fmod(sp.phi + sp.alpha, (PI * 2.0)) - sp.alpha;
-
-    // Map to the lower bound, so -alpha + n pi/2
-    double low_bound = floor((phi2 + sp.alpha) / (PI * 0.5)) * (PI * 0.5);
-
-    // Remaining is the distance to this boundary in rad.
-    double remaining = phi2 - low_bound + sp.alpha;
-
-    double dphi;
-    if (!clockwise && false) dphi = remaining;
-    else if (!clockwise)     dphi = 2*sp.alpha - remaining;
-    else if (!false)         dphi = 2 * sp.alpha - remaining;
-    else                     dphi = remaining;
-    
-    double bound_time = max(sp.tau, dphi / sp.angular_speed);
-    
     for (int j = 0; j < particles_in_row; j++)
     {
         for (int i = 0; i < particles_in_row; i++)
@@ -46,7 +104,26 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
 
             cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
 
+            double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
+            double radius = vf / sp.angular_speed;
+            auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
+
             double lifetime = bound_time;
+            for (int k = 0; k < impurity_count; k++)
+            {
+                const cl_double2 ip = imp_pos[k];
+
+                if (sp.impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
+                {
+                    lifetime = 0;
+                    break;
+                }
+
+                if (CirclesCross(center, radius, ip, sp.impurity_radius))
+                {
+                    double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius);
+                }
+            }
         }
     }
 }
@@ -73,7 +150,7 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
                 const cl_double2 unit = { vel.x / sp.particle_speed, vel.y / sp.particle_speed };
                 const cl_double2 projected = { pos.x + (ip.x - pos.x) * unit.x, pos.y + (ip.y - pos.y) * unit.y };
 
-                const double a = pow(projected.x - ip.x, 2.0) + pow(projected.y - ip.y, 2.0);
+                const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
                 if (a > sp.impurity_radius_sq) {
                     continue; //@Speedup, if distance is greater than current min continue as well.
                 }
