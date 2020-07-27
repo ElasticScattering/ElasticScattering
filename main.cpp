@@ -29,10 +29,9 @@ void RedirectIO()
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
-        case WM_CLOSE: 
         case WM_DESTROY: 
         {
-            PostQuitMessage(0);
+            PostQuitMessage(0); 
         } break;
         case WM_KEYDOWN: 
         {
@@ -40,10 +39,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         } break;
         case WM_PAINT:
         {
-            PAINTSTRUCT ps;
+            DrawScreen();
+
+            /*PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
-            EndPaint(hWnd, &ps);
+            FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW));
+            EndPaint(hWnd, &ps);*/
         } break;
         default: 
         {
@@ -78,7 +79,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                        nullptr, nullptr, hInstance, nullptr);
     
     InitializeOpenGL(windowHandle);
-    ShowWindow(windowHandle, SW_SHOW);
+    ShowWindow(windowHandle, nCmdShow);
     UpdateWindow(windowHandle);
 
     ElasticScattering *es = new ElasticScattering();
@@ -100,7 +101,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
         else
         {
-            DrawQuad();
+            //DrawQuad();
             DrawScreen();
         }
 

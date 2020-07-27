@@ -36,7 +36,7 @@ static bool InitializeOpenGL(HWND hWnd)
 	int attributes[] =
 	{
 		WGL_CONTEXT_MAJOR_VERSION_ARB, 3, // @Todo, probeer 4.0?
-		WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+		WGL_CONTEXT_MINOR_VERSION_ARB, 3,
 		WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, 
 		0
 	};
@@ -49,17 +49,46 @@ static bool InitializeOpenGL(HWND hWnd)
 		wglMakeCurrent(hdc, hrc);				// make 3.0 context current
 	}
 	else hrc = tempOpenGLContext;				// no support for OpenGL 3.x and up, use 2.1
-	printf("OpenGL device: %s\n", glGetString(GL_RENDERER));
-	
-	glViewport(0, 0, 600, 600); // @Refactor, hardcoded screen size!
+	printf("//////OpenGL device: %s\n", glGetString(GL_RENDERER));
+
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+	
+	GLfloat verts[] = {
+	-0.5f, -0.5f, 0.0f, // Left  
+			0.5f, -0.5f, 0.0f, // Right 
+			0.0f,  0.5f, 0.0f  // Top   
+	};
+
+	GLuint vao, vbo;
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &vbo);
+	
+	glBindVertexArray(vao);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 	return true;
 }
 
 static void DrawScreen()
 {
+
+	glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glViewport(0, 0, 600, 600);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	SwapBuffers(hdc);
+
 	//TextureTarget.Texture2D
 	/*glBindTexture(GL_TEXTURE_2D, screenID);
 	GL.TexImage2D(TextureTarget.Texture2D,
@@ -84,7 +113,6 @@ static void DrawScreen()
 	GL.End();
 	*/
 
-	SwapBuffers(hdc);
 }
 
 static void DrawQuad()
