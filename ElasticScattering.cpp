@@ -4,6 +4,7 @@
 #include <limits>
 #include <vector>
 #include <unordered_map>
+#include <math.h>
 
 #include "ElasticScattering.h"
 
@@ -34,20 +35,12 @@ double ElasticScattering::GetBoundTime(const double phi, const double w, const d
 
 cl_double2 ElasticScattering::GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const
 {
-    double xshift = radius * velocity.x / vf; //@Incorrect, code says velocity.y?
-    double yshift = -radius * velocity.y / vf;
+    //              @Incorrect, code says velocity.y?
+    cl_double2 shift = { radius * velocity.x / vf, -radius * velocity.y / vf }; 
 
     cl_double2 center;
-    if (is_electron)
-    {
-        center.x = p.x - xshift;
-        center.y = p.y - yshift;
-    }
-    else
-    {
-        center.x = p.x + xshift;
-        center.y = p.y + yshift;
-    }
+    if (is_electron) center = { p.x - shift.x, p.y - shift.y };
+    else             center = { p.x + shift.x, p.y + shift.y };
 
     return center;
 }
@@ -81,11 +74,34 @@ cl_double4 ElasticScattering::GetCrossPoints(const cl_double2 p1, const double r
     return z;
 }
 
-double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir) const
+double ElasticScattering::GetPhi(const cl_double2 pos, const cl_double2 center, const double radius) const
 {
-    auto cross_points = GetCrossPoints(center, r, ip, ir);
+    double phi = acos((pos.x - center.x) / radius);
+    if (pos.y < center.y) 
+        phi = 2.0 * PI - phi;
 
+    return phi;
 }
+
+double ElasticScattering::GetCrossAngle(const double p, const double q, const bool clockwise) const
+{
+    return fmod(clockwise ? (p - q) : (q - p), 2.0 * PI);
+}
+
+
+double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir, const double w, const double clockwise) const
+{
+    const auto cross_points = GetCrossPoints(center, r, ip, ir);
+
+    double phi0 = GetPhi(pos, center, r);
+    double phi1 = GetPhi(cross_points.lo, center, r);
+    double phi2 = GetPhi(cross_points.hi, center, r);
+
+    double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
+    double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
+    return min(t1, t2);
+}
+
 
 void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results)
 {
@@ -109,7 +125,7 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
             auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
 
             double lifetime = bound_time;
-            for (int k = 0; k < impurity_count; k++)
+            for (int k = 0; k < sp.impurity_count; k++)
             {
                 const cl_double2 ip = imp_pos[k];
 
@@ -121,9 +137,12 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
 
                 if (CirclesCross(center, radius, ip, sp.impurity_radius))
                 {
-                    double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius);
+                    double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
+                    if (t < lifetime) 
+                        lifetime = t;
                 }
             }
+            lifetime_results[j * particles_in_row + i] = lifetime;
         }
     }
 }
@@ -144,7 +163,7 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
             
             double lifetime = sp.tau;
 
-            for (int k = 0; k < impurity_count; k++)
+            for (int k = 0; k < sp.impurity_count; k++)
             {
                 const cl_double2 ip = imp_pos[k];
                 const cl_double2 unit = { vel.x / sp.particle_speed, vel.y / sp.particle_speed };
@@ -226,7 +245,7 @@ void ElasticScattering::ParseArgs(int argc, char** argv, InitParameters* p_init)
     p_init->show_info = strcmp(argv[3], "show");
 }
 
-void ElasticScattering::PrepareOpenCLKernels()
+void ElasticScattering::PrepareOpenCLKernels(int impurity_count, int particle_count)
 {
     ocl.kernel = clCreateKernel(ocl.program, "scatter", &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create kernel.");
@@ -291,7 +310,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.particle_mass      = 5 * 9.1e-31; 
     sp.alpha              = 3.14159 / 4.0;
     sp.phi                = sp.alpha;
-    sp.magnetic_field     = 0.3;
+    sp.magnetic_field     = 10.4;
     sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
 
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
@@ -311,8 +330,8 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::uniform_real_distribution<double> unif(0, 5e-6);
     std::random_device r;
     std::default_random_engine re(r());
-    imp_data = new cl_double2[impurity_count];
-    for (int i = 0; i < impurity_count; i++)
+    imp_data = new cl_double2[sp.impurity_count];
+    for (int i = 0; i < sp.impurity_count; i++)
         imp_data[i] = { unif(re), unif(re) };
 
     double *lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
@@ -340,7 +359,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
 
-    for (int i = 0; i < min(sp.particle_count - 1, 100); i++)
+    for (int i = 0; i < min(sp.particle_count - 1, 1000); i++)
         std::cout << lifetime_results[i] << ", ";
     return;
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
@@ -358,10 +377,10 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
 
-    PrepareOpenCLKernels();
+    PrepareOpenCLKernels(sp.impurity_count, sp.particle_count);
 
     QueryPerformanceCounter(&beginClock);
-    GPUElasticScattering(particle_count);
+    GPUElasticScattering(sp.particle_count);
     QueryPerformanceCounter(&endClock);
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;

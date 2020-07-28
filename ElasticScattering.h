@@ -51,7 +51,6 @@ class ElasticScattering {
 	OCLResources ocl;
 	cl_int clStatus;
 
-	size_t impurity_count, particle_count;
 	cl_double2* imp_data;
 	bool* alive_data;
 
@@ -63,11 +62,12 @@ class ElasticScattering {
 	cl_double2 GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const;
 	bool CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const;
 	cl_double4 GetCrossPoints(const cl_double2 p, const double radius, const cl_double2 p2, const double r2) const;
-	double GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir) const;
-
+	double GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir, const double w, const double clockwise) const;
+	double GetPhi(const cl_double2 pos, const cl_double2 center, const double radius) const;
+	double GetCrossAngle(const double p, const double q, const bool clockwise) const;
 
 	void GPUElasticScattering(size_t size);
-	void PrepareOpenCLKernels();
+	void PrepareOpenCLKernels(int impurity_count, int particle_count);
 
 public:
 	void Init(int argc, char* argv[]);
