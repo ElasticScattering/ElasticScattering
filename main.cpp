@@ -1,30 +1,15 @@
-#include "Main.h"
+#include <windows.h>
+#include <fstream>
+#include <fcntl.h>
+#include <io.h>
+#include <string>
+
+#include "ElasticScattering.h"
+#include "OpenGLUtils.h"
 
 bool should_quit = false;
 
-void RedirectIO() 
-{
-    CONSOLE_SCREEN_BUFFER_INFO coninfo;
-    AllocConsole();
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
-    coninfo.dwSize.Y = 500;
-    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
-    HANDLE h1 = GetStdHandle(STD_OUTPUT_HANDLE);
-    int h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    FILE* fp = _fdopen(h2, "w");
-    *stdout = *fp;
-    setvbuf(stdout, NULL, _IONBF, 0);
-    h1 = GetStdHandle(STD_INPUT_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    fp = _fdopen(h2, "r"), * stdin = *fp;
-    setvbuf(stdin, NULL, _IONBF, 0);
-    h1 = GetStdHandle(STD_ERROR_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    fp = _fdopen(h2, "w"), * stderr = *fp;
-    setvbuf(stderr, NULL, _IONBF, 0);
-    std::ios::sync_with_stdio();
-
-    freopen_s(&fp, "CON", "w", stdout);
-    freopen_s(&fp, "CON", "w", stderr);
-}
+void RedirectIO();
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -111,4 +96,28 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     //es->Cleanup();
 
     return msg.wParam;
+}
+
+void RedirectIO()
+{
+    CONSOLE_SCREEN_BUFFER_INFO coninfo;
+    AllocConsole();
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
+    coninfo.dwSize.Y = 500;
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
+    HANDLE h1 = GetStdHandle(STD_OUTPUT_HANDLE);
+    int h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    FILE* fp = _fdopen(h2, "w");
+    *stdout = *fp;
+    setvbuf(stdout, NULL, _IONBF, 0);
+    h1 = GetStdHandle(STD_INPUT_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    fp = _fdopen(h2, "r"), * stdin = *fp;
+    setvbuf(stdin, NULL, _IONBF, 0);
+    h1 = GetStdHandle(STD_ERROR_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
+    fp = _fdopen(h2, "w"), * stderr = *fp;
+    setvbuf(stderr, NULL, _IONBF, 0);
+    std::ios::sync_with_stdio();
+
+    freopen_s(&fp, "CON", "w", stdout);
+    freopen_s(&fp, "CON", "w", stderr);
 }

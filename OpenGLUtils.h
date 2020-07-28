@@ -1,8 +1,8 @@
 #ifndef OPENGL_UTILS
 #define OPENGL_UTILS
 
-#include <windows.h>
-#include "OpenCLUtils.h"
+#include "glew.h"
+#include <wglew.h>
 
 HDC hdc;
 

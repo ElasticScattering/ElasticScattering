@@ -156,7 +156,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ElasticScattering.h" />
-    <ClInclude Include="Main.h" />
     <ClInclude Include="OpenCLUtils.h" />
     <ClInclude Include="OpenGLUtils.h" />
   </ItemGroup>

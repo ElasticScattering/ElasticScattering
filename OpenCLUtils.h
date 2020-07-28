@@ -9,9 +9,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "glew.h"
-#include <wglew.h>
-#include <cl/cl_gl_ext.h>
+
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -111,7 +109,7 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
         CL_ERR_FAIL_COND_MSG(cl_status, "Could not get platform info.");
 
         bool is_intel = strncmp("Intel", platform_vendor, strlen("Intel")) == 0;
-        score *= is_intel ? 0.1f : 1;
+        score *= is_intel ? 1 : 0.1f;
 
         cl_device_id device_id = nullptr;
         cl_device_type device_type = CL_DEVICE_TYPE_GPU;
@@ -121,7 +119,7 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
             cl_status = clGetDeviceIDs(platform_id, device_type, 1, &device_id, nullptr);
         }
 
-        score *= device_type == CL_DEVICE_TYPE_GPU ? 1 : 0.3f;
+        score *= device_type == CL_DEVICE_TYPE_GPU ? 1 : 0.6f;
 
         if (score > best_device_score) {
             selected_device = device_id;
