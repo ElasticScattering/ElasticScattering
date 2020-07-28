@@ -16,7 +16,12 @@ const double PI = 3.141592653589793238463;
 double ElasticScattering::GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const
 {
     // Map phi to the interval[-alpha, 2pi - alpha).
-    double phi2 = fmod(phi + alpha, (PI * 2.0)) - alpha;
+    // @Todo, mod function!
+    double phi2 = phi + alpha;
+    if (phi2 < 0) phi2 += 2.0 * PI;
+    if (phi2 >= 2 * PI) phi2 -= 2.0 * PI;
+
+     phi2 -= alpha;
 
     // Map to the lower bound, so -alpha + n pi/2
     double low_bound = floor((phi2 + alpha) / (PI * 0.5)) * (PI * 0.5);
@@ -85,7 +90,12 @@ double ElasticScattering::GetPhi(const cl_double2 pos, const cl_double2 center, 
 
 double ElasticScattering::GetCrossAngle(const double p, const double q, const bool clockwise) const
 {
-    return fmod(clockwise ? (p - q) : (q - p), 2.0 * PI);
+    double g = clockwise ? (p - q) : (q - p);
+
+    if (g < 0) return g + 2.0 * PI;
+    if (g >= 2 * PI) return g - 2.0 * PI;
+    
+    return g;
 }
 
 
@@ -93,12 +103,12 @@ double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2
 {
     const auto cross_points = GetCrossPoints(center, r, ip, ir);
 
-    double phi0 = GetPhi(pos, center, r);
-    double phi1 = GetPhi(cross_points.lo, center, r);
-    double phi2 = GetPhi(cross_points.hi, center, r);
+    const double phi0 = GetPhi(pos, center, r);
+    const double phi1 = GetPhi(cross_points.lo, center, r);
+    const double phi2 = GetPhi(cross_points.hi, center, r);
 
-    double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
-    double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
+    const double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
+    const double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
     return min(t1, t2);
 }
 
@@ -106,7 +116,8 @@ double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2
 void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results)
 {
     const bool clockwise = true;
-    double bound_time = max(sp.tau, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false));
+    double bt = GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false);
+    double bound_time = max(sp.tau, bt);
 
     const int particles_in_row = sqrt(sp.particle_count);
 
