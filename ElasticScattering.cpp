@@ -117,7 +117,7 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
 {
     const bool clockwise = true;
     double bt = GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false);
-    double bound_time = max(sp.tau, bt);
+    double bound_time = min(sp.tau, bt);
 
     const int particles_in_row = sqrt(sp.particle_count);
 
@@ -314,14 +314,14 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.region_size        = 5e-6;
     sp.particle_count     = 10'000; //100'000'000;
     sp.particle_speed     = 7e5;
+    sp.particle_mass      = 5 * 9.1e-31;
     sp.impurity_count     = 1000;
     sp.impurity_radius    = 1.5e-8;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.tau                = 1e-12;
-    sp.particle_mass      = 5 * 9.1e-31; 
     sp.alpha              = PI / 4.0;
     sp.phi                = sp.alpha;
-    sp.magnetic_field     = 10.4;
+    sp.magnetic_field     = 40.4;
     sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
 
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
@@ -335,6 +335,8 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Tau:               " << sp.tau << std::endl;
     std::cout << "Alpha:             " << sp.alpha << std::endl;
     std::cout << "Phi:               " << sp.phi << std::endl;
+    std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
+    std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
     ERR_FAIL_COND_MSG(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
