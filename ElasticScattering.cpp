@@ -308,7 +308,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.tau                = 1e-12;
     sp.particle_mass      = 5 * 9.1e-31; 
-    sp.alpha              = 3.14159 / 4.0;
+    sp.alpha              = PI / 4.0;
     sp.phi                = sp.alpha;
     sp.magnetic_field     = 10.4;
     sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
@@ -325,6 +325,11 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Alpha:             " << sp.alpha << std::endl;
     std::cout << "Phi:               " << sp.phi << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
+
+    ERR_FAIL_COND_MSG(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
+    ERR_FAIL_COND_MSG(sp.alpha <= 0, "Alpha should be positive.");
+    ERR_FAIL_COND_MSG(sp.angular_speed < 0, "Angular speed (w) should be positive");
+    ERR_FAIL_COND_MSG(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
     // Initialize buffers.
     std::uniform_real_distribution<double> unif(0, 5e-6);
