@@ -1,123 +1,168 @@
 #include <windows.h>
-#include <fstream>
-#include <fcntl.h>
-#include <io.h>
-#include <string>
 
 #include "ElasticScattering.h"
-#include "OpenGLUtils.h"
+//#include "OpenGLUtils.h"
+#include <GL/glew.h>
+#include <GL/wglew.h>
 
-bool should_quit = false;
+#include <GL/glfw3.h>
 
-void RedirectIO();
+const char* vert_source = "#version 330 core\n          \
+layout(location = 0) in vec3 aPos;\n                    \
+void main()\n                                           \
+{\n                                                     \
+    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n  \
+}\0";
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+const char* frag_source = "#version 330 core\n          \
+out vec4 FragColor;\n                                   \
+void main()\n                                           \
+{\n                                                     \
+    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n         \
+}\0";
+
+void ProcessInput(GLFWwindow* window)
 {
-    switch (message) {
-        case WM_DESTROY: 
-        {
-            PostQuitMessage(0); 
-        } break;
-        case WM_KEYDOWN: 
-        {
-            if (wParam == VK_ESCAPE) should_quit = true;
-        } break;
-        case WM_PAINT:
-        {
-            DrawScreen();
-
-            /*PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW));
-            EndPaint(hWnd, &ps);*/
-        } break;
-        default: 
-        {
-            break;
-        }
-    }
-
-    return DefWindowProc(hWnd, message, wParam, lParam);
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 }
 
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int main(void)
 {
-    const wchar_t title[] = L"Elastic Scattering";
+    GLFWwindow* window;
 
-    RedirectIO();
+    if (!glfwInit())
+        return -1;
+
+    int width = 640;
+    int height = 480;
+    window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
+    if (!window)
+    {
+        glfwTerminate();
+        return -1;
+    }
 
     RECT rect;
     GetClientRect(GetDesktopWindow(), &rect);
+    glfwSetWindowPos(window, rect.right / 2 - width / 2, rect.bottom / 2 - height / 2);
 
-    WNDCLASSEX windowClass = {};
-    windowClass.cbSize = sizeof(WNDCLASSEX);
-    windowClass.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW;
-    windowClass.lpfnWndProc = WndProc;
-    windowClass.hInstance = hInstance;
-    windowClass.lpszClassName = title;
-    RegisterClassEx(&windowClass);
+    glfwMakeContextCurrent(window);
 
-    int width = 600, height = 600;
-
-    HWND windowHandle = CreateWindowEx(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE, title, title, WS_OVERLAPPEDWINDOW,
-                                       rect.right/2 - width/2, rect.bottom/2 - height/2, width, height,
-                                       nullptr, nullptr, hInstance, nullptr);
-    
-    InitializeOpenGL(windowHandle);
-    ShowWindow(windowHandle, nCmdShow);
-    UpdateWindow(windowHandle);
-
-    ElasticScattering *es = new ElasticScattering();
+    ElasticScattering* es = new ElasticScattering();
     es->Init(0, nullptr);
 
-    MSG msg;
-    while (!should_quit) {
-        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) 
-        {
-            if (msg.message == WM_QUIT) 
-            {
-                should_quit = true;
-            }
-            else 
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-        }
-        else
-        {
-            //DrawQuad();
-            //DrawScreen();
-        }
+    GLenum error = glewInit();
+    if (error != GLEW_OK) return EXIT_FAILURE;
 
-        //RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
+    double* data = es->GetData();
+    int dim = sqrt(sizeof(data) / sizeof(*data));
+    
+    {
+        GLuint texID;
+        glGenTextures(1, &texID);
+
+        float pixels[] = {
+            0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
+        };
     }
 
-    //es->Cleanup();
+    // Shaders
+    GLint success;
+    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert_shader, 1, &vert_source, nullptr);
+    glCompileShader(vert_shader);
+    
+    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[512];
+        glGetShaderInfoLog(vert_shader, 512, nullptr, infoLog);
+        std::cout << "Failed to compile vertex shader. Info:\n" << infoLog << std::endl;
+    }
 
-    return msg.wParam;
-}
+    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag_shader, 1, &frag_source, nullptr);
+    glCompileShader(frag_shader);
+    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[512];
+        glGetShaderInfoLog(frag_shader, 512, nullptr, infoLog);
+        std::cout << "Failed to compile fragement shader. Info:\n" << infoLog << std::endl;
+    }
 
-void RedirectIO()
-{
-    CONSOLE_SCREEN_BUFFER_INFO coninfo;
-    AllocConsole();
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
-    coninfo.dwSize.Y = 500;
-    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
-    HANDLE h1 = GetStdHandle(STD_OUTPUT_HANDLE);
-    int h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    FILE* fp = _fdopen(h2, "w");
-    *stdout = *fp;
-    setvbuf(stdout, NULL, _IONBF, 0);
-    h1 = GetStdHandle(STD_INPUT_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    fp = _fdopen(h2, "r"), * stdin = *fp;
-    setvbuf(stdin, NULL, _IONBF, 0);
-    h1 = GetStdHandle(STD_ERROR_HANDLE), h2 = _open_osfhandle((intptr_t)h1, _O_TEXT);
-    fp = _fdopen(h2, "w"), * stderr = *fp;
-    setvbuf(stderr, NULL, _IONBF, 0);
-    std::ios::sync_with_stdio();
+    GLuint shader_program = glCreateProgram();
+    glAttachShader(shader_program, vert_shader);
+    glAttachShader(shader_program, frag_shader);
+    glLinkProgram(shader_program);
+    glUseProgram(shader_program);
+    glDeleteShader(vert_shader);
+    glDeleteShader(frag_shader);
 
-    freopen_s(&fp, "CON", "w", stdout);
-    freopen_s(&fp, "CON", "w", stderr);
+    // Vertex data
+    float vertices[] =
+    {
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.5f,  0.5f, 0.0f,
+        -0.5f,  0.5f, 0.0f,
+    };
+
+    GLuint vbo, vao;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    
+    glBindVertexArray(vao);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    while (!glfwWindowShouldClose(window))
+    {
+        ProcessInput(window);
+
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        glUseProgram(shader_program);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_QUADS, 0, 4);
+
+        /*
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim, dim, 0, GL_RGBA, GL_DOUBLE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+
+        glBindTexture(GL_TEXTURE_2D, texID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+       glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, 1.0f);
+        glEnd();
+        */
+
+        glfwSwapBuffers(window);
+
+        glfwPollEvents();
+    }
+
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteProgram(shader_program);
+
+    es->Cleanup();
+
+    glfwTerminate();
+    return 0;
 }

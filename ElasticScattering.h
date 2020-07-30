@@ -53,6 +53,7 @@ class ElasticScattering {
 
 	cl_double2* imp_data;
 	bool* alive_data;
+	double* lifetime_results;
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
 
@@ -71,6 +72,7 @@ class ElasticScattering {
 
 public:
 	void Init(int argc, char* argv[]);
+	double* GetData();
 	void Process();
 	void Cleanup();
 };

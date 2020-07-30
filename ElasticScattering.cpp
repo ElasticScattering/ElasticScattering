@@ -349,7 +349,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     for (int i = 0; i < sp.impurity_count; i++)
         imp_data[i] = { unif(re), unif(re) };
 
-    double *lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
+    lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
     ERR_FAIL_COND_MSG(!lifetime_results, "Could not init arrays.")
     memset(lifetime_results, 0, sp.particle_count * sizeof(double));
 
@@ -412,4 +412,9 @@ void ElasticScattering::Init(int argc, char* argv[])
         */
 
     //std::cout << "(" << result[particle_count - 1].x << ", " << result[particle_count - 1].y << + ")" << std::endl;
+}
+
+double* ElasticScattering::GetData()
+{
+    return lifetime_results;
 }

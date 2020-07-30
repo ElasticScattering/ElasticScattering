@@ -1,8 +1,8 @@
 #ifndef OPENGL_UTILS
 #define OPENGL_UTILS
 
-#include "glew.h"
-#include <wglew.h>
+#include "GL/glew.h"
+#include <GL/wglew.h>
 
 HDC hdc;
 
@@ -49,7 +49,7 @@ static bool InitializeOpenGL(HWND hWnd)
 		wglMakeCurrent(hdc, hrc);				// make 3.0 context current
 	}
 	else hrc = tempOpenGLContext;				// no support for OpenGL 3.x and up, use 2.1
-	printf("//////OpenGL device: %s\n", glGetString(GL_RENDERER));
+	//printf("//////OpenGL device: %s\n", glGetString(GL_RENDERER));
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
@@ -88,31 +88,6 @@ static void DrawScreen()
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
 	SwapBuffers(hdc);
-
-	//TextureTarget.Texture2D
-	/*glBindTexture(GL_TEXTURE_2D, screenID);
-	GL.TexImage2D(TextureTarget.Texture2D,
-		0,
-		PixelInternalFormat.Rgba,
-		game.screen.width,
-		game.screen.height,
-		0,
-		OpenTK.Graphics.OpenGL.PixelFormat.Bgra,
-		PixelType.UnsignedByte,
-		game.screen.pixels
-	);
-	GL.Clear(ClearBufferMask.ColorBufferBit);
-	GL.MatrixMode(MatrixMode.Modelview);
-	GL.LoadIdentity();
-	GL.BindTexture(TextureTarget.Texture2D, screenID);
-	GL.Begin(PrimitiveType.Quads);
-	GL.TexCoord2(0.0f, 1.0f); GL.Vertex2(-1.0f, -1.0f);
-	GL.TexCoord2(1.0f, 1.0f); GL.Vertex2(1.0f, -1.0f);
-	GL.TexCoord2(1.0f, 0.0f); GL.Vertex2(1.0f, 1.0f);
-	GL.TexCoord2(0.0f, 0.0f); GL.Vertex2(-1.0f, 1.0f);
-	GL.End();
-	*/
-
 }
 
 static void DrawQuad()

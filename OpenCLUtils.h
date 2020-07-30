@@ -128,7 +128,6 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
         }
     }
 
-    /*
     cl_context_properties props[] =
     {
         CL_GL_CONTEXT_KHR,
@@ -139,7 +138,6 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
         (cl_context_properties)selected_platform,
         0
     };
-    */
 
     ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_ERR_FAIL_COND_MSG(!ctx, cl_status, "Couldn't create context.");
