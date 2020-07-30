@@ -1,31 +1,32 @@
 #include <windows.h>
 
 #include "ElasticScattering.h"
-//#include "OpenGLUtils.h"
+
+#include<string>
+#include<iostream>
+#include<sstream>
+#include<fstream>
+
 #include <GL/glew.h>
 #include <GL/wglew.h>
-
 #include <GL/glfw3.h>
-
-const char* vert_source = "#version 330 core\n          \
-layout(location = 0) in vec3 aPos;\n                    \
-void main()\n                                           \
-{\n                                                     \
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n  \
-}\0";
-
-const char* frag_source = "#version 330 core\n          \
-out vec4 FragColor;\n                                   \
-void main()\n                                           \
-{\n                                                     \
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n         \
-}\0";
 
 void ProcessInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
+
+std::string ReadShaderFile(const char *shader_file) 
+{
+    std::ifstream file(shader_file);
+    std::stringstream sstream;
+    sstream << file.rdbuf();
+
+    std::string contents = sstream.str();
+    return contents;
+}
+
 
 int main(void)
 {
@@ -58,39 +59,40 @@ int main(void)
     double* data = es->GetData();
     int dim = sqrt(sizeof(data) / sizeof(*data));
     
-    {
-        GLuint texID;
-        glGenTextures(1, &texID);
-
-        float pixels[] = {
-            0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
-        };
-    }
-
     // Shaders
     GLint success;
+
+    std::string source = ReadShaderFile("shader.vs");
+    char *vsource = new char[source.length() + 1];
+    std::copy_n(source.c_str(), source.length() + 1, vsource);
+
+    source = ReadShaderFile("shader.fs");
+    char* fsource = new char[source.length() + 1];
+    std::copy_n(source.c_str(), source.length() + 1, fsource);
+
+
     GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert_shader, 1, &vert_source, nullptr);
+    glShaderSource(vert_shader, 1, &vsource, nullptr);
     glCompileShader(vert_shader);
     
     glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        char infoLog[512];
-        glGetShaderInfoLog(vert_shader, 512, nullptr, infoLog);
+        char infoLog[2048];
+        glGetShaderInfoLog(vert_shader, 2048, nullptr, infoLog);
         std::cout << "Failed to compile vertex shader. Info:\n" << infoLog << std::endl;
     }
 
     GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_shader, 1, &frag_source, nullptr);
+    glShaderSource(frag_shader, 1, &fsource, nullptr);
     glCompileShader(frag_shader);
+
     glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        char infoLog[512];
-        glGetShaderInfoLog(frag_shader, 512, nullptr, infoLog);
-        std::cout << "Failed to compile fragement shader. Info:\n" << infoLog << std::endl;
+        char infoLog[2048];
+        glGetShaderInfoLog(frag_shader, 2048, nullptr, infoLog);
+        std::cout << "Failed to compile fragment shader. Info:\n" << infoLog << std::endl;
     }
 
     GLuint shader_program = glCreateProgram();
@@ -104,10 +106,10 @@ int main(void)
     // Vertex data
     float vertices[] =
     {
-        -0.5f, -0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-         0.5f,  0.5f, 0.0f,
-        -0.5f,  0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
+         0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f, 0.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f, 0.0f, 0.0f, 1.0f
     };
 
     GLuint vbo, vao;
@@ -119,11 +121,32 @@ int main(void)
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    auto stride = 5 * sizeof(float);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // Texture
+    float pixels[] = {
+        0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
+    };
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glUseProgram(shader_program);
+    glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -132,6 +155,9 @@ int main(void)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+
         glUseProgram(shader_program);
         glBindVertexArray(vao);
         glDrawArrays(GL_QUADS, 0, 4);
