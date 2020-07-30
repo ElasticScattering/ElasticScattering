@@ -35,8 +35,8 @@ int main(void)
     if (!glfwInit())
         return -1;
 
-    int width = 640;
-    int height = 480;
+    int width = 900;
+    int height = 900;
     window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
     if (!window)
     {
@@ -49,6 +49,7 @@ int main(void)
     glfwSetWindowPos(window, rect.right / 2 - width / 2, rect.bottom / 2 - height / 2);
 
     glfwMakeContextCurrent(window);
+    glViewport(0, 0, width, height);
 
     ElasticScattering* es = new ElasticScattering();
     es->Init(0, nullptr);
@@ -56,9 +57,6 @@ int main(void)
     GLenum error = glewInit();
     if (error != GLEW_OK) return EXIT_FAILURE;
 
-    double* data = es->GetData();
-    int dim = sqrt(sizeof(data) / sizeof(*data));
-    
     // Shaders
     GLint success;
 
@@ -69,7 +67,6 @@ int main(void)
     source = ReadShaderFile("shader.fs");
     char* fsource = new char[source.length() + 1];
     std::copy_n(source.c_str(), source.length() + 1, fsource);
-
 
     GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vert_shader, 1, &vsource, nullptr);
@@ -106,10 +103,10 @@ int main(void)
     // Vertex data
     float vertices[] =
     {
-        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-         0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f, 0.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f, 0.0f, 0.0f, 1.0f
+        -0.9f, -0.9f, 0.0f, 1.0f, 1.0f,
+         0.9f, -0.9f, 0.0f, 1.0f, 0.0f,
+         0.9f,  0.9f, 0.0f, 0.0f, 0.0f,
+        -0.9f,  0.9f, 0.0f, 0.0f, 1.0f
     };
 
     GLuint vbo, vao;
@@ -131,6 +128,30 @@ int main(void)
     glBindVertexArray(0);
 
     // Texture
+
+    double* data = es->GetData();
+    int dim = 1000; // sqrt(sizeof(data) / sizeof(*data));
+
+    int length = dim * dim;
+    double itau = 1.0 / es->result_max_time;
+    float *pixels2 = new float[length * 3];
+    int j = 0;
+    for (int i = 0; i < length; i++)
+    {
+        double k = data[i] * itau;
+        if (k == 0) {
+            pixels2[j] = 1.0f;
+            pixels2[j + 1] = 0.0f;
+            pixels2[j + 2] = 0.0f;
+        }
+        else {
+            pixels2[j] = k;
+            pixels2[j + 1] = k;
+            pixels2[j + 2] = k;
+        }
+        j += 3;
+    }
+
     float pixels[] = {
         0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
@@ -139,11 +160,11 @@ int main(void)
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels2);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glUseProgram(shader_program);
     glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);

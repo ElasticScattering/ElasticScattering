@@ -75,6 +75,8 @@ public:
 	double* GetData();
 	void Process();
 	void Cleanup();
+
+	double result_max_time;
 };
 
 #endif // ELASTIC_SCATTERING_H

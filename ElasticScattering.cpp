@@ -116,6 +116,7 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
     double bt = GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false);
     double bound_time = min(sp.tau, bt);
     std::cout << "Bound time: " << bound_time << std::endl;
+    result_max_time = bound_time;
 
     const int particles_in_row = sqrt(sp.particle_count);
 
@@ -180,7 +181,7 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
 
                 const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
                 if (a > sp.impurity_radius_sq) {
-                    continue; //@Speedup, if distance is greater than current min continue as well.
+                    continue; //@Speedup, if distance is greater than current min continue as well?
                 }
 
                 double L = sqrt(sp.impurity_radius_sq - a);
@@ -309,10 +310,10 @@ void ElasticScattering::Init(int argc, char* argv[])
 
     SimulationParameters sp;
     sp.region_size        = 5e-6;
-    sp.particle_count     = 1'000; //100'000'000;
+    sp.particle_count     = 1000'000; //100'000'000;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * 9.1e-31;
-    sp.impurity_count     = 1000;
+    sp.impurity_count     = 100;
     sp.impurity_radius    = 1.5e-8;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.tau                = 1e-12;
@@ -374,7 +375,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
 
-    std::sort(lifetime_results, lifetime_results + sp.particle_count);
+    //std::sort(lifetime_results, lifetime_results + sp.particle_count);
     
     std::cout << "\n\nSorted results:" << std::endl;
     for (int i = 0; i < min(sp.particle_count, 200); i++)
