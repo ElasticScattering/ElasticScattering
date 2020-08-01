@@ -117,7 +117,7 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
 {
     const bool clockwise = true;
     double bt = GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false);
-    double bound_time = min(sp.tau, bt);
+    double bound_time = min(sp.temperature, bt);
     std::cout << "Bound time: " << bound_time << std::endl;
     result_max_time = bound_time;
 
@@ -174,7 +174,7 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
 
             cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
             
-            double lifetime = sp.tau;
+            double lifetime = sp.temperature;
 
             for (int k = 0; k < sp.impurity_count; k++)
             {
@@ -312,18 +312,20 @@ void ElasticScattering::Init(int argc, char* argv[])
     ParseArgs(argc, argv, &init);
 
     SimulationParameters sp;
-    sp.region_size        = 5e-6;
-    sp.particle_count     = 10'000; //100'000'000;
-    sp.particle_speed     = 7e5;
-    sp.particle_mass      = 5 * 9.1e-31;
-    sp.impurity_count     = 100;
-    sp.impurity_radius    = 1.5e-8;
-    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.tau                = 1e-12;
-    sp.alpha              = PI / 4.0;
-    sp.phi = 0; // sp.alpha;
-    sp.magnetic_field     = 50.4;
-    sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
+    sp.region_size           = 5e-6;
+    sp.particle_count        = 10'000; //100'000'000;
+    sp.particle_row_count    = sqrt(sp.particle_count);
+    sp.particle_speed        = 7e5;
+    sp.particle_mass         = 5 * 9.1e-31;
+    sp.impurity_count        = 100;
+    sp.impurity_radius       = 1.5e-8;
+    sp.impurity_radius_sq    = sp.impurity_radius * sp.impurity_radius;
+    sp.temperature           = 1e-12;
+    sp.alpha                 = PI / 4.0;
+    sp.phi                   = 0; // sp.alpha;
+    sp.magnetic_field        = 50.4;
+    sp.angular_speed         = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
+    sp.particle_max_lifetime = sp.angular_speed == 0 ? sp.temperature : min(sp.temperature, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, true, false));
 
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
@@ -333,13 +335,14 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
     std::cout << "Impurities:        " << sp.impurity_count << std::endl;
     std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
-    std::cout << "Tau:               " << sp.tau << std::endl;
+    std::cout << "Tau:               " << sp.temperature << std::endl;
     std::cout << "Alpha:             " << sp.alpha << std::endl;
     std::cout << "Phi:               " << sp.phi << std::endl;
     std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
     std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
+    ERR_FAIL_COND_MSG(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
     ERR_FAIL_COND_MSG(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
     ERR_FAIL_COND_MSG(sp.alpha <= 0, "Alpha should be positive.");
     ERR_FAIL_COND_MSG(sp.angular_speed < 0, "Angular speed (w) should be positive");
@@ -378,12 +381,12 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
 
-    //std::sort(lifetime_results, lifetime_results + sp.particle_count);
-    
     std::cout << "\n\nSorted results:" << std::endl;
     for (int i = 0; i < min(sp.particle_count, 200); i++)
         std::cout << lifetime_results[i] << ", ";
     std::cout << "..." << std::endl;
+
+    MakeTexture(sp);
 
     return;
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
@@ -418,7 +421,30 @@ void ElasticScattering::Init(int argc, char* argv[])
     //std::cout << "(" << result[particle_count - 1].x << ", " << result[particle_count - 1].y << + ")" << std::endl;
 }
 
-double* ElasticScattering::GetData()
+std::vector<float>  ElasticScattering::GetPixels()
 {
-    return lifetime_results;
+    return pixels;
+}
+
+void ElasticScattering::MakeTexture(const SimulationParameters sp)
+{
+    double itau = 1.0 / sp.particle_max_lifetime;
+    pixels.clear();
+    pixels.resize(sp.particle_count * 3);
+    int j = 0;
+    for (int i = 0; i < sp.particle_count; i++)
+    {
+        double k = lifetime_results[i] * itau;
+        if (k == 0) {
+            pixels[j] = 1.0f;
+            pixels[j + 1] = 0.0f;
+            pixels[j + 2] = 0.0f;
+        }
+        else {
+            pixels[j] = k;
+            pixels[j + 1] = k;
+            pixels[j + 2] = k;
+        }
+        j += 3;
+    }
 }

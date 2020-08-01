@@ -15,12 +15,14 @@ class ElasticScattering {
 	{
 		double region_size;
 		int particle_count;
+		int particle_row_count;
+		double particle_max_lifetime;
 		double particle_speed;      // v
 		double particle_mass;       // m
 		int impurity_count;
 		double impurity_radius;     // r
 		double impurity_radius_sq;  // r^2
-		double tau;
+		double temperature;
 
 		double alpha;
 		double phi;
@@ -55,6 +57,8 @@ class ElasticScattering {
 	bool* alive_data;
 	double* lifetime_results;
 
+	std::vector<float> pixels;
+
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
 
 	void CPUElasticScattering(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
@@ -69,10 +73,11 @@ class ElasticScattering {
 
 	void GPUElasticScattering(size_t size);
 	void PrepareOpenCLKernels(int impurity_count, int particle_count);
+	void MakeTexture(const SimulationParameters sp);
 
 public:
 	void Init(int argc, char* argv[]);
-	double* GetData();
+	std::vector<float> GetPixels();
 	void Process();
 	void Cleanup();
 

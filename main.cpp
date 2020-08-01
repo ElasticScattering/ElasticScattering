@@ -27,7 +27,6 @@ std::string ReadShaderFile(const char *shader_file)
     return contents;
 }
 
-
 int main(void)
 {
     GLFWwindow* window;
@@ -100,9 +99,10 @@ int main(void)
     glDeleteShader(vert_shader);
     glDeleteShader(frag_shader);
 
-    // Vertex data
+    // Vertex data 
     float vertices[] =
     {
+        // Position,        Tex coord
         -0.9f, -0.9f, 0.0f, 0.0f, 0.0f,
          0.9f, -0.9f, 0.0f, 1.0f, 0.0f,
          0.9f,  0.9f, 0.0f, 1.0f, 1.0f,
@@ -128,34 +128,12 @@ int main(void)
     glBindVertexArray(0);
 
     // Texture
-
-    double* data = es->GetData();
-    int dim = 100; // sqrt(sizeof(data) / sizeof(*data));
-
-    int length = dim * dim;
-    double itau = 1.0 / 1e-12; // es->result_max_time;
-    float *pixels = new float[length * 3];
-    int j = 0;
-    for (int i = 0; i < length; i++)
-    {
-        double k = data[i] * itau;
-        if (k == 0) {
-            pixels[j] = 1.0f;
-            pixels[j + 1] = 0.0f;
-            pixels[j + 2] = 0.0f;
-        }
-        else {
-            pixels[j] = k;
-            pixels[j + 1] = k;
-            pixels[j + 2] = k;
-        }
-        j += 3;
-    }
-
+    auto pixels = es->GetPixels();
+    int dim = sqrt(pixels.size()/3);
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -178,33 +156,14 @@ int main(void)
         glBindVertexArray(vao);
         glDrawArrays(GL_QUADS, 0, 4);
 
-        /*
-        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim, dim, 0, GL_RGBA, GL_DOUBLE, data);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
-
-        glBindTexture(GL_TEXTURE_2D, texID);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-       glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, -1.0f);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, 1.0f);
-        glEnd();
-        */
-
         glfwSwapBuffers(window);
-
         glfwPollEvents();
     }
 
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteProgram(shader_program);
-
     es->Cleanup();
-
     glfwTerminate();
     return 0;
 }
