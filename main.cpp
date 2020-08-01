@@ -103,9 +103,9 @@ int main(void)
     // Vertex data
     float vertices[] =
     {
-        -0.9f, -0.9f, 0.0f, 1.0f, 1.0f,
+        -0.9f, -0.9f, 0.0f, 0.0f, 0.0f,
          0.9f, -0.9f, 0.0f, 1.0f, 0.0f,
-         0.9f,  0.9f, 0.0f, 0.0f, 0.0f,
+         0.9f,  0.9f, 0.0f, 1.0f, 1.0f,
         -0.9f,  0.9f, 0.0f, 0.0f, 1.0f
     };
 
@@ -130,41 +130,36 @@ int main(void)
     // Texture
 
     double* data = es->GetData();
-    int dim = 1000; // sqrt(sizeof(data) / sizeof(*data));
+    int dim = 100; // sqrt(sizeof(data) / sizeof(*data));
 
     int length = dim * dim;
-    double itau = 1.0 / es->result_max_time;
-    float *pixels2 = new float[length * 3];
+    double itau = 1.0 / 1e-12; // es->result_max_time;
+    float *pixels = new float[length * 3];
     int j = 0;
     for (int i = 0; i < length; i++)
     {
         double k = data[i] * itau;
         if (k == 0) {
-            pixels2[j] = 1.0f;
-            pixels2[j + 1] = 0.0f;
-            pixels2[j + 2] = 0.0f;
+            pixels[j] = 1.0f;
+            pixels[j + 1] = 0.0f;
+            pixels[j + 2] = 0.0f;
         }
         else {
-            pixels2[j] = k;
-            pixels2[j + 1] = k;
-            pixels2[j + 2] = k;
+            pixels[j] = k;
+            pixels[j + 1] = k;
+            pixels[j + 2] = k;
         }
         j += 3;
     }
 
-    float pixels[] = {
-        0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
-    };
-
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels2);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glUseProgram(shader_program);
     glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);

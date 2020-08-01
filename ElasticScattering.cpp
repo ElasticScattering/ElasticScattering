@@ -17,17 +17,20 @@ double ElasticScattering::GetBoundTime(const double phi, const double w, const d
 {
     // Map phi to the interval[-alpha, 2pi - alpha).
     // @Todo, mod function!
-    double phi2 = phi + alpha;
-    if (phi2 < 0)       phi2 += PI2;
+    /*double phi2 = phi + alpha;
+    if (phi2 < 0)    phi2 += PI2;
     if (phi2 >= PI2) phi2 -= PI2;
 
-    phi2 -= alpha;
 
     // Map to the lower bound, so -alpha + n pi/2
     double low_bound = floor((phi2 + alpha) / (PI * 0.5)) * (PI * 0.5);
-
     // Remaining is the distance to this boundary in rad.
     double remaining = phi2 - low_bound + alpha;
+    */
+
+    double remaining = (phi + alpha);
+    double halfpi = PI * .5;
+    remaining = remaining - halfpi * floor(remaining / halfpi);
 
     double dphi;
     if (!is_electron && is_future) dphi = remaining;
@@ -310,7 +313,7 @@ void ElasticScattering::Init(int argc, char* argv[])
 
     SimulationParameters sp;
     sp.region_size        = 5e-6;
-    sp.particle_count     = 1000'000; //100'000'000;
+    sp.particle_count     = 10'000; //100'000'000;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * 9.1e-31;
     sp.impurity_count     = 100;
@@ -318,7 +321,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.tau                = 1e-12;
     sp.alpha              = PI / 4.0;
-    sp.phi                = sp.alpha;
+    sp.phi = 0; // sp.alpha;
     sp.magnetic_field     = 50.4;
     sp.angular_speed      = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
 
