@@ -113,23 +113,16 @@ double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2
     return min(t1, t2);
 }
 
-void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results)
+void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes)
 {
     const bool clockwise = true;
-    double bt = GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, clockwise, false);
-    double bound_time = min(sp.temperature, bt);
-    std::cout << "Bound time: " << bound_time << std::endl;
-    result_max_time = bound_time;
 
-    const int particles_in_row = sqrt(sp.particle_count);
-
-    for (int j = 0; j < particles_in_row; j++)
-    {
-        for (int i = 0; i < particles_in_row; i++)
+    for (int j = 0; j < sp.particle_row_count; j++)
+        for (int i = 0; i < sp.particle_row_count; i++)
         {
             cl_double2 pos;
-            pos.x = sp.region_size * (double(i) / particles_in_row);
-            pos.y = sp.region_size * (double(j) / particles_in_row);
+            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
+            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
 
             cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
 
@@ -137,10 +130,10 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
             double radius = vf / sp.angular_speed;
             auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
 
-            double lifetime = bound_time;
+            double lifetime = sp.particle_max_lifetime;
             for (int k = 0; k < sp.impurity_count; k++)
             {
-                const cl_double2 ip = imp_pos[k];
+                const cl_double2 ip = impurities[k];
 
                 if (sp.impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
                 {
@@ -155,30 +148,26 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
                         lifetime = t;
                 }
             }
-            lifetime_results[j * particles_in_row + i] = lifetime;
+            lifetimes[j * sp.particle_row_count + i] = lifetime;
         }
-    }
 }
 
-void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const cl_double2 *imp_pos, cl_double *lifetime_results) 
+void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes)
 {
-    const int particles_in_row = sqrt(sp.particle_count);
-
-    for (int j = 0; j < particles_in_row; j++) 
-    {
-        for (int i = 0; i < particles_in_row; i++)
+    for (int j = 0; j < sp.particle_row_count; j++) 
+        for (int i = 0; i < sp.particle_row_count; i++)
         {
             cl_double2 pos;
-            pos.x = sp.region_size * (double(i) / particles_in_row);
-            pos.y = sp.region_size * (double(j) / particles_in_row);
+            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
+            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
 
             cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
             
-            double lifetime = sp.temperature;
+            double lifetime = sp.particle_max_lifetime;
 
             for (int k = 0; k < sp.impurity_count; k++)
             {
-                const cl_double2 ip = imp_pos[k];
+                const cl_double2 ip = impurities[k];
                 const cl_double2 unit = { vel.x / sp.particle_speed, vel.y / sp.particle_speed };
                 const cl_double2 projected = { pos.x + (ip.x - pos.x) * unit.x, pos.y + (ip.y - pos.y) * unit.y };
 
@@ -207,13 +196,13 @@ void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, cons
                 }
             }
 
-            lifetime_results[j * particles_in_row + i] = lifetime;
+            lifetimes[j * sp.particle_row_count + i] = lifetime;
         }
-    }
 }
 
 void ElasticScattering::GPUElasticScattering(size_t size)
 {
+    cl_int clStatus;
     size_t local_work_size = 20;
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 1, nullptr, &size, &local_work_size, 0, nullptr, nullptr);
@@ -258,23 +247,21 @@ void ElasticScattering::ParseArgs(int argc, char** argv, InitParameters* p_init)
     p_init->show_info = strcmp(argv[3], "show");
 }
 
-void ElasticScattering::PrepareOpenCLKernels(int impurity_count, int particle_count)
+void ElasticScattering::PrepareOpenCLKernels(std::vector<cl_double2> impurities, int particle_count)
 {
+    cl_int clStatus;
+
     ocl.kernel = clCreateKernel(ocl.program, "scatter", &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create kernel.");
 
-    ocl.impb = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(cl_double2) * impurity_count, nullptr, &clStatus);
+    ocl.impb = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(cl_double2) * impurities.size(), nullptr, &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create imp buffer.");
 
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impb, CL_TRUE, 0, sizeof(cl_double2) * impurity_count, imp_data, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impb, CL_TRUE, 0, sizeof(cl_double2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't enqueue buffer.");
 
     ocl.alive_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(bool) * particle_count, nullptr, &clStatus);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create imp buffer.");
-
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.alive_buffer, CL_TRUE, 0, sizeof(bool) * particle_count, alive_data, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't enqueue buffer.");
-
 
     clStatus = clSetKernelArg(ocl.kernel, 0, sizeof(cl_mem), (void*)&ocl.impb);
     CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't set argument to buffer.");
@@ -348,33 +335,28 @@ void ElasticScattering::Init(int argc, char* argv[])
     ERR_FAIL_COND_MSG(sp.angular_speed < 0, "Angular speed (w) should be positive");
     ERR_FAIL_COND_MSG(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
-    // Initialize buffers.
+    // Initialize arrays.
     std::uniform_real_distribution<double> unif(0, 5e-6);
     std::random_device r;
     std::default_random_engine re(r());
-    imp_data = new cl_double2[sp.impurity_count];
+
+    std::vector<cl_double2> impurities(sp.impurity_count);
     for (int i = 0; i < sp.impurity_count; i++)
-        imp_data[i] = { unif(re), unif(re) };
+        impurities[i] = { unif(re), unif(re) };
 
-    lifetime_results = (double*)malloc(sp.particle_count * sizeof(double));
-    ERR_FAIL_COND_MSG(!lifetime_results, "Could not init arrays.")
-    memset(lifetime_results, 0, sp.particle_count * sizeof(double));
-
-    alive_data = (bool*)malloc(sp.particle_count * sizeof(bool));
-    ERR_FAIL_COND_MSG(!alive_data, "Could not init arrays.")
-    memset(alive_data, false, sp.particle_count * sizeof(bool));
+    lifetimes.resize(sp.particle_count, 0);
 
 #ifdef RUN_CPU_SIM
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
     QueryPerformanceCounter(&beginClock);
-    if (sp.angular_speed == 0) CPUElasticScattering(sp, imp_data, lifetime_results);
-    else                       CPUElasticScattering2(sp, imp_data, lifetime_results);
+    if (sp.angular_speed == 0) CPUElasticScattering(sp, impurities, lifetimes);
+    else                       CPUElasticScattering2(sp, impurities, lifetimes);
     QueryPerformanceCounter(&endClock);
     
     double total = 0;
     for (int i = 0; i < sp.particle_count; i++) {
-        total += lifetime_results[i];
+        total += lifetimes[i];
     }
     std::cout << "Average lifetime:     " << total/ sp.particle_count << " s" << std::endl;
     
@@ -383,7 +365,7 @@ void ElasticScattering::Init(int argc, char* argv[])
 
     std::cout << "\n\nSorted results:" << std::endl;
     for (int i = 0; i < min(sp.particle_count, 200); i++)
-        std::cout << lifetime_results[i] << ", ";
+        std::cout << lifetimes[i] << ", ";
     std::cout << "..." << std::endl;
 
     MakeTexture(sp);
@@ -404,21 +386,13 @@ void ElasticScattering::Init(int argc, char* argv[])
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
 
-    PrepareOpenCLKernels(sp.impurity_count, sp.particle_count);
+    PrepareOpenCLKernels(impurities, sp.particle_count);
 
     QueryPerformanceCounter(&beginClock);
     GPUElasticScattering(sp.particle_count);
     QueryPerformanceCounter(&endClock);
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
-
-    /*std::cout.precision(64); // std::numeric_limits<double>::max_digits10);
-    for (int i = 0; i < min(particle_count - 1, 100); i++)
-        std::cout << "(" << result[i] << "), ";
-
-        */
-
-    //std::cout << "(" << result[particle_count - 1].x << ", " << result[particle_count - 1].y << + ")" << std::endl;
 }
 
 std::vector<float>  ElasticScattering::GetPixels()
@@ -430,20 +404,20 @@ void ElasticScattering::MakeTexture(const SimulationParameters sp)
 {
     double itau = 1.0 / sp.particle_max_lifetime;
     pixels.clear();
-    pixels.resize(sp.particle_count * 3);
-    int j = 0;
+    pixels.resize(sp.particle_count * 3L);
+    size_t j = 0;
     for (int i = 0; i < sp.particle_count; i++)
     {
-        double k = lifetime_results[i] * itau;
+        float k = float(lifetimes[i] * itau);
         if (k == 0) {
             pixels[j] = 1.0f;
-            pixels[j + 1] = 0.0f;
-            pixels[j + 2] = 0.0f;
+            pixels[j + 1L] = 0.0f;
+            pixels[j + 2L] = 0.0f;
         }
         else {
             pixels[j] = k;
-            pixels[j + 1] = k;
-            pixels[j + 2] = k;
+            pixels[j + 1L] = k;
+            pixels[j + 2L] = k;
         }
         j += 3;
     }

@@ -51,18 +51,15 @@ class ElasticScattering {
 	} OCLResources;
 
 	OCLResources ocl;
-	cl_int clStatus;
 
-	cl_double2* imp_data;
-	bool* alive_data;
-	double* lifetime_results;
-
+	std::vector<cl_double2> impurities;
+	std::vector<double> lifetimes;
 	std::vector<float> pixels;
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
 
-	void CPUElasticScattering(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
-	void CPUElasticScattering2(const SimulationParameters sp, const cl_double2* imp_pos, cl_double* lifetime_results);
+	void CPUElasticScattering(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes);
+	void CPUElasticScattering2(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes);
 	double GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const;
 	cl_double2 GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const;
 	bool CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const;
@@ -72,7 +69,8 @@ class ElasticScattering {
 	double GetCrossAngle(const double p, const double q, const bool clockwise) const;
 
 	void GPUElasticScattering(size_t size);
-	void PrepareOpenCLKernels(int impurity_count, int particle_count);
+	void PrepareOpenCLKernels(std::vector<cl_double2> impurities, int particle_count);
+
 	void MakeTexture(const SimulationParameters sp);
 
 public:
@@ -80,8 +78,6 @@ public:
 	std::vector<float> GetPixels();
 	void Process();
 	void Cleanup();
-
-	double result_max_time;
 };
 
 #endif // ELASTIC_SCATTERING_H
