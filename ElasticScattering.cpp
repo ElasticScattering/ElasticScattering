@@ -15,19 +15,6 @@ const double PI2 = PI * 2.0;
 
 double ElasticScattering::GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const
 {
-    // Map phi to the interval[-alpha, 2pi - alpha).
-    // @Todo, mod function!
-    /*double phi2 = phi + alpha;
-    if (phi2 < 0)    phi2 += PI2;
-    if (phi2 >= PI2) phi2 -= PI2;
-
-
-    // Map to the lower bound, so -alpha + n pi/2
-    double low_bound = floor((phi2 + alpha) / (PI * 0.5)) * (PI * 0.5);
-    // Remaining is the distance to this boundary in rad.
-    double remaining = phi2 - low_bound + alpha;
-    */
-
     double remaining = (phi + alpha);
     double halfpi = PI * .5;
     remaining = remaining - halfpi * floor(remaining / halfpi);
@@ -154,21 +141,22 @@ void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, con
 
 void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes)
 {
+    const cl_double2 unit = { cos(sp.phi), sin(sp.phi) };
+
     for (int j = 0; j < sp.particle_row_count; j++) 
         for (int i = 0; i < sp.particle_row_count; i++)
         {
             cl_double2 pos;
             pos.x = sp.region_size * (double(i) / sp.particle_row_count);
             pos.y = sp.region_size * (double(j) / sp.particle_row_count);
-
-            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
             
             double lifetime = sp.particle_max_lifetime;
+
+            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
 
             for (int k = 0; k < sp.impurity_count; k++)
             {
                 const cl_double2 ip = impurities[k];
-                const cl_double2 unit = { vel.x / sp.particle_speed, vel.y / sp.particle_speed };
                 const cl_double2 projected = { pos.x + (ip.x - pos.x) * unit.x, pos.y + (ip.y - pos.y) * unit.y };
 
                 const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
@@ -304,13 +292,13 @@ void ElasticScattering::Init(int argc, char* argv[])
     sp.particle_row_count    = sqrt(sp.particle_count);
     sp.particle_speed        = 7e5;
     sp.particle_mass         = 5 * 9.1e-31;
-    sp.impurity_count        = 100;
-    sp.impurity_radius       = 1.5e-8;
+    sp.impurity_count        = 10;
+    sp.impurity_radius       = 1.5e-7;
     sp.impurity_radius_sq    = sp.impurity_radius * sp.impurity_radius;
     sp.temperature           = 1e-12;
     sp.alpha                 = PI / 4.0;
-    sp.phi                   = 0; // sp.alpha;
-    sp.magnetic_field        = 50.4;
+    sp.phi = 0;
+    sp.magnetic_field        = 0;
     sp.angular_speed         = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
     sp.particle_max_lifetime = sp.angular_speed == 0 ? sp.temperature : min(sp.temperature, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, true, false));
 
@@ -338,7 +326,7 @@ void ElasticScattering::Init(int argc, char* argv[])
     // Initialize arrays.
     std::uniform_real_distribution<double> unif(0, 5e-6);
     std::random_device r;
-    std::default_random_engine re(r());
+    std::default_random_engine re(0);
 
     std::vector<cl_double2> impurities(sp.impurity_count);
     for (int i = 0; i < sp.impurity_count; i++)
