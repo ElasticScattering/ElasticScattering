@@ -4,6 +4,7 @@
 #include <limits>
 #include <vector>
 #include <unordered_map>
+#include <assert.h>
 
 #include "ElasticScattering.h"
 
@@ -13,16 +14,19 @@ const double PI  = 3.141592653589793238463;
 const double PI2 = PI * 2.0;
 #define RUN_CPU_SIM
 
+inline double smod(double a, double b)
+{
+    return a - b * floor(a / b);
+}
+
 double ElasticScattering::GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const
 {
-    double remaining = (phi + alpha);
-    double halfpi = PI * .5;
-    remaining = remaining - halfpi * floor(remaining / halfpi);
+    double remaining = smod(phi + alpha, PI * 0.5);
 
     double dphi;
     if (!is_electron && is_future) dphi = remaining;
     else if (!is_electron)         dphi = 2 * alpha - remaining;
-    else if (!is_future)           dphi = 2 * alpha - remaining;
+    else if (is_future)            dphi = 2 * alpha - remaining;
     else                           dphi = remaining;
 
     return dphi / w;
@@ -30,7 +34,7 @@ double ElasticScattering::GetBoundTime(const double phi, const double w, const d
 
 cl_double2 ElasticScattering::GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const
 {
-    cl_double2 shift = { radius * velocity.x / vf, -radius * velocity.y / vf }; 
+    cl_double2 shift = { radius * velocity.y / vf, -radius * velocity.x / vf }; 
 
     cl_double2 center;
     if (is_electron) center = { p.x - shift.x, p.y - shift.y };
@@ -52,17 +56,17 @@ cl_double4 ElasticScattering::GetCrossPoints(const cl_double2 p1, const double r
 {
     const double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
     const double dist = sqrt(dist_squared);
-    const double xs = (dist_squared + r1 * r1 - r2 * r2) / (2 * dist);
-    const double ys = sqrt(r1 * r1 + xs * xs);
+    const double xs = (dist_squared + r1 * r1 - r2 * r2) / (2.0 * dist);
+    const double ys = sqrt(r1 * r1 - xs * xs);
 
     cl_double2 u = { (p2.x - p1.x) / dist, (p2.y - p1.y) / dist };
 
     cl_double4 z = { 
-        p1.x + u.x * xs + u.x * ys,  
-        p1.y + u.y * xs + -u.y * xs, 
+        p1.x + u.x * xs +  u.y * ys,  
+        p1.y + u.y * xs + -u.x * ys, 
 
-        p1.x + u.x * xs - u.x * ys,
-        p1.y + u.y * xs + u.y * xs 
+        p1.x + u.x * xs + -u.y * ys,
+        p1.y + u.y * xs +  u.x * ys 
     };
 
     return z;
@@ -70,8 +74,12 @@ cl_double4 ElasticScattering::GetCrossPoints(const cl_double2 p1, const double r
 
 double ElasticScattering::GetPhi(const cl_double2 pos, const cl_double2 center, const double radius) const
 {
-    double phi = acos((pos.x - center.x) / radius);
-    if (pos.y < center.y) 
+    double p = (pos.x - center.x) / radius;
+    assert(abs(p) < 1.0001);
+    p = max(min(p, 1), -1);
+    double phi = acos(p);
+    
+    if (pos.y < center.y)
         phi = PI2 - phi;
 
     return phi;
@@ -80,11 +88,7 @@ double ElasticScattering::GetPhi(const cl_double2 pos, const cl_double2 center, 
 double ElasticScattering::GetCrossAngle(const double p, const double q, const bool clockwise) const
 {
     double g = clockwise ? (p - q) : (q - p);
-
-    if (g < 0) return g + PI2;
-    if (g >= PI2) return g - PI2;
-    
-    return g;
+    return smod(g, PI2);
 }
 
 double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir, const double w, const double clockwise) const
@@ -100,92 +104,73 @@ double ElasticScattering::GetCrossTime(const cl_double2 center, const cl_double2
     return min(t1, t2);
 }
 
-void ElasticScattering::CPUElasticScattering2(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes)
+double ElasticScattering::CPUElasticScattering2(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp, const std::vector<cl_double2> impurities)
 {
     const bool clockwise = true;
 
-    for (int j = 0; j < sp.particle_row_count; j++)
-        for (int i = 0; i < sp.particle_row_count; i++)
+    double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
+    double radius = vf / sp.angular_speed;
+    auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
+
+    double lifetime = sp.particle_max_lifetime;
+    for (int k = 0; k < sp.impurity_count; k++)
+    {
+        const cl_double2 ip = impurities[k];
+
+        if (sp.impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
         {
-            cl_double2 pos;
-            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
-            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
-
-            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
-
-            double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
-            double radius = vf / sp.angular_speed;
-            auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
-
-            double lifetime = sp.particle_max_lifetime;
-            for (int k = 0; k < sp.impurity_count; k++)
-            {
-                const cl_double2 ip = impurities[k];
-
-                if (sp.impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
-                {
-                    lifetime = 0;
-                    break;
-                }
-
-                if (CirclesCross(center, radius, ip, sp.impurity_radius))
-                {
-                    double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
-                    if (t < lifetime) 
-                        lifetime = t;
-                }
-            }
-            lifetimes[j * sp.particle_row_count + i] = lifetime;
+            lifetime = 0;
+            break;
         }
+
+        if (CirclesCross(center, radius, ip, sp.impurity_radius))
+        {
+            double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
+
+            assert(t >= 0);
+                    
+            if (t < lifetime) 
+                lifetime = t;
+        }
+    }
+
+    return lifetime;
 }
 
-void ElasticScattering::CPUElasticScattering(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes)
+double ElasticScattering::CPUElasticScattering(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp, const std::vector<cl_double2> impurities)
 {
     const cl_double2 unit = { cos(sp.phi), sin(sp.phi) };
+    double lifetime = sp.particle_max_lifetime;
 
-    for (int j = 0; j < sp.particle_row_count; j++) 
-        for (int i = 0; i < sp.particle_row_count; i++)
-        {
-            cl_double2 pos;
-            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
-            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
-            
-            double lifetime = sp.particle_max_lifetime;
+    for (int k = 0; k < sp.impurity_count; k++)
+    {
+        const cl_double2 ip = impurities[k];
+        const cl_double inner = (ip.x - pos.x) * unit.x + (ip.y - pos.y) * unit.y;
+        const cl_double2 projected = { pos.x + inner * unit.x, pos.y + inner * unit.y };
 
-            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
-
-            for (int k = 0; k < sp.impurity_count; k++)
-            {
-                const cl_double2 ip = impurities[k];
-                const cl_double2 projected = { pos.x + (ip.x - pos.x) * unit.x, pos.y + (ip.y - pos.y) * unit.y };
-
-                const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
-                if (a > sp.impurity_radius_sq) {
-                    continue; //@Speedup, if distance is greater than current min continue as well?
-                }
-
-                double L = sqrt(sp.impurity_radius_sq - a);
-
-                cl_double2 time_taken;
-                if (vel.x != 0) time_taken = { ((projected.x - L * unit.x) - pos.x) / vel.x, ((projected.x + L * unit.x) - pos.x) / vel.x };
-                else            time_taken = { ((projected.y - L * unit.y) - pos.y) / vel.y, ((projected.y + L * unit.y) - pos.y) / vel.y };
-
-
-                if ((time_taken.s0 * time_taken.s1) < 0) {
-                    lifetime = 0;
-                    break;
-                }
-
-                if (time_taken.s0 > 0 && time_taken.s0 < lifetime) {
-                    lifetime = time_taken.s0;
-                }
-                if (time_taken.s1 > 0 && time_taken.s1 < lifetime) {
-                    lifetime = time_taken.s1;
-                }
-            }
-
-            lifetimes[j * sp.particle_row_count + i] = lifetime;
+        const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
+        if (a > sp.impurity_radius_sq) {
+            continue; //@Speedup, if distance is greater than current min continue as well?
         }
+
+        double L = sqrt(sp.impurity_radius_sq - a);
+
+        cl_double2 time_taken;
+        if (vel.x != 0) time_taken = { - ((projected.x - L * unit.x) - pos.x) / vel.x, -((projected.x + L * unit.x) - pos.x) / vel.x };
+        else            time_taken = { - ((projected.y - L * unit.y) - pos.y) / vel.y, -((projected.y + L * unit.y) - pos.y) / vel.y };
+
+        if ((time_taken.s0 * time_taken.s1) < 0)
+            return 0;
+
+        if (time_taken.s0 > 0 && time_taken.s0 < lifetime) {
+            lifetime = time_taken.s0;
+        }
+        if (time_taken.s1 > 0 && time_taken.s1 < lifetime) {
+            lifetime = time_taken.s1;
+        }
+    }
+
+    return lifetime;
 }
 
 void ElasticScattering::GPUElasticScattering(size_t size)
@@ -287,20 +272,20 @@ void ElasticScattering::Init(int argc, char* argv[])
     ParseArgs(argc, argv, &init);
 
     SimulationParameters sp;
-    sp.region_size           = 5e-6;
+    sp.region_size           = 1e-6;
     sp.particle_count        = 10'000; //100'000'000;
     sp.particle_row_count    = sqrt(sp.particle_count);
     sp.particle_speed        = 7e5;
-    sp.particle_mass         = 5 * 9.1e-31;
-    sp.impurity_count        = 10;
-    sp.impurity_radius       = 1.5e-7;
+    sp.particle_mass         = 5 * 9.109e-31;
+    sp.impurity_count        = 100;
+    sp.impurity_radius       = 1.5e-8;
     sp.impurity_radius_sq    = sp.impurity_radius * sp.impurity_radius;
-    sp.temperature           = 1e-12;
     sp.alpha                 = PI / 4.0;
-    sp.phi = 0;
+    sp.phi                   = sp.alpha - 1e-10;
     sp.magnetic_field        = 0;
     sp.angular_speed         = 1.602e-19 * sp.magnetic_field / sp.particle_mass;
-    sp.particle_max_lifetime = sp.angular_speed == 0 ? sp.temperature : min(sp.temperature, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, true, false));
+    sp.tau                   = 1e-12;
+    sp.particle_max_lifetime = sp.angular_speed == 0 ? sp.tau : min(sp.tau, GetBoundTime(sp.phi, sp.angular_speed, sp.alpha, true, false));
 
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
@@ -310,11 +295,12 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
     std::cout << "Impurities:        " << sp.impurity_count << std::endl;
     std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
-    std::cout << "Tau:               " << sp.temperature << std::endl;
     std::cout << "Alpha:             " << sp.alpha << std::endl;
     std::cout << "Phi:               " << sp.phi << std::endl;
     std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
     std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
+    std::cout << "Tau:               " << sp.tau << std::endl; 
+    std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
     ERR_FAIL_COND_MSG(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
@@ -324,7 +310,8 @@ void ElasticScattering::Init(int argc, char* argv[])
     ERR_FAIL_COND_MSG(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
     // Initialize arrays.
-    std::uniform_real_distribution<double> unif(0, 5e-6);
+    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::random_device r;
     std::default_random_engine re(0);
 
@@ -338,8 +325,21 @@ void ElasticScattering::Init(int argc, char* argv[])
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
     QueryPerformanceCounter(&beginClock);
-    if (sp.angular_speed == 0) CPUElasticScattering(sp, impurities, lifetimes);
-    else                       CPUElasticScattering2(sp, impurities, lifetimes);
+    for (int j = 0; j < sp.particle_row_count; j++)
+        for (int i = 0; i < sp.particle_row_count; i++)
+        {
+            cl_double2 pos;
+            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
+            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
+
+            double lifetime = sp.particle_max_lifetime;
+
+            cl_double2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+
+            double res = (sp.angular_speed == 0) ? CPUElasticScattering(pos, vel, sp, impurities) : CPUElasticScattering2(pos, vel, sp, impurities);
+            lifetimes[j * sp.particle_row_count + i] = res;
+        }
+
     QueryPerformanceCounter(&endClock);
     
     double total = 0;

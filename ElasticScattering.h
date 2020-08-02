@@ -22,7 +22,7 @@ class ElasticScattering {
 		int impurity_count;
 		double impurity_radius;     // r
 		double impurity_radius_sq;  // r^2
-		double temperature;
+		double tau;
 
 		double alpha;
 		double phi;
@@ -58,8 +58,8 @@ class ElasticScattering {
 
 	void ParseArgs(int argc, char** argv, InitParameters* p_init);
 
-	void CPUElasticScattering(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes);
-	void CPUElasticScattering2(const SimulationParameters sp, const std::vector<cl_double2> impurities, std::vector<double> &lifetimes);
+	double CPUElasticScattering(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp, const std::vector<cl_double2> impurities);
+	double CPUElasticScattering2(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp, const std::vector<cl_double2> impurities);
 	double GetBoundTime(const double phi, const double w, const double alpha, const bool is_electron, const bool is_future) const;
 	cl_double2 GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const;
 	bool CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const;
