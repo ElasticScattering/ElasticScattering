@@ -6,10 +6,25 @@
 #include<iostream>
 #include<sstream>
 #include<fstream>
+#include <unordered_map>
 
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
+
+enum class Mode {
+    LIFETIME,
+    STATS,
+    AVG_DISTANCE,
+    CONDUCTIVITY
+};
+
+typedef struct
+{
+    int num_iterations;
+    Mode mode;
+    bool show_info;
+} InitParameters;
 
 void ProcessInput(GLFWwindow* window)
 {
@@ -25,6 +40,35 @@ std::string ReadShaderFile(const char *shader_file)
 
     std::string contents = sstream.str();
     return contents;
+}
+
+void ParseArgs(int argc, char** argv, InitParameters* p_init) {
+    p_init->num_iterations = 1;
+    p_init->mode = Mode::LIFETIME;
+    p_init->show_info = true;
+    return;
+
+    if (argc != 4) {
+        std::cout << "Usage: ElasticScattering [num iterations] [lifetime | distance | stats | conductivity] [show | no-show]" << std::endl;
+        exit(0);
+    }
+
+    p_init->num_iterations = atoi(argv[1]);
+
+    std::unordered_map<std::string, Mode> modes
+    {
+        {"lifetime",     Mode::LIFETIME},
+        {"distance",     Mode::AVG_DISTANCE},
+        {"stats",        Mode::STATS},
+        {"conductivity", Mode::CONDUCTIVITY}
+    };
+    std::string key;
+    key.assign(argv[2], strlen(argv[2]));
+    auto iterator = modes.find(key);
+    ERR_FAIL_COND_MSG(iterator == modes.end(), "Couldn't understand second command line argument.");
+    p_init->mode = iterator->second;
+
+    p_init->show_info = strcmp(argv[3], "show");
 }
 
 int main(void)
@@ -50,8 +94,51 @@ int main(void)
     glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
 
-    ElasticScattering* es = new ElasticScattering();
-    es->Init(0, nullptr);
+    InitParameters init;
+    //ParseArgs(argc, argv, &init);
+
+    SimulationParameters sp;
+    sp.region_size      = 1e-6;
+    sp.particle_count   = 10'000; //100'000'000;
+    sp.particle_row_count = sqrt(sp.particle_count);
+    sp.particle_speed   = 7e5;
+    sp.particle_mass    = 5 * M0;
+    sp.impurity_count   = 100;
+    sp.impurity_radius  = 1.5e-8;
+    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+    sp.alpha            = PI / 4.0;
+    sp.phi = 0;// sp.alpha - 1e-10;
+    sp.magnetic_field   = 20;
+    sp.angular_speed    = E * sp.magnetic_field / sp.particle_mass;
+    sp.tau              = 1e-12;
+    
+    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
+    std::cout << "Simulation parameters:" << std::endl;
+    std::cout << "Start region size: (" << sp.region_size << ", " << sp.region_size << ")" << std::endl;
+    std::cout << "Particles:         " << sp.particle_count << std::endl;
+    std::cout << "Particle speed:    " << sp.particle_speed << std::endl;
+    std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
+    std::cout << "Impurities:        " << sp.impurity_count << std::endl;
+    std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
+    std::cout << "Alpha:             " << sp.alpha << std::endl;
+    std::cout << "Phi:               " << sp.phi << std::endl;
+    std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
+    std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
+    std::cout << "Tau:               " << sp.tau << std::endl;
+    std::cout << "-----------------------------------------------------" << std::endl;
+
+    ERR_FAIL_COND_MSG(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
+    ERR_FAIL_COND_MSG(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
+    ERR_FAIL_COND_MSG(sp.alpha <= 0, "Alpha should be positive.");
+    ERR_FAIL_COND_MSG(sp.angular_speed < 0, "Angular speed (w) should be positive");
+    ERR_FAIL_COND_MSG(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
+
+    ElasticScattering* es = new CPUElasticScattering();
+    es->Init(sp);
+    es->Compute();
+    auto pixels = es->GetPixels();
+
+    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
 
     GLenum error = glewInit();
     if (error != GLEW_OK) return EXIT_FAILURE;
@@ -128,7 +215,6 @@ int main(void)
     glBindVertexArray(0);
 
     // Texture
-    auto pixels = es->GetPixels();
     int dim = sqrt(pixels.size()/3);
     GLuint tex;
     glGenTextures(1, &tex);
@@ -168,7 +254,6 @@ int main(void)
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteProgram(shader_program);
-    es->Cleanup();
     glfwTerminate();
     return 0;
 }

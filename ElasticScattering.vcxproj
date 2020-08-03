@@ -151,10 +151,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ElasticScattering.cpp" />
+    <ClCompile Include="CPUElasticScattering.cpp" />
+    <ClCompile Include="GPUElasticScattering.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="ElasticScattering.h" />
     <ClInclude Include="OpenCLUtils.h" />
     <ClInclude Include="OpenGLUtils.h" />
