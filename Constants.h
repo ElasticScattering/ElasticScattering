@@ -6,4 +6,7 @@ const double M0 = 9.109e-31;
 const double E = 1.602e-19;
 
 #define MIN(m_a, m_b) (((m_a) < (m_b)) ? (m_a) : (m_b))
-#define min(a, b) (a < b) ? a : b 
+
+typedef struct {
+    double x, y;
+} v2;

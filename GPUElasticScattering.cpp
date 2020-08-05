@@ -30,7 +30,7 @@ void GPUElasticScattering::Init(SimulationParameters sp) // todo arguments
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
 
-    PrepareOpenCLKernels(impurities, sp.particle_count);
+    PrepareOpenCLKernels(sp.particle_count);
 
     impurities.clear();
     impurities.resize(sp.impurity_count);
@@ -51,7 +51,7 @@ void GPUElasticScattering::Init(SimulationParameters sp) // todo arguments
 }
 
 
-void GPUElasticScattering::PrepareOpenCLKernels(std::vector<cl_double2> impurities, int particle_count)
+void GPUElasticScattering::PrepareOpenCLKernels(int particle_count)
 {
     cl_int clStatus;
 

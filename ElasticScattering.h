@@ -25,7 +25,7 @@ typedef struct
 
 class ElasticScattering {
 protected:
-	std::vector<cl_double2> impurities;
+	std::vector<v2> impurities;
 	std::vector<double> lifetimes;
 	std::vector<float> pixels;
 
@@ -38,15 +38,8 @@ public:
 };
 
 class CPUElasticScattering : public ElasticScattering {
-	double ComputeA(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp);
-	double ComputeB(const cl_double2 pos, const cl_double2 vel, const SimulationParameters sp);
-	double GetBoundTime(const bool is_electron, const bool is_future) const;
-	cl_double2 GetCyclotronOrbit(const cl_double2 p, const cl_double2 velocity, const double radius, const double vf, const bool is_electron) const;
-	bool CirclesCross(const cl_double2 p1, const double r1, const cl_double2 p2, const double r2) const;
-	std::pair<cl_double2, cl_double2> GetCrossPoints(const cl_double2 p, const double radius, const cl_double2 p2, const double r2) const;
-	double GetCrossTime(const cl_double2 center, const cl_double2 pos, const cl_double2 ip, const double r, const double ir, const double w, const double clockwise) const;
-	double GetPhi(const cl_double2 pos, const cl_double2 center, const double radius) const;
-	double GetCrossAngle(const double p, const double q, const bool clockwise) const;
+	double ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp);
+	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
 
 	void MakeTexture(const SimulationParameters sp);
 
@@ -71,7 +64,7 @@ class GPUElasticScattering : public ElasticScattering {
 
 	OCLResources ocl;
 
-	void PrepareOpenCLKernels(std::vector<cl_double2> impurities, int particle_count);
+	void PrepareOpenCLKernels(int particle_count);
 
 public:
 	virtual void Init(SimulationParameters sp);

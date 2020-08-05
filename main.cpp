@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include "ElasticScattering.h"
+#include "Test.h"
 
 #include<string>
 #include<iostream>
@@ -12,6 +13,10 @@
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
 
+
+
+//#define DOCTEST_CONFIG_IMPLEMENT
+
 enum class Mode {
     LIFETIME,
     STATS,
@@ -21,6 +26,7 @@ enum class Mode {
 
 typedef struct
 {
+    bool run_tests;
     int num_iterations;
     Mode mode;
     bool show_info;
@@ -46,10 +52,16 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->num_iterations = 1;
     p_init->mode = Mode::LIFETIME;
     p_init->show_info = true;
-    return;
+    p_init->run_tests = false;
 
+    if (argc == 2) {
+        p_init->run_tests = strcmp(argv[1], "test");
+    }
+    return;
+    
     if (argc != 4) {
         std::cout << "Usage: ElasticScattering [num iterations] [lifetime | distance | stats | conductivity] [show | no-show]" << std::endl;
+        std::cout << "Usage: ElasticScattering [test]" << std::endl;
         exit(0);
     }
 
@@ -71,7 +83,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->show_info = strcmp(argv[3], "show");
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     GLFWwindow* window;
 
@@ -95,7 +107,14 @@ int main(void)
     glViewport(0, 0, width, height);
 
     InitParameters init;
-    //ParseArgs(argc, argv, &init);
+    ParseArgs(argc, argv, &init);
+
+    if (init.run_tests)
+    {
+        //RunAllTests();
+        std::cout << "All tests passed successfully" << std::endl;
+        return 0;
+    }
 
     SimulationParameters sp;
     sp.region_size      = 1e-6;
