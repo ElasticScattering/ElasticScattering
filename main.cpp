@@ -1,7 +1,8 @@
 #include <windows.h>
 
 #include "ElasticScattering.h"
-#include "Test.h"
+#include "utils/Test.h"
+#include "utils/ErrorMacros.h"
 
 #include<string>
 #include<iostream>
@@ -55,7 +56,13 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->run_tests = false;
 
     if (argc == 2) {
-        p_init->run_tests = strcmp(argv[1], "test");
+        
+        std::string w;
+        w.assign(argv[1], strlen(argv[1]));
+
+        p_init->run_tests = w == "test";
+        if (p_init->run_tests)
+            std::cout << "Testing! " << std::endl;
     }
     return;
     
@@ -111,7 +118,7 @@ int main(int argc, char **argv)
 
     if (init.run_tests)
     {
-        //RunAllTests();
+        RunAllTests();
         std::cout << "All tests passed successfully" << std::endl;
         return 0;
     }

@@ -1,6 +1,8 @@
 #ifndef OPENCL_UTIL_H
 #define OPENCL_UTIL_H
 
+#include "ErrorMacros.h"
+
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include <stdio.h>
@@ -8,8 +10,6 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-
-
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -62,20 +62,6 @@ static std::string CLErrorString(int err) {
         default: return "Unknown error";
     }
 }
-
-#define CL_ERR_FAIL_COND_MSG(err, msg)                                                                                                                                                          \
-    if (err != CL_SUCCESS) {                                                                                                                                                                    \
-        std::cout << "\x1B[31mError [" << CLErrorString(err) << "]\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;   \
-        system("pause");                                                                                                                                          \
-        exit(0);                                                                                                                                                                                \
-    }
-
-#define ERR_FAIL_COND_MSG(cond, msg)                                                                                                                            \
-	if (cond) {                                                                                                                                                 \
-		std::cout << "\x1B[31mError\x1B[0m: " << msg << "\n\tat: " << "L" << __LINE__ << ": " << __FILE__ << "\n\tin function: " << __FUNCTION__ << std::endl;  \
-        system("pause");                                                                                                                                          \
-		exit(0);                                                                                                                                                \
-	}
 
 static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue) 
 {

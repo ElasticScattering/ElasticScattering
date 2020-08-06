@@ -2,8 +2,8 @@
 
 #include <random>
 #include <limits>
-#include <vector>
 #include <assert.h>
+#include <iostream>
 
 #include "ElasticScattering.h"
 #include "Details.h"
@@ -134,7 +134,7 @@ double CPUElasticScattering::ComputeB(const v2 pos, const v2 vel, const Simulati
 
         if (CirclesCross(center, radius, ip, sp.impurity_radius))
         {
-            double t = GetCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
+            double t = GetFirstCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
 
             assert(t >= 0);
 

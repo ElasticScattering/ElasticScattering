@@ -9,7 +9,7 @@ inline double smod(double a, double b)
     return a - b * floor(a / b);
 }
 
-double GetBoundTime(const double phi, const double alpha, const double w, const bool is_electron, const bool is_future)
+inline double GetBoundTime(const double phi, const double alpha, const double w, const bool is_electron, const bool is_future)
 {
     double remaining = smod(phi + alpha, PI * 0.5);
 
@@ -22,7 +22,7 @@ double GetBoundTime(const double phi, const double alpha, const double w, const 
     return dphi / w;
 }
 
-v2 GetCyclotronOrbit(const v2 p, const v2 velocity, const double radius, const double vf, const bool is_electron)
+inline v2 GetCyclotronOrbit(const v2 p, const v2 velocity, const double radius, const double vf, const bool is_electron)
 {
     v2 shift = { radius * velocity.y / vf, -radius * velocity.x / vf };
 
@@ -33,7 +33,7 @@ v2 GetCyclotronOrbit(const v2 p, const v2 velocity, const double radius, const d
     return center;
 }
 
-bool CirclesCross(const v2 p1, const double r1, const v2 p2, const double r2)
+inline bool CirclesCross(const v2 p1, const double r1, const v2 p2, const double r2)
 {
     double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
     if (dist_squared >= pow(r1 + r2, 2)) return false;
@@ -42,7 +42,7 @@ bool CirclesCross(const v2 p1, const double r1, const v2 p2, const double r2)
     return true;
 }
 
-std::pair<v2, v2> GetCrossPoints(const v2 p1, const double r1, const v2 p2, const double r2)
+inline std::pair<v2, v2> GetCrossPoints(const v2 p1, const double r1, const v2 p2, const double r2)
 {
     const double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
     const double dist = sqrt(dist_squared);
@@ -65,7 +65,7 @@ std::pair<v2, v2> GetCrossPoints(const v2 p1, const double r1, const v2 p2, cons
     return points;
 }
 
-double GetPhi(const v2 pos, const v2 center, const double radius)
+inline double GetPhi(const v2 pos, const v2 center, const double radius)
 {
     double p = (pos.x - center.x) / radius;
     assert(abs(p) < 1.0001);
@@ -78,13 +78,13 @@ double GetPhi(const v2 pos, const v2 center, const double radius)
     return phi;
 }
 
-double GetCrossAngle(const double p, const double q, const bool clockwise)
+inline double GetCrossAngle(const double p, const double q, const bool clockwise)
 {
     double g = clockwise ? (p - q) : (q - p);
     return smod(g, PI2);
 }
 
-double GetCrossTime(const v2 center, const v2 pos, const v2 ip, const double r, const double ir, const double w, const double clockwise)
+inline double GetFirstCrossTime(const v2 center, const v2 pos, const v2 ip, const double r, const double ir, const double w, const double clockwise)
 {
     const auto cross_points = GetCrossPoints(center, r, ip, ir);
 

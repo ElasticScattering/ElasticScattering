@@ -2,11 +2,26 @@
 
 #include <random>
 #include <limits>
-#include <vector>
 
 #include "ElasticScattering.h"
+#include "utils/OpenCLUtils.h"
 
 // typedef unsigned int uint;
+typedef struct
+{
+    cl_device_id deviceID;
+    cl_context context;
+    cl_program program;
+    cl_command_queue queue;
+    cl_kernel kernel;
+
+    cl_mem db;
+    cl_mem impb;
+    cl_mem alive_buffer;
+} OCLResources;
+
+OCLResources ocl;
+
 
 void GPUElasticScattering::Init(SimulationParameters sp) // todo arguments
 {
