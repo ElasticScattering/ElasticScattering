@@ -71,26 +71,26 @@ void GPUElasticScattering::PrepareOpenCLKernels(int particle_count)
     cl_int clStatus;
 
     ocl.kernel = clCreateKernel(ocl.program, "scatter", &clStatus);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create kernel.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
     ocl.impb = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(cl_double2) * impurities.size(), nullptr, &clStatus);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create imp buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
 
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impb, CL_TRUE, 0, sizeof(cl_double2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't enqueue buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
     ocl.alive_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(bool) * particle_count, nullptr, &clStatus);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't create imp buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
 
     clStatus = clSetKernelArg(ocl.kernel, 0, sizeof(cl_mem), (void*)&ocl.impb);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't set argument to buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     double imp_radius = 0.003;
     clStatus = clSetKernelArg(ocl.kernel, 1, sizeof(double), (void*)&imp_radius);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't set argument to buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.kernel, 2, sizeof(cl_mem), (void*)&ocl.alive_buffer);
-    CL_ERR_FAIL_COND_MSG(clStatus, "Couldn't set argument to buffer.");
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
 void GPUElasticScattering::Compute()
@@ -100,7 +100,7 @@ void GPUElasticScattering::Compute()
     size_t local_work_size = 20;
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
+    CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
 
     //clStatus = clFinish(ocl.queue);
 
@@ -108,7 +108,7 @@ void GPUElasticScattering::Compute()
     /*result = new bool[size];
     memset(result, 0, sizeof(bool) * size);
     clEnqueueReadBuffer(ocl.queue, ocl.db, CL_TRUE, 0, sizeof(bool) * size, result, 0, nullptr, nullptr);
-    CL_ERR_FAIL_COND_MSG(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
+    CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
     */
 }
 

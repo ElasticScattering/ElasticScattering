@@ -69,7 +69,10 @@ TEST_CASE("BoundTime Sectors")
 	double alpha = 1;
 	double w = 0.5;
 
-	double t = GetBoundTime(PI / 2 - 0.25, w, alpha, false, true);
+	double t = GetBoundTime(-0.25, w, alpha, false, true);
+	CHECK(t == 0.25);
+
+	t = GetBoundTime(PI / 2 - 0.25, w, alpha, false, true);
 	CHECK(t == 0.25);
 
 	t = GetBoundTime(PI - 0.25, w, alpha, false, true);
@@ -93,13 +96,9 @@ TEST_CASE("BoundTime Corners")
 
 TEST_CASE("Circles Cross")
 {
-	v2 p1 = { 1, 2 };
-	v2 p2 = { 5, 5 };
-	v2 p3 = { 1, 3 };
-
-	CHECK(!CirclesCross(p1, 1, p2, 1));
-	CHECK(!CirclesCross(p1, 1, p3, 5));
-	CHECK( CirclesCross({ 0, 0 }, 1, { 0, 0.5 }, 0.6));
+	CHECK(!CirclesCross({ 1, 2 }, 1,    { 5, 5 }, 1));
+	CHECK(!CirclesCross({ 1, 2 }, 1,    { 1, 3 }, 5));
+	CHECK( CirclesCross({ 0, 0 }, 1,    { 0, 0.5 }, 0.6));
 	CHECK( CirclesCross({ 0, 0 }, 1000, { 2, 0 }, 1001));
 }
 

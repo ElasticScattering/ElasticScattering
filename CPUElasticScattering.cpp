@@ -69,7 +69,7 @@ void CPUElasticScattering::Compute()
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
 
-    std::cout << "\n\nSorted results:" << std::endl;
+    std::cout << "\n\Results:" << std::endl;
     for (int i = 0; i < MIN(lifetimes.size() - 1, 200); i++)
         std::cout << lifetimes[i] << ", ";
     std::cout << "..." << std::endl;

@@ -222,7 +222,6 @@
     <ClInclude Include="Details.h" />
     <ClInclude Include="ElasticScattering.h" />
     <ClInclude Include="OpenCLUtils.h" />
-    <ClInclude Include="OpenGLUtils.h" />
     <ClInclude Include="utils\ErrorMacros.h" />
     <ClInclude Include="utils\Test.h" />
   </ItemGroup>

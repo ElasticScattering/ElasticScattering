@@ -61,8 +61,6 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         w.assign(argv[1], strlen(argv[1]));
 
         p_init->run_tests = w == "test";
-        if (p_init->run_tests)
-            std::cout << "Testing! " << std::endl;
     }
     return;
     
@@ -84,7 +82,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     std::string key;
     key.assign(argv[2], strlen(argv[2]));
     auto iterator = modes.find(key);
-    ERR_FAIL_COND_MSG(iterator == modes.end(), "Couldn't understand second command line argument.");
+    FAIL_CONDITION(iterator == modes.end(), "Couldn't understand second command line argument.");
     p_init->mode = iterator->second;
 
     p_init->show_info = strcmp(argv[3], "show");
@@ -156,11 +154,11 @@ int main(int argc, char **argv)
     std::cout << "Tau:               " << sp.tau << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
-    ERR_FAIL_COND_MSG(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
-    ERR_FAIL_COND_MSG(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
-    ERR_FAIL_COND_MSG(sp.alpha <= 0, "Alpha should be positive.");
-    ERR_FAIL_COND_MSG(sp.angular_speed < 0, "Angular speed (w) should be positive");
-    ERR_FAIL_COND_MSG(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
+    FAIL_CONDITION(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
+    FAIL_CONDITION(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
+    FAIL_CONDITION(sp.alpha <= 0, "Alpha should be positive.");
+    FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
+    FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
     ElasticScattering* es = new CPUElasticScattering();
     es->Init(sp);
