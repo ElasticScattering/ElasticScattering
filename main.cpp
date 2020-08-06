@@ -1,22 +1,22 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+
 #include <windows.h>
 
 #include "ElasticScattering.h"
 #include "utils/Test.h"
 #include "utils/ErrorMacros.h"
+#include "doctest.h"
 
-#include<string>
-#include<iostream>
-#include<sstream>
-#include<fstream>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 #include <unordered_map>
 
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
 
-
-
-//#define DOCTEST_CONFIG_IMPLEMENT
 
 enum class Mode {
     LIFETIME,
@@ -92,6 +92,19 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
 
 int main(int argc, char **argv)
 {
+    InitParameters init;
+    ParseArgs(argc, argv, &init);
+
+    if (init.run_tests)
+    {
+        doctest::Context context;
+        context.applyCommandLine(argc, argv);
+        context.setOption("no-breaks", true);
+        int res = context.run();
+
+        return 0;
+    }
+
     GLFWwindow* window;
 
     if (!glfwInit())
@@ -112,16 +125,6 @@ int main(int argc, char **argv)
 
     glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
-
-    InitParameters init;
-    ParseArgs(argc, argv, &init);
-
-    if (init.run_tests)
-    {
-        RunAllTests();
-        std::cout << "All tests passed successfully" << std::endl;
-        return 0;
-    }
 
     SimulationParameters sp;
     sp.region_size      = 1e-6;
