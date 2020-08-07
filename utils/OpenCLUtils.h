@@ -151,7 +151,7 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
     clStatus = clBuildProgram(program, 1, &p_device_id, NULL, NULL, NULL);
     if (clStatus != CL_SUCCESS) {
         size_t len;
-        char buffer[2048];
+        char buffer[4086];
 
         clGetProgramBuildInfo(program, p_device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
         CL_FAIL_CONDITION(clStatus, buffer);
@@ -159,7 +159,6 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
 
     *p_ocl_program = program;
 }
-
 
 static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context contextHdl)
 {

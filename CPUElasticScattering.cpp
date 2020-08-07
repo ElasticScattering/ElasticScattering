@@ -145,26 +145,3 @@ double CPUElasticScattering::ComputeB(const v2 pos, const v2 vel, const Simulati
 
     return lifetime;
 }
-
-void CPUElasticScattering::MakeTexture(const SimulationParameters sp)
-{
-    double itau = 1.0 / sp.particle_max_lifetime;
-    pixels.clear();
-    pixels.resize(sp.particle_count * 3L);
-    size_t j = 0;
-    for (int i = 0; i < sp.particle_count; i++)
-    {
-        float k = float(lifetimes[i] * itau);
-        if (k == 0) {
-            pixels[j] = 1.0f;
-            pixels[j + 1L] = 0.0f;
-            pixels[j + 2L] = 0.0f;
-        }
-        else {
-            pixels[j] = k;
-            pixels[j + 1L] = k;
-            pixels[j + 2L] = k;
-        }
-        j += 3;
-    }
-}

@@ -221,12 +221,13 @@
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Details.h" />
     <ClInclude Include="ElasticScattering.h" />
-    <ClInclude Include="OpenCLUtils.h" />
     <ClInclude Include="utils\ErrorMacros.h" />
+    <ClInclude Include="utils\OpenCLUtils.h" />
     <ClInclude Include="utils\Test.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="program.cl" />
+    <None Include="scatterB.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -108,8 +108,8 @@ int main(int argc, char **argv)
     if (!glfwInit())
         return -1;
 
-    int width = 900;
-    int height = 900;
+    int width = 1000;
+    int height = 1000;
     window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
     if (!window)
     {
@@ -130,12 +130,12 @@ int main(int argc, char **argv)
     sp.particle_row_count = sqrt(sp.particle_count);
     sp.particle_speed   = 7e5;
     sp.particle_mass    = 5 * M0;
-    sp.impurity_count   = 100;
-    sp.impurity_radius  = 1.5e-8;
+    sp.impurity_count   = 1000;
+    sp.impurity_radius  = 1.5e-9;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha            = PI / 4.0;
-    sp.phi = 0;// sp.alpha - 1e-10;
-    sp.magnetic_field   = 20;
+    sp.phi              = - sp.alpha - 1e-10;
+    sp.magnetic_field   = 30;
     sp.angular_speed    = E * sp.magnetic_field / sp.particle_mass;
     sp.tau              = 1e-12;
     
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
-    ElasticScattering* es = new CPUElasticScattering();
+    ElasticScattering* es = new GPUElasticScattering();
     es->Init(sp);
     es->Compute();
     auto pixels = es->GetPixels();
@@ -214,6 +214,7 @@ int main(int argc, char **argv)
     glDeleteShader(frag_shader);
 
     // Vertex data 
+    /*
     float vertices[] =
     {
         // Position,        Tex coord
@@ -221,6 +222,15 @@ int main(int argc, char **argv)
          0.9f, -0.9f, 0.0f, 1.0f, 0.0f,
          0.9f,  0.9f, 0.0f, 1.0f, 1.0f,
         -0.9f,  0.9f, 0.0f, 0.0f, 1.0f
+    };
+    */
+    float vertices[] =
+    {
+        // Position,        Tex coord
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
     };
 
     GLuint vbo, vao;
@@ -249,7 +259,7 @@ int main(int argc, char **argv)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-#if 1
+#if 0
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 #else
