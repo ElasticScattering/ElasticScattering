@@ -130,8 +130,8 @@ int main(int argc, char **argv)
     sp.particle_row_count = sqrt(sp.particle_count);
     sp.particle_speed   = 7e5;
     sp.particle_mass    = 5 * M0;
-    sp.impurity_count   = 1000;
-    sp.impurity_radius  = 1.5e-9;
+    sp.impurity_count   = 100;
+    sp.impurity_radius  = 1.5e-8;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha            = PI / 4.0;
     sp.phi              = - sp.alpha - 1e-10;

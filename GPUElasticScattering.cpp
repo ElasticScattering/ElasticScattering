@@ -140,10 +140,10 @@ void GPUElasticScattering::Compute()
     QueryPerformanceCounter(&beginClock);
 
     cl_int clStatus;
-    size_t global_work_size = (size_t)sp.particle_count;
-    size_t local_work_size = 20;
+    size_t global_work_size[2] = { (size_t)sp.particle_row_count, (size_t)sp.particle_row_count };
+    size_t local_work_size[2] = { 10, 10 };
 
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
 
     clStatus = clFinish(ocl.queue);
@@ -162,7 +162,7 @@ void GPUElasticScattering::Compute()
 
 
     std::cout << "\n\Results:" << std::endl;
-    for (int i = 0; i < MIN(lifetimes.size(), 200); i++)
+    for (int i = 0; i < MIN(lifetimes.size(), 2000); i++)
         std::cout << lifetimes[i] << ", ";
     std::cout << "..." << std::endl;
 

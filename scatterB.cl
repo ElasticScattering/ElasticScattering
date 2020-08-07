@@ -105,10 +105,9 @@ __kernel void scatterB(double region_size,
                        __global double *lifetimes) 
 {
     bool clockwise = true;
-    int idx = get_global_id(0);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
     
-    int x = idx % ROW_SIZE;
-    int y = idx / ROW_SIZE;
     double2 pos = {region_size * x / ROW_SIZE, region_size * y / ROW_SIZE};
 
     double2 unit = { cos(phi), sin(phi) };
@@ -140,5 +139,5 @@ __kernel void scatterB(double region_size,
 		}
     }
 
-    lifetimes[idx] = lifetime;
+    lifetimes[y * ROW_SIZE + x] = lifetime;
 }
