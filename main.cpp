@@ -39,16 +39,6 @@ void ProcessInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 }
 
-std::string ReadShaderFile(const char *shader_file) 
-{
-    std::ifstream file(shader_file);
-    std::stringstream sstream;
-    sstream << file.rdbuf();
-
-    std::string contents = sstream.str();
-    return contents;
-}
-
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->num_iterations = 1;
     p_init->mode = Mode::LIFETIME;
@@ -160,7 +150,7 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
-    ElasticScattering* es = new GPUElasticScattering();
+    GPUElasticScattering* es = new GPUElasticScattering();
     es->Init(sp);
     es->Compute();
     auto pixels = es->GetPixels();
@@ -170,49 +160,8 @@ int main(int argc, char **argv)
     GLenum error = glewInit();
     if (error != GLEW_OK) return EXIT_FAILURE;
 
-    // Shaders
-    GLint success;
-
-    std::string source = ReadShaderFile("shader.vs");
-    char *vsource = new char[source.length() + 1];
-    std::copy_n(source.c_str(), source.length() + 1, vsource);
-
-    source = ReadShaderFile("shader.fs");
-    char* fsource = new char[source.length() + 1];
-    std::copy_n(source.c_str(), source.length() + 1, fsource);
-
-    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert_shader, 1, &vsource, nullptr);
-    glCompileShader(vert_shader);
-    
-    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[2048];
-        glGetShaderInfoLog(vert_shader, 2048, nullptr, infoLog);
-        std::cout << "Failed to compile vertex shader. Info:\n" << infoLog << std::endl;
-    }
-
-    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_shader, 1, &fsource, nullptr);
-    glCompileShader(frag_shader);
-
-    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[2048];
-        glGetShaderInfoLog(frag_shader, 2048, nullptr, infoLog);
-        std::cout << "Failed to compile fragment shader. Info:\n" << infoLog << std::endl;
-    }
-
-    GLuint shader_program = glCreateProgram();
-    glAttachShader(shader_program, vert_shader);
-    glAttachShader(shader_program, frag_shader);
-    glLinkProgram(shader_program);
-    glUseProgram(shader_program);
-    glDeleteShader(vert_shader);
-    glDeleteShader(frag_shader);
-
+ 
+#if 0
     // Vertex data 
     /*
     float vertices[] =
@@ -251,6 +200,10 @@ int main(int argc, char **argv)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+
+    
+
+
     // Texture
     int dim = sqrt(pixels.size()/3);
     GLuint tex;
@@ -259,38 +212,26 @@ int main(int argc, char **argv)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-#if 0
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-#else
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#endif
     
     glUseProgram(shader_program);
     glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);
-
+#endif
     while (!glfwWindowShouldClose(window))
     {
         ProcessInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex);
 
-        glUseProgram(shader_program);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_QUADS, 0, 4);
+        es->Draw();
+        
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
-    glDeleteProgram(shader_program);
     glfwTerminate();
     return 0;
 }

@@ -79,11 +79,14 @@ public:
 };
 
 class GPUElasticScattering : public ElasticScattering {
+	unsigned int tex;
+
 	void PrepareOpenCLKernels();
 
 public:
 	virtual void Init(SimulationParameters sp);
 	virtual void Compute();
+	void Draw();
 
 	~GPUElasticScattering();
 };

@@ -108,7 +108,7 @@ __kernel void scatterB(double region_size,
     int x = get_global_id(0);
     int y = get_global_id(1);
     
-    double2 pos = {region_size * x / ROW_SIZE, region_size * y / ROW_SIZE};
+    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
 
     double2 unit = { cos(phi), sin(phi) };
     double2 vel = { speed * unit.x, speed * unit.y };

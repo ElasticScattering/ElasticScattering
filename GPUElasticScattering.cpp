@@ -6,6 +6,7 @@
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
 #include "Details.h"
+#include <GL/glew.h>
 
 // typedef unsigned int uint;
 typedef struct
@@ -19,10 +20,20 @@ typedef struct
     cl_mem db;
     cl_mem impb;
     cl_mem lifetimes;
+    cl_mem image;
 } OCLResources;
 
 OCLResources ocl;
 
+typedef struct
+{
+    GLuint tex;
+    GLuint vbo, vao;
+    GLuint shader_program;
+
+} OpenGLResources;
+
+OpenGLResources ogl;
 
 void GPUElasticScattering::Init(SimulationParameters p_sp) // todo arguments
 {
@@ -53,7 +64,7 @@ void GPUElasticScattering::Init(SimulationParameters p_sp) // todo arguments
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
 
-
+    
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
@@ -67,8 +78,88 @@ void GPUElasticScattering::Init(SimulationParameters p_sp) // todo arguments
 
     sp.particle_count *= 100;
     sp.particle_row_count = sqrt(sp.particle_count);
-//    lifetimes.clear();
-  //  lifetimes.resize(sp.particle_count, 0);
+
+    // Shaders
+    GLint success;
+
+    std::string source = ReadShaderFile("shader.vs");
+    char* vsource = new char[source.length() + 1];
+    std::copy_n(source.c_str(), source.length() + 1, vsource);
+
+    source = ReadShaderFile("shader.fs");
+    char* fsource = new char[source.length() + 1];
+    std::copy_n(source.c_str(), source.length() + 1, fsource);
+
+    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert_shader, 1, &vsource, nullptr);
+    glCompileShader(vert_shader);
+
+    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[2048];
+        glGetShaderInfoLog(vert_shader, 2048, nullptr, infoLog);
+        std::cout << "Failed to compile vertex shader. Info:\n" << infoLog << std::endl;
+    }
+
+    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag_shader, 1, &fsource, nullptr);
+    glCompileShader(frag_shader);
+
+    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[2048];
+        glGetShaderInfoLog(frag_shader, 2048, nullptr, infoLog);
+        std::cout << "Failed to compile fragment shader. Info:\n" << infoLog << std::endl;
+    }
+
+    ogl.shader_program = glCreateProgram();
+    glAttachShader(ogl.shader_program, vert_shader);
+    glAttachShader(ogl.shader_program, frag_shader);
+    glLinkProgram(ogl.shader_program);
+    glUseProgram(ogl.shader_program);
+    glDeleteShader(vert_shader);
+    glDeleteShader(frag_shader);
+
+    // Texture
+    float vertices[] =
+    {
+        // Position,        Tex coord
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
+    };
+
+    GLuint vbo, vao;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    auto stride = 5 * sizeof(float);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //glUseProgram(shader_program);
+//    glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);
+
 
     PrepareOpenCLKernels();
 }
@@ -89,8 +180,13 @@ void GPUElasticScattering::PrepareOpenCLKernels()
 
     ocl.lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
-
     
+    float* pixels = new float[sp.particle_count];
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, sp.particle_row_count, sp.particle_row_count, 0, GL_RGB, GL_FLOAT, pixels);
+
+    ocl.image = clCreateFromGLTexture2D(ocl.context, CL_MEM_WRITE_ONLY, CL_GL_OBJECT_TEXTURE2D, 0, tex, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create GLInterop texture.");
     
     clStatus = clSetKernelArg(ocl.kernel, 0, sizeof(double), (void*)&sp.region_size);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
@@ -128,7 +224,7 @@ void GPUElasticScattering::PrepareOpenCLKernels()
     clStatus = clSetKernelArg(ocl.kernel, 11, sizeof(cl_mem), (void*)&ocl.impb);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
     
-    clStatus = clSetKernelArg(ocl.kernel, 12, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    clStatus = clSetKernelArg(ocl.kernel, 12, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
@@ -141,32 +237,29 @@ void GPUElasticScattering::Compute()
 
     cl_int clStatus;
     size_t global_work_size[2] = { (size_t)sp.particle_row_count, (size_t)sp.particle_row_count };
-    size_t local_work_size[2] = { 10, 10 };
+    size_t local_work_size[2]  = { 10, 10 };
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
 
     clStatus = clFinish(ocl.queue);
 
-    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-    
-    lifetimes.clear();
-    lifetimes.resize(sp.particle_count, 0);
-
-    clEnqueueReadBuffer(ocl.queue, ocl.lifetimes, CL_TRUE, 0, sizeof(double) * sp.particle_count, lifetimes.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
-
-    QueryPerformanceCounter(&endClock);
-    double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
-
-
+    /*
     std::cout << "\n\Results:" << std::endl;
-    for (int i = 0; i < MIN(lifetimes.size(), 2000); i++)
+    for (int i = 0; i < MIN(lifetimes.size(), 0); i++)
         std::cout << lifetimes[i] << ", ";
     std::cout << "..." << std::endl;
+    */
+}
 
-    MakeTexture(sp);
+void GPUElasticScattering::Draw()
+{
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glUseProgram(ogl.shader_program);
+    glBindVertexArray(ogl.vao);
+    glDrawArrays(GL_QUADS, 0, 4);
 }
 
 GPUElasticScattering::~GPUElasticScattering()
@@ -177,4 +270,8 @@ GPUElasticScattering::~GPUElasticScattering()
     clReleaseProgram(ocl.program);
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);
+
+    glDeleteVertexArrays(1, &ogl.vao);
+    glDeleteBuffers(1, &ogl.vbo);
+    glDeleteProgram(ogl.shader_program);
 }
