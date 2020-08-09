@@ -33,6 +33,16 @@ typedef struct
     bool show_info;
 } InitParameters;
 
+std::string ReadShaderFile2(const char* shader_file)
+{
+    std::ifstream file(shader_file);
+    std::stringstream sstream;
+    sstream << file.rdbuf();
+
+    std::string contents = sstream.str();
+    return contents;
+}
+
 void ProcessInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -95,6 +105,10 @@ int main(int argc, char **argv)
 
     GLFWwindow* window;
 
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     if (!glfwInit())
         return -1;
 
@@ -106,13 +120,21 @@ int main(int argc, char **argv)
         glfwTerminate();
         return -1;
     }
+    glfwMakeContextCurrent(window);
 
     RECT rect;
     GetClientRect(GetDesktopWindow(), &rect);
     glfwSetWindowPos(window, rect.right / 2 - width / 2, rect.bottom / 2 - height / 2);
 
-    glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
+
+    GLenum error = glewInit();
+    if (error != GLEW_OK) return EXIT_FAILURE;
+
+    GPUElasticScattering* es = new GPUElasticScattering();
+    es->Init();
+
+    std::cout << "+---------------------------------------------------+" << std::endl;
 
     SimulationParameters sp;
     sp.region_size      = 1e-6;
@@ -125,7 +147,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha            = PI / 4.0;
     sp.phi              = - sp.alpha - 1e-10;
-    sp.magnetic_field   = 30;
+    sp.magnetic_field   = 0;
     sp.angular_speed    = E * sp.magnetic_field / sp.particle_mass;
     sp.tau              = 1e-12;
     
@@ -150,83 +172,20 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
 
-    GPUElasticScattering* es = new GPUElasticScattering();
-    es->Init(sp);
-    es->Compute();
-    auto pixels = es->GetPixels();
-
-    std::cout << "\n\n+---------------------------------------------------+" << std::endl;
-
-    GLenum error = glewInit();
-    if (error != GLEW_OK) return EXIT_FAILURE;
-
- 
-#if 0
-    // Vertex data 
-    /*
-    float vertices[] =
-    {
-        // Position,        Tex coord
-        -0.9f, -0.9f, 0.0f, 0.0f, 0.0f,
-         0.9f, -0.9f, 0.0f, 1.0f, 0.0f,
-         0.9f,  0.9f, 0.0f, 1.0f, 1.0f,
-        -0.9f,  0.9f, 0.0f, 0.0f, 1.0f
-    };
-    */
-    float vertices[] =
-    {
-        // Position,        Tex coord
-        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
-    };
-
-    GLuint vbo, vao;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    
-    glBindVertexArray(vao);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    auto stride = 5 * sizeof(float);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-
-    
-
-
-    // Texture
-    int dim = sqrt(pixels.size()/3);
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, pixels.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    
-    glUseProgram(shader_program);
-    glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);
-#endif
     while (!glfwWindowShouldClose(window))
     {
         ProcessInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_TEXTURE_2D);
 
+        sp.phi += 0.1;
+        if (sp.phi > PI2)
+            sp.phi = 0;
+
+        es->Compute(sp);
         es->Draw();
-        
 
         glfwSwapBuffers(window);
         glfwPollEvents();
