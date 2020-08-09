@@ -68,7 +68,7 @@ inline std::pair<v2, v2> GetCrossPoints(const v2 p1, const double r1, const v2 p
 inline double GetPhi(const v2 pos, const v2 center, const double radius)
 {
     double p = (pos.x - center.x) / radius;
-    assert(abs(p) < 1.0001);
+    assert(abs(p) < 1.0001); // Geen intersectie.
     p = max(min(p, 1), -1);
     double phi = acos(p);
 
@@ -84,13 +84,13 @@ inline double GetCrossAngle(const double p, const double q, const bool clockwise
     return smod(g, PI2);
 }
 
-inline double GetFirstCrossTime(const v2 center, const v2 pos, const v2 ip, const double r, const double ir, const double w, const double clockwise)
+inline double GetFirstCrossTime(const v2 center_orbit, const v2 pos, const v2 ip, const double r, const double ir, const double w, const double clockwise)
 {
-    const auto cross_points = GetCrossPoints(center, r, ip, ir);
+    const auto cross_points = GetCrossPoints(center_orbit, r, ip, ir);
 
-    const double phi0 = GetPhi(pos, center, r);
-    const double phi1 = GetPhi(cross_points.first, center, r);
-    const double phi2 = GetPhi(cross_points.second, center, r);
+    const double phi0 = GetPhi(pos, center_orbit, r);
+    const double phi1 = GetPhi(cross_points.first, center_orbit, r);
+    const double phi2 = GetPhi(cross_points.second, center_orbit, r);
 
     const double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
     const double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;

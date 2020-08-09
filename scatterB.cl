@@ -104,7 +104,7 @@ __kernel void scatterB(double region_size,
                        __global double2 *imps,
                        __global double *lifetimes) 
 {
-    bool clockwise = true;
+    bool clockwise = false;
     int x = get_global_id(0);
     int y = get_global_id(1);
     

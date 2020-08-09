@@ -180,18 +180,30 @@ TEST_CASE("Cross Angle")
 	CHECK(a == 6);
 
 	a = GetCrossAngle(6.1, 0.1, false);
-	CHECK_APPROX_HIGH(a, 0.28);
+	CHECK_APPROX(a, PI2 - 6.0);
 }
 
 TEST_CASE("Cross Time")
 {
-	const v2 center = { 3, 4 };
-	const v2 pos    = { 0, 0 };
-	double t = GetFirstCrossTime(pos, center, { 5, 0 }, 5, 0.1, 2, true); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	const v2 center = { 0, 0 }; 
+	const v2 pos    = { 3, 4 };
+	const double r = 5;
+	double ir = 0.1;
+	double w = 2;
+
+	double t = GetFirstCrossTime(center, pos, { 5, 0 }, r, ir, w, true); // @todo, pos/center omdraaien geeft GetPhi assert error!
 	CHECK_APPROX_HIGH(t, 0.907 / 2);
 
-	//double t2 = GetFirstCrossTime(pos, center, { 5, 0 }, 5, 0.1, 2, false);
-	//AssertEqualS(t+t2, PI);
+	double t2 = GetFirstCrossTime(center, pos, { 5, 0 }, r, ir, w, false); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	CHECK_APPROX(t+t2, (PI2-(ir*2.0 / r))/ w);
+
+
+	ir = 0.059;
+	w = 100;
+	
+	t = GetFirstCrossTime(center, pos, { 5, 0 }, r, ir, w, true);
+	t2 = GetFirstCrossTime(center, pos, { 5, 0 }, r, ir, w, false);
+	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / r)) / w);
 }
 
 #endif // TEST_H

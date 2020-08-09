@@ -33,7 +33,7 @@ void GPUElasticScattering::Init(SimulationParameters p_sp) // todo arguments
     if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
     else {
         double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);
-        sp.particle_max_lifetime = MIN(sp.tau, bound_time);
+        sp.particle_max_lifetime = MIN(sp.tau, bound_time); // move to kernel.
     }
     std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
 
@@ -67,9 +67,7 @@ void GPUElasticScattering::Init(SimulationParameters p_sp) // todo arguments
 
     sp.particle_count *= 100;
     sp.particle_row_count = sqrt(sp.particle_count);
-//    lifetimes.clear();
-  //  lifetimes.resize(sp.particle_count, 0);
-
+    
     PrepareOpenCLKernels();
 }
 
@@ -160,11 +158,12 @@ void GPUElasticScattering::Compute()
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-
+/*
     std::cout << "\n\Results:" << std::endl;
     for (int i = 0; i < MIN(lifetimes.size(), 2000); i++)
         std::cout << lifetimes[i] << ", ";
     std::cout << "..." << std::endl;
+*/
 
     MakeTexture(sp);
 }
