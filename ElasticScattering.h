@@ -63,8 +63,8 @@ protected:
 	}
 
 public:
-	virtual void Init(SimulationParameters sp) = 0;
-	virtual void Compute() = 0;
+	virtual void Init() = 0;
+	virtual void Compute(SimulationParameters sp) = 0;
 	virtual std::vector<float> GetPixels() { return pixels; };
 	
 };
@@ -74,16 +74,17 @@ class CPUElasticScattering : public ElasticScattering {
 	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
 
 public:
-	virtual void Init(SimulationParameters sp);
-	virtual void Compute();
+	virtual void Init();
+	virtual void Compute(SimulationParameters sp);
 };
 
 class GPUElasticScattering : public ElasticScattering {
 	void PrepareOpenCLKernels();
 
 public:
-	virtual void Init(SimulationParameters sp);
-	virtual void Compute();
+	virtual void Init();
+	virtual void Compute(SimulationParameters sp);
+	void Draw();
 
 	~GPUElasticScattering();
 };

@@ -10,6 +10,13 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+
+#include <GL/glew.h>
+#include <GL/wglew.h>
+#include <GL/glfw3.h>
+
+GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -116,16 +123,16 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
 
     cl_context_properties props[] =
     {
+        CL_CONTEXT_PLATFORM,
+        (cl_context_properties)selected_platform,
         CL_GL_CONTEXT_KHR,
         (cl_context_properties)wglGetCurrentContext(),
         CL_WGL_HDC_KHR,
         (cl_context_properties)wglGetCurrentDC(),
-        CL_CONTEXT_PLATFORM,
-        (cl_context_properties)selected_platform,
         0
     };
 
-    ctx = clCreateContext(0, 1, &selected_device, nullptr, nullptr, &cl_status);
+    ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_FAIL_CONDITION(!ctx, cl_status, "Couldn't create context.");
 
     queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &cl_status);
@@ -232,6 +239,17 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     char* info = (char*)_malloca(sizeof(char) * info_size);
     clGetDeviceInfo(device_id, CL_DEVICE_EXTENSIONS, info_size, info, nullptr);
 
+    std::string infos(info);
+    std::stringstream ss(infos);
+    std::string ext;
+    std::vector<std::string> extensions;
+
+    while (std::getline(ss, ext, ' ')) {
+        extensions.push_back(ext);
+    }
+
+    bool glinterop = std::find(extensions.begin(), extensions.end(), "cl_khr_gl_sharing") != extensions.end();
+
     /* Doesn't work
     cl_uint	uMaxImage2DWidth;
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(cl_uint), &uMaxImage2DWidth, &uNumBytes);
@@ -254,7 +272,7 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
     std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
     std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
-    std::cout << "Device extensions:              " << info << std::endl;
+    std::cout << "GL Interop Available:           " << (glinterop ? "True" : "False") << std::endl;
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
 }
 

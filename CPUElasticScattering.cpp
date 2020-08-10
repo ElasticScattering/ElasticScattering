@@ -8,11 +8,21 @@
 #include "ElasticScattering.h"
 #include "Details.h"
 
-void CPUElasticScattering::Init(SimulationParameters p_sp)
+void CPUElasticScattering::Init()
 {
+    // Hmm
+}
+
+void CPUElasticScattering::Compute(SimulationParameters p_sp)
+{
+    double total_time;
+
+    LARGE_INTEGER beginClock, endClock, clockFrequency;
+    QueryPerformanceFrequency(&clockFrequency);
+
     sp = p_sp;
     if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
-    else  {
+    else {
         double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);
         sp.particle_max_lifetime = MIN(sp.tau, bound_time);
     }
@@ -20,26 +30,18 @@ void CPUElasticScattering::Init(SimulationParameters p_sp)
 
     // Initialize arrays.
     impurities.clear();
-    impurities.resize(sp.impurity_count); 
-    
+    impurities.resize(sp.impurity_count);
+
     std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
     std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::random_device r;
     std::default_random_engine re(0);
-    
+
     for (int i = 0; i < sp.impurity_count; i++)
         impurities[i] = { unif(re), unif(re) };
 
     lifetimes.clear();
     lifetimes.resize(sp.particle_count, 0);
-}
-
-void CPUElasticScattering::Compute()
-{
-    double total_time;
-
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
-    QueryPerformanceFrequency(&clockFrequency);
 
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 

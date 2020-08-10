@@ -2,6 +2,8 @@ __constant double PI = 3.141592653589793238463;
 __constant double PI2 = 6.283185307179586;
 
 #define ROW_SIZE 1000
+#define GLINTEROP
+
 
 double smod(double a, double b)
 {
@@ -102,13 +104,17 @@ __kernel void scatterB(double region_size,
                        double angular_speed,
                        int impurity_count,
                        __global double2 *imps,
+#ifdef GLINTEROP
+                       __write_only image2d_t screen)
+#else
                        __global double *lifetimes) 
+#endif
 {
     bool clockwise = false;
     int x = get_global_id(0);
     int y = get_global_id(1);
     
-    double2 pos = {region_size * x / ROW_SIZE, region_size * y / ROW_SIZE};
+    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
 
     double2 unit = { cos(phi), sin(phi) };
     double2 vel = { speed * unit.x, speed * unit.y };
@@ -138,6 +144,10 @@ __kernel void scatterB(double region_size,
                 lifetime = t;
 		}
     }
-
+#ifdef GLINTEROP
+    float k = (float)(lifetime / max_lifetime);
+    write_imagef(screen, (int2)(x, y), (float4)(k,k,k,1.0f));
+#else
     lifetimes[y * ROW_SIZE + x] = lifetime;
+#endif
 }
