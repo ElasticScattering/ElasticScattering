@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 
     SimulationParameters sp;
     sp.region_size        = 1e-6;
-    sp.particle_count     = 1000'000; //100'000'000;
+    sp.particle_count     = 1'000'000; //100'000'000;
     sp.particle_row_count = sqrt(sp.particle_count);
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = - sp.alpha - 1e-10;
-    sp.magnetic_field     = 30;
+    sp.magnetic_field     = 0;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau                = 1e-12;
     

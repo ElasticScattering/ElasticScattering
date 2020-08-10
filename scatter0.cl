@@ -25,34 +25,15 @@ typedef struct ParticleParameters {
 	double angular_speed;       // w
 } ParticleParameters;
 
-__kernel void scatter0(double region_size,
-                       double speed,
-                       double mass,
-                       double imp_radius,
-                       double tau,
-                       double alpha,
-                       double phi,
-                       double magnetic_field,
-                       double angular_speed,
-                       int impurity_count,
-                       __global double2 *imps,
-#ifdef GLINTEROP
-                       __write_only image2d_t screen)
-#else
-                       __global double *lifetimes) 
-#endif
+//     lifetime0(tau,                pos,        phi,        speed,     impurity_count,        imp_radius,                  imps);
+double lifetime0(double tau, double2 pos, double phi, double speed, int impurity_count, double imp_radius, __global double2 *imps)
 {
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
-
+    double impurity_radius_sq = imp_radius * imp_radius;
+    double lifetime = tau;
+      
     double2 unit = { cos(phi), sin(phi) };
     double2 vel = { speed * unit.x, speed * unit.y };
-
-    double impurity_radius_sq = imp_radius * imp_radius;
     
-    double lifetime = tau;
-
     for (int i = 0; i < impurity_count; i++) {
         double2 imp_pos = imps[i];
         double inner = (imp_pos.x - pos.x) * unit.x + (imp_pos.y - pos.y) * unit.y;
@@ -90,6 +71,27 @@ __kernel void scatter0(double region_size,
             lifetime = time_taken.y;
         }
     }
+
+    return lifetime;
+}
+__kernel void lifetime(double region_size,
+                       double speed,
+                       double tau,
+                       double phi,
+                       int impurity_count,
+                       double imp_radius,
+                       __global double2 *imps,
+#ifdef GLINTEROP
+                       __write_only image2d_t screen)
+#else
+                       __global double *lifetimes) 
+#endif
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
+
+    double lifetime = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
 
 #ifdef GLINTEROP
     float k = (float)(lifetime / tau);

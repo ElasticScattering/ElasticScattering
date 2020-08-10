@@ -105,41 +105,15 @@ double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double r, doub
     return min(t1, t2);
 }
 
-__kernel void scatterB(double region_size,
-                       double speed,
-                       double mass,
-                       double imp_radius,
-                       double tau,
-                       double alpha,
-                       double phi,
-                       double magnetic_field,
-                       double angular_speed,
-                       int impurity_count,
-                       __global double2 *imps,
-#ifdef GLINTEROP
-                       __write_only image2d_t screen)
-#else
-                       __global double *lifetimes) 
-#endif
+double lifetime0(double max_lifetime, double2 pos, double2 vel, double angular_speed, bool clockwise, int impurity_count, double imp_radius,  __global double2 *imps)
 {
-    bool clockwise = false;
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    
-    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
-
-    double2 unit = { cos(phi), sin(phi) };
-    double2 vel = { speed * unit.x, speed * unit.y };
-
-    double impurity_radius_sq = imp_radius * imp_radius;
+    double lifetime = max_lifetime;
 
     double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
     double radius = vf / angular_speed;
     double2 center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
 
-    double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
-    double max_lifetime =  min(tau, bound_time);
-    double lifetime = max_lifetime;
+    double impurity_radius_sq = imp_radius * imp_radius;
 
     for (int i = 0; i < impurity_count; i++) {
         double2 imp_pos = imps[i];
@@ -158,6 +132,38 @@ __kernel void scatterB(double region_size,
                 lifetime = t;
 		}
     }
+
+    return lifetime;
+}
+
+__kernel void lifetime(double region_size,
+                       double speed,
+                       double imp_radius,
+                       double tau,
+                       double alpha,
+                       double phi,
+                       double angular_speed,
+                       int impurity_count,
+                       __global double2 *imps,
+#ifdef GLINTEROP
+                       __write_only image2d_t screen)
+#else
+                       __global double *lifetimes) 
+#endif
+{
+    bool clockwise = false;
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    
+    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
+
+    double2 unit = { cos(phi), sin(phi) };
+    double2 vel = { speed * unit.x, speed * unit.y };
+
+    double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
+    double max_lifetime =  min(tau, bound_time);
+    double lifetime = lifetime0(max_lifetime, pos, vel, angular_speed, clockwise, impurity_count, imp_radius, imps);
+
 #ifdef GLINTEROP
     float k = (float)(lifetime / max_lifetime);
     write_imagef(screen, (int2)(x, y), (float4)(k,k,k,1.0f));
