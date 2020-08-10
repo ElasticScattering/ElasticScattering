@@ -31,8 +31,6 @@ typedef struct
     cl_mem image;
 } OCLResources;
 
-OCLResources ocl;
-
 typedef struct
 {
     GLuint tex, tex2;
@@ -41,7 +39,10 @@ typedef struct
 
 } OpenGLResources;
 
+OCLResources ocl;
 OpenGLResources ogl;
+
+LARGE_INTEGER beginClock, endClock, clockFrequency;
 
 std::string ReadShaderFile(const char* shader_file)
 {
@@ -53,13 +54,14 @@ std::string ReadShaderFile(const char* shader_file)
     return contents;
 }
 
-void GPUElasticScattering::Init()
+void GPUElasticScattering::Init(SimulationParameters p_sp)
 {
     char		deviceStr[256];
     char		vendorStr[256];
-    const char* source_file = "program.cl";
-    
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
+    const char* source_file = "scatterB.cl";
+
+    sp = p_sp;
+
     QueryPerformanceFrequency(&clockFrequency);
 
     InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
@@ -141,13 +143,26 @@ void GPUElasticScattering::Init()
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    impurities.clear();
+    impurities.resize(sp.impurity_count);
+
+    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
+    std::random_device r;
+    std::default_random_engine re(0);
+
+    for (int i = 0; i < sp.impurity_count; i++)
+        impurities[i] = { unif(re), unif(re) };
+
+    PrepareOpenCLKernels();
 }
 
 void GPUElasticScattering::PrepareOpenCLKernels()
 {
     cl_int clStatus;
 
-    ocl.kernel = clCreateKernel(ocl.program, "scatter0", &clStatus);
+    ocl.kernel = clCreateKernel(ocl.program, "scatterB", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
     ocl.impb = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
@@ -185,82 +200,60 @@ void GPUElasticScattering::PrepareOpenCLKernels()
     clStatus = clSetKernelArg(ocl.kernel, 0, sizeof(double), (void*)&sp.region_size);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 1, sizeof(double), (void*)&sp.particle_max_lifetime);
+    clStatus = clSetKernelArg(ocl.kernel, 1, sizeof(double), (void*)&sp.particle_speed);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 2, sizeof(double), (void*)&sp.particle_speed);
+    clStatus = clSetKernelArg(ocl.kernel, 2, sizeof(double), (void*)&sp.particle_mass);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 3, sizeof(double), (void*)&sp.particle_mass);
+    clStatus = clSetKernelArg(ocl.kernel, 3, sizeof(double), (void*)&sp.impurity_radius);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 4, sizeof(double), (void*)&sp.impurity_radius);
+    clStatus = clSetKernelArg(ocl.kernel, 4, sizeof(double), (void*)&sp.tau);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 5, sizeof(double), (void*)&sp.tau);
+    clStatus = clSetKernelArg(ocl.kernel, 5, sizeof(double), (void*)&sp.alpha);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 6, sizeof(double), (void*)&sp.alpha);
+    clStatus = clSetKernelArg(ocl.kernel, 6, sizeof(double), (void*)&sp.phi);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 7, sizeof(double), (void*)&sp.phi);
+    clStatus = clSetKernelArg(ocl.kernel, 7, sizeof(double), (void*)&sp.magnetic_field);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 8, sizeof(double), (void*)&sp.magnetic_field);
+    clStatus = clSetKernelArg(ocl.kernel, 8, sizeof(double), (void*)&sp.angular_speed);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 9, sizeof(double), (void*)&sp.angular_speed);
+    clStatus = clSetKernelArg(ocl.kernel, 9, sizeof(int), (void*)&sp.impurity_count);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.kernel, 10, sizeof(int), (void*)&sp.impurity_count);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.kernel, 11, sizeof(cl_mem), (void*)&ocl.impb);
+    clStatus = clSetKernelArg(ocl.kernel, 10, sizeof(cl_mem), (void*)&ocl.impb);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
 #ifdef GL_INTEROP
-    clStatus = clSetKernelArg(ocl.kernel, 12, sizeof(cl_mem), (void*)&ocl.image);
+    clStatus = clSetKernelArg(ocl.kernel, 11, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 #else
-    clStatus = clSetKernelArg(ocl.kernel, 12, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    clStatus = clSetKernelArg(ocl.kernel, 11, sizeof(cl_mem), (void*)&ocl.lifetimes);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 #endif
 }
 
-void GPUElasticScattering::Compute(SimulationParameters p_sp)
+void GPUElasticScattering::Compute()
 {
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
-    QueryPerformanceFrequency(&clockFrequency);
-    QueryPerformanceCounter(&beginClock);
-
-    sp = p_sp;
-
-    if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
-    else {
-        double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);
-        sp.particle_max_lifetime = MIN(sp.tau, bound_time);
-    }
-    std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
-
-    impurities.clear();
-    impurities.resize(sp.impurity_count);
-
-    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
-    std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
-    std::random_device r;
-    std::default_random_engine re(0);
-
-    for (int i = 0; i < sp.impurity_count; i++)
-        impurities[i] = { unif(re), unif(re) };
-
-    sp.particle_count *= 100;
-    sp.particle_row_count = sqrt(sp.particle_count);
-
-    PrepareOpenCLKernels();
-
+    sp.phi += 0.1;
+    if (sp.phi > PI2)
+        sp.phi = 0;
+    
     cl_int clStatus;
+
+    clStatus = clSetKernelArg(ocl.kernel, 6, sizeof(double), (void*)&sp.phi);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
     size_t global_work_size[2] = { (size_t)sp.particle_row_count, (size_t)sp.particle_row_count };
-    size_t local_work_size[2]  = { 10, 10 };
+    size_t local_work_size[2] = { 10, 10 };
+
+    QueryPerformanceCounter(&beginClock);
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Couldn't start kernel execution.");
@@ -275,11 +268,11 @@ void GPUElasticScattering::Compute(SimulationParameters p_sp)
 
     clEnqueueReadBuffer(ocl.queue, ocl.lifetimes, CL_TRUE, 0, sizeof(double) * sp.particle_count, lifetimes.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus != CL_SUCCESS, clStatus, "Failed to read back result.");
+#endif
 
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
-#endif
 }
 
 

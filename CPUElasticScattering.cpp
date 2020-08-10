@@ -8,18 +8,8 @@
 #include "ElasticScattering.h"
 #include "Details.h"
 
-void CPUElasticScattering::Init()
+void CPUElasticScattering::Init(SimulationParameters p_sp)
 {
-    // Hmm
-}
-
-void CPUElasticScattering::Compute(SimulationParameters p_sp)
-{
-    double total_time;
-
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
-    QueryPerformanceFrequency(&clockFrequency);
-
     sp = p_sp;
     if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
     else {
@@ -42,6 +32,14 @@ void CPUElasticScattering::Compute(SimulationParameters p_sp)
 
     lifetimes.clear();
     lifetimes.resize(sp.particle_count, 0);
+}
+
+void CPUElasticScattering::Compute()
+{
+    double total_time;
+
+    LARGE_INTEGER beginClock, endClock, clockFrequency;
+    QueryPerformanceFrequency(&clockFrequency);
 
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 

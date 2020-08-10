@@ -10,6 +10,19 @@ double smod(double a, double b)
     return a - b * floor(a / b);
 }
 
+inline double GetBoundTime(const double phi, const double alpha, const double w, const bool is_electron, const bool is_future)
+{
+    double remaining = smod(phi + alpha, PI * 0.5);
+
+    double dphi;
+    if (!is_electron && is_future) dphi = remaining;
+    else if (!is_electron)         dphi = 2.0 * alpha - remaining;
+    else if (is_future)            dphi = 2.0 * alpha - remaining;
+    else                           dphi = remaining;
+
+    return dphi / w;
+}
+
 double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, double vf, bool is_electron)
 {
     double2 shift = { radius * velocity.y / vf, -radius * velocity.x / vf };
@@ -93,7 +106,6 @@ double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double r, doub
 }
 
 __kernel void scatterB(double region_size,
-                       double max_lifetime,
                        double speed,
                        double mass,
                        double imp_radius,
@@ -125,6 +137,8 @@ __kernel void scatterB(double region_size,
     double radius = vf / angular_speed;
     double2 center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
 
+    double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
+    double max_lifetime =  min(tau, bound_time);
     double lifetime = max_lifetime;
 
     for (int i = 0; i < impurity_count; i++) {

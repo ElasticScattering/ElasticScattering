@@ -26,7 +26,6 @@ typedef struct ParticleParameters {
 } ParticleParameters;
 
 __kernel void scatter0(double region_size,
-                       double max_lifetime,
                        double speed,
                        double mass,
                        double imp_radius,
@@ -51,9 +50,8 @@ __kernel void scatter0(double region_size,
     double2 vel = { speed * unit.x, speed * unit.y };
 
     double impurity_radius_sq = imp_radius * imp_radius;
-
-
-    double lifetime = max_lifetime;
+    
+    double lifetime = tau;
 
     for (int i = 0; i < impurity_count; i++) {
         double2 imp_pos = imps[i];
@@ -94,7 +92,7 @@ __kernel void scatter0(double region_size,
     }
 
 #ifdef GLINTEROP
-    float k = (float)(lifetime / max_lifetime);
+    float k = (float)(lifetime / tau);
     write_imagef(screen, (int2)(x, y), (float4)(k,k,k,1.0f));
 #else
     lifetimes[y * ROW_SIZE + x] = lifetime;

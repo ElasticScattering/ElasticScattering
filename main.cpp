@@ -131,14 +131,9 @@ int main(int argc, char **argv)
     GLenum error = glewInit();
     if (error != GLEW_OK) return EXIT_FAILURE;
 
-    GPUElasticScattering* es = new GPUElasticScattering();
-    es->Init();
-
-    std::cout << "+---------------------------------------------------+" << std::endl;
-
     SimulationParameters sp;
     sp.region_size        = 1e-6;
-    sp.particle_count     = 10'000; //100'000'000;
+    sp.particle_count     = 1000'000; //100'000'000;
     sp.particle_row_count = sqrt(sp.particle_count);
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
@@ -147,7 +142,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = - sp.alpha - 1e-10;
-    sp.magnetic_field     = 0;
+    sp.magnetic_field     = 30;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau                = 1e-12;
     
@@ -171,6 +166,10 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.alpha <= 0, "Alpha should be positive.");
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
+   
+    GPUElasticScattering* es = new GPUElasticScattering();
+    es->Init(sp);
+    std::cout << "+---------------------------------------------------+" << std::endl;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -180,11 +179,7 @@ int main(int argc, char **argv)
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_TEXTURE_2D);
 
-        sp.phi += 0.1;
-        if (sp.phi > PI2)
-            sp.phi = 0;
-
-        es->Compute(sp);
+        es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);
