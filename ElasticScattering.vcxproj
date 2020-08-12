@@ -226,6 +226,7 @@
     <ClInclude Include="utils\Test.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="program.cl" />
     <None Include="scatter0.cl" />
     <None Include="scatterB.cl" />
   </ItemGroup>

@@ -20,33 +20,26 @@ typedef struct Simulation {
     double alpha;
 } Simulation;
 
-typedef struct ParticleParameters {
-	double phi;
-	double angular_speed;       // w
-} ParticleParameters;
-
-//     lifetime0(tau,                pos,        phi,        speed,     impurity_count,        imp_radius,                  imps);
 double lifetime0(double tau, double2 pos, double phi, double speed, int impurity_count, double imp_radius, __global double2 *imps)
 {
     double impurity_radius_sq = imp_radius * imp_radius;
     double lifetime = tau;
       
     double2 unit = { cos(phi), sin(phi) };
-    double2 vel = { speed * unit.x, speed * unit.y };
+    double2 vel = unit * speed;
     
     for (int i = 0; i < impurity_count; i++) {
         double2 imp_pos = imps[i];
         double inner = (imp_pos.x - pos.x) * unit.x + (imp_pos.y - pos.y) * unit.y;
-        double2 projected = { pos.x + inner * unit.x, pos.y + inner * unit.y };
+        double2 projected = pos + unit * inner;
         
-        double d1 = projected.x - imp_pos.x;
-        double d2 = projected.y - imp_pos.y;
-        double a = d1*d1 + d2*d2;
-        if (a > impurity_radius_sq) {
+        double2 d = projected - imp_pos;
+        double diff = impurity_radius_sq - dot(d, d);
+        if (diff < 0.0) {
             continue;
         }
 
-        double L = sqrt(impurity_radius_sq - a);
+        double L = sqrt(diff);
 
         double2 time_taken;
         if (vel.x != 0) {
@@ -57,9 +50,9 @@ double lifetime0(double tau, double2 pos, double phi, double speed, int impurity
             time_taken.x = -((projected.y - L * unit.y) - pos.y) / vel.y;
             time_taken.y = -((projected.y + L * unit.y) - pos.y) / vel.y;
         }
+        
 
-        if ((time_taken.x * time_taken.y) < 0)
-        {
+        if ((time_taken.x * time_taken.y) < 0) {
             lifetime = 0;
             break;        
 		}
@@ -74,13 +67,7 @@ double lifetime0(double tau, double2 pos, double phi, double speed, int impurity
 
     return lifetime;
 }
-__kernel void lifetime(double region_size,
-                       double speed,
-                       double tau,
-                       double phi,
-                       int impurity_count,
-                       double imp_radius,
-                       __global double2 *imps,
+__kernel void lifetime(double region_size, double speed, double tau, double phi, int impurity_count, double imp_radius, __global double2 *imps,
 #ifdef GLINTEROP
                        __write_only image2d_t screen)
 #else
@@ -89,7 +76,8 @@ __kernel void lifetime(double region_size,
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-    double2 pos = {region_size * x / (ROW_SIZE-1), region_size * y / (ROW_SIZE-1)};
+    int row_size = get_global_size(0)-1;
+    double2 pos = (double2)(region_size * x, region_size * y) / row_size;
 
     double lifetime = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
 
@@ -97,6 +85,6 @@ __kernel void lifetime(double region_size,
     float k = (float)(lifetime / tau);
     write_imagef(screen, (int2)(x, y), (float4)(k,k,k,1.0f));
 #else
-    lifetimes[y * ROW_SIZE + x] = lifetime;
+    lifetimes[y * (row_size+1) + x] = lifetime;
 #endif
 }

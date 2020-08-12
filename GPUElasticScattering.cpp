@@ -272,7 +272,8 @@ void GPUElasticScattering::Compute()
     sp.phi += 0.1;
     if (sp.phi > PI2)
         sp.phi = 0;
-    
+    std::cout << "Phi:               " << sp.phi << std::endl;
+
     cl_int clStatus;
 
     if (sp.angular_speed == 0) clStatus = clSetKernelArg(ocl.kernel, 3, sizeof(double), (void*)&sp.phi);
@@ -303,8 +304,6 @@ void GPUElasticScattering::Compute()
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 }
-
-
 
 void GPUElasticScattering::Draw()
 {

@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     sp.impurity_radius    = 1.5e-8;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
-    sp.phi                = - sp.alpha - 1e-10;
+    sp.phi                = -sp.alpha - 1e-10;
     sp.magnetic_field     = 0;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau                = 1e-12;
