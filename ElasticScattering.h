@@ -7,8 +7,8 @@
 typedef struct
 {
 	double region_size;
-	int particle_count;
 	int particle_row_count;
+	int particle_count;
 	double particle_max_lifetime;
 	double particle_speed;      // v
 	double particle_mass;       // m
@@ -79,6 +79,9 @@ public:
 
 class GPUElasticScattering : public ElasticScattering {
 	void PrepareOpenCLKernels();
+	void PrepareScatterKernel();
+	void PrepareTexKernel();
+	void PrepareAverageDistanceKernel();
 
 public:
 	virtual void Init(SimulationParameters p_sp);

@@ -3,9 +3,9 @@
 #include <windows.h>
 
 #include "ElasticScattering.h"
-#include "utils/Test.h"
+
+#include "Test.h"
 #include "utils/ErrorMacros.h"
-#include "doctest.h"
 
 #include <string>
 #include <iostream>
@@ -32,16 +32,6 @@ typedef struct
     Mode mode;
     bool show_info;
 } InitParameters;
-
-std::string ReadShaderFile2(const char* shader_file)
-{
-    std::ifstream file(shader_file);
-    std::stringstream sstream;
-    sstream << file.rdbuf();
-
-    std::string contents = sstream.str();
-    return contents;
-}
 
 void ProcessInput(GLFWwindow* window)
 {
@@ -133,8 +123,8 @@ int main(int argc, char **argv)
 
     SimulationParameters sp;
     sp.region_size        = 1e-6;
-    sp.particle_count     = 1'000'000; //100'000'000;
-    sp.particle_row_count = sqrt(sp.particle_count);
+    sp.particle_row_count = 1024;
+    sp.particle_count     = sp.particle_row_count * sp.particle_row_count;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
     sp.impurity_count     = 100;
@@ -142,7 +132,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = -sp.alpha - 1e-10;
-    sp.magnetic_field     = 0;
+    sp.magnetic_field     = 30;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau                = 1e-12;
     
@@ -167,8 +157,18 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
    
+    glEnable(GL_TEXTURE_2D);
+
+    /*
+    CPUElasticScattering* ces = new CPUElasticScattering();
+    ces->Init(sp);
+    ces->Compute();
+    */
+
     GPUElasticScattering* es = new GPUElasticScattering();
     es->Init(sp);
+    es->Compute();
+
     std::cout << "+---------------------------------------------------+" << std::endl;
 
     while (!glfwWindowShouldClose(window))
@@ -177,9 +177,7 @@ int main(int argc, char **argv)
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        glEnable(GL_TEXTURE_2D);
 
-        es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);

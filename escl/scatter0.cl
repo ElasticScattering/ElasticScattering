@@ -1,24 +1,4 @@
-__constant double PI = 3.141592653589793238463;
-__constant double PI2 = 6.283185307179586;
-
-#define GLINTEROP
-
-#define ROW_SIZE 1000
-
-
-typedef struct Simulation {
-    double region_size;
-	int particle_count;
-	int particle_row_count;
-    double impurity_radius;     // r
-	double impurity_radius_sq;  // r^2
-    double magnetic_field;      // B
-    double _max_lifetime;
-	double speed;      // v
-	double mass;       // m
-	double tau;
-    double alpha;
-} Simulation;
+#include "escl/common.h"
 
 double lifetime0(double tau, double2 pos, double phi, double speed, int impurity_count, double imp_radius, __global double2 *imps)
 {
@@ -67,24 +47,13 @@ double lifetime0(double tau, double2 pos, double phi, double speed, int impurity
 
     return lifetime;
 }
-__kernel void lifetime(double region_size, double speed, double tau, double phi, int impurity_count, double imp_radius, __global double2 *imps,
-#ifdef GLINTEROP
-                       __write_only image2d_t screen)
-#else
-                       __global double *lifetimes) 
-#endif
+
+__kernel void lifetime(double region_size, double speed, double tau, double phi, int impurity_count, double imp_radius, __global double2 *imps, __global double *lifetimes) 
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-    int row_size = get_global_size(0)-1;
-    double2 pos = (double2)(region_size * x, region_size * y) / row_size;
+    int row_size = get_global_size(0);
+    double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
 
-    double lifetime = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
-
-#ifdef GLINTEROP
-    float k = (float)(lifetime / tau);
-    write_imagef(screen, (int2)(x, y), (float4)(k,k,k,1.0f));
-#else
-    lifetimes[y * (row_size+1) + x] = lifetime;
-#endif
+    lifetimes[y * row_size + x] = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
 }

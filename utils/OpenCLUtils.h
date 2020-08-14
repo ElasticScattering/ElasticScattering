@@ -143,11 +143,13 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
     *p_queue = queue;
 }
 
-static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl_context, const char * p_soure_file, cl_program *p_ocl_program)
+static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_context p_ocl_context, const char *p_soure_file, cl_program *p_ocl_program)
 {
     cl_int clStatus;
     
-    std::fstream kernelFile(p_soure_file);
+    std::string relative_path("escl/");
+    relative_path.append(p_soure_file);
+    std::fstream kernelFile(relative_path);
     std::string content((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
     const char *code = new char[content.size()];
     code = content.c_str();
