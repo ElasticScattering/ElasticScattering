@@ -55,5 +55,8 @@ __kernel void lifetime(double region_size, double speed, double tau, double phi,
     int row_size = get_global_size(0);
     double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
 
+    //for phi waardes
+
+    //gem
     lifetimes[y * row_size + x] = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
 }

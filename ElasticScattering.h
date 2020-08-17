@@ -4,8 +4,15 @@
 #include <vector>
 #include "Constants.h"
 
+enum class Mode {
+	AVG_LIFETIME,
+
+	CONDUCTIVITY
+};
+
 typedef struct
 {
+	Mode mode;
 	double region_size;
 	int particle_row_count;
 	int particle_count;
@@ -81,7 +88,7 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareOpenCLKernels();
 	void PrepareScatterKernel();
 	void PrepareTexKernel();
-	void PrepareAverageDistanceKernel();
+	void PrepareLifetimeSumKernel();
 
 public:
 	virtual void Init(SimulationParameters p_sp);

@@ -41,16 +41,12 @@ typedef struct
     GLuint tex, tex2;
     GLuint vbo, vao;
     GLuint shader_program;
-
 } OpenGLResources;
 
 OCLResources ocl;
 OpenGLResources ogl;
 
 LARGE_INTEGER beginClock, endClock, clockFrequency;
-
-int tmp_size  = 2048;
-int tmp_block = 256;
 
 std::string ReadShaderFile(const char* shader_file)
 {
@@ -285,7 +281,10 @@ void GPUElasticScattering::PrepareTexKernel()
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(cl_mem), (void*)&ocl.image);
+    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&sp.tau);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
@@ -352,7 +351,7 @@ void GPUElasticScattering::Compute()
 
     std::cout << "GPU result: " << result / sp.particle_count << std::endl;
     
-    /*
+    /* Serial sum
     std::vector<double> results2;
     results2.resize(sp.particle_count, 1);
     clEnqueueReadBuffer(ocl.queue, ocl.lifetimes, CL_TRUE, 0, sizeof(double) * sp.particle_count, results2.data(), 0, nullptr, nullptr);

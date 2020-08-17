@@ -18,18 +18,10 @@
 #include <GL/glfw3.h>
 
 
-enum class Mode {
-    LIFETIME,
-    STATS,
-    AVG_DISTANCE,
-    CONDUCTIVITY
-};
-
 typedef struct
 {
     bool run_tests;
     int num_iterations;
-    Mode mode;
     bool show_info;
 } InitParameters;
 
@@ -41,7 +33,7 @@ void ProcessInput(GLFWwindow* window)
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->num_iterations = 1;
-    p_init->mode = Mode::LIFETIME;
+    //p_init->mode = Mode::LIFETIME;
     p_init->show_info = true;
     p_init->run_tests = false;
 
@@ -62,6 +54,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
 
     p_init->num_iterations = atoi(argv[1]);
 
+    /*
     std::unordered_map<std::string, Mode> modes
     {
         {"lifetime",     Mode::LIFETIME},
@@ -74,6 +67,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     auto iterator = modes.find(key);
     FAIL_CONDITION(iterator == modes.end(), "Couldn't understand second command line argument.");
     p_init->mode = iterator->second;
+    */
 
     p_init->show_info = strcmp(argv[3], "show");
 }
@@ -131,10 +125,10 @@ int main(int argc, char **argv)
     sp.impurity_radius    = 1.5e-8;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
-    sp.phi                = -sp.alpha - 1e-10;
+    sp.phi                = 0;// -sp.alpha - 1e-10;
     sp.magnetic_field     = 30;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
-    sp.tau                = 1e-12;
+    sp.tau = 1e-12; // 3.7e-13;
     
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
@@ -167,7 +161,6 @@ int main(int argc, char **argv)
 
     GPUElasticScattering* es = new GPUElasticScattering();
     es->Init(sp);
-    es->Compute();
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 
@@ -178,6 +171,7 @@ int main(int argc, char **argv)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);

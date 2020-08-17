@@ -38,16 +38,20 @@ double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, double vf,
 
 bool CirclesCross(double2 p1, double r1, double2 p2, double r2)
 {
-    double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
-    if (dist_squared >= pow(r1 + r2, 2)) return false;
-    if (dist_squared <= pow(r1 - r2, 2)) return false;
+    double2 q = p1 - p2;
+
+    double dist_squared = q.x *q.x + q.y*q.y;
+    if (dist_squared >= (r1 + r2)*(r1 + r2)) return false;
+    if (dist_squared <= (r1 - r2)*(r1 - r2)) return false;
 
     return true;
 }
 
 double4 GetCrossPoints(double2 p1, double r1, double2 p2, double r2)
 {
-    double dist_squared = pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
+    double2 q = p1 - p2;
+
+    double dist_squared = dot(q,q);
     double dist = sqrt(dist_squared);
     double xs = (dist_squared + r1 * r1 - r2 * r2) / (2.0 * dist);
     double ys = sqrt(r1 * r1 - xs * xs);
@@ -113,7 +117,7 @@ double lifetime0(double max_lifetime, double2 pos, double2 vel, double angular_s
     for (int i = 0; i < impurity_count; i++) {
         double2 imp_pos = imps[i];
 
-        double2 d = pos - imp_pos; 
+        double2 d = pos - imp_pos;
         if (impurity_radius_sq > dot(d,d))
         {
             lifetime = 0;

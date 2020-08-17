@@ -27,24 +27,50 @@ __kernel void sum(__global double *A, __global double *B, __local double *local_
 	}
 
 	if (local_id == 0) {
-		B[get_group_id(0)] = local_sums[0] +  local_sums[1];
+		B[get_group_id(0)] = local_sums[0] + local_sums[1];
 	}
 }
 
 
-__kernel void to_texture(__global double* lifetimes, __write_only image2d_t screen)
+__kernel void add_weights(__global double* A)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+
+	double x_mult = 1;
+	if (x > 0) {
+		x_mult = (x % 2 == 0) 4 : 2;
+	}
+}
+
+__kernel void to_texture(__global double* lifetimes, double tau, __write_only image2d_t screen)
 {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int row_size = get_global_size(0);
 
-	float k = (float)(lifetimes[y * row_size + x] / 1e-12); // @Todo, wat is hier de max lifetime?
+	float k = (float)(lifetimes[y * row_size + x] / tau);
 	write_imagef(screen, (int2)(x, y), (float4)(k, k, k, 1.0f));
 }
 
 
-__kernel void sigma_xx(__global double* lifetimes)
+__kernel void sigma_xx(double2 pos, double phi, double magnetic_field, double vf, double L, double alpha, double tau, __global double* lifetimes, __global double *sigma_xx)
 {
+	/*
+	double T = 0;
+	
+	double wc = E * B / m;
+	
+	double z = exp(-T / tau);
+	double r = cos(phi) - cos(phi + wc * T) * z;
+	r       += wc * tau * sin(phi + wc * T) * z;
+	r       -= wc * tau * sin(phi);
+	r       *= cos(phi);
 
+	double kf = m * vf / HBAR;
+	double outside = E * E * kf * kf / (2.0 * PI * PI * m * L * L * C);
+	outside *= tau / (1 + pow(E * magnetic_field * tau / m), 2);
+
+	sigma_xx[get_global_id(0)] = r * outside;*/
 }
 #endif // CL_COMMON_H
