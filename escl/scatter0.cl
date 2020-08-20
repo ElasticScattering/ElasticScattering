@@ -48,15 +48,12 @@ double lifetime0(double tau, double2 pos, double phi, double speed, int impurity
     return lifetime;
 }
 
-__kernel void lifetime(double region_size, double speed, double tau, double phi, int impurity_count, double imp_radius, __global double2 *imps, __global double *lifetimes) 
+__kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global double *lifetimes) 
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
     int row_size = get_global_size(0);
-    double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
+    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
 
-    //for phi waardes
-
-    //gem
-    lifetimes[y * row_size + x] = lifetime0(tau, pos, phi, speed, impurity_count, imp_radius, imps);
+    lifetimes[y * row_size + x] = lifetime0(sp.tau, pos, sp.phi, sp.particle_speed, sp.impurity_count, sp.impurity_radius, imps);
 }

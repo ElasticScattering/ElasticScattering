@@ -8,9 +8,11 @@
 #include "ElasticScattering.h"
 #include "Details.h"
 
-void CPUElasticScattering::Init(SimulationParameters p_sp)
+void CPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
 {
     sp = p_sp;
+    mode = p_mode;
+
     if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
     else {
         double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);

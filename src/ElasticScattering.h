@@ -3,31 +3,12 @@
 
 #include <vector>
 #include "Constants.h"
+#include "common_structs.h"
 
 enum class Mode {
 	AVG_LIFETIME,
 	SIGMA_XX
 };
-
-typedef struct
-{
-	Mode mode;
-	double region_size;
-	int particle_row_count;
-	int particle_count;
-	double particle_max_lifetime;
-	double particle_speed;      // v
-	double particle_mass;       // m
-	int impurity_count;
-	double impurity_radius;     // r
-	double impurity_radius_sq;  // r^2
-	double tau;
-
-	double alpha;
-	double phi;
-	double magnetic_field;      // B
-	double angular_speed;       // w
-} SimulationParameters;
 
 class ElasticScattering {
 protected:
@@ -36,6 +17,7 @@ protected:
 	std::vector<float> pixels;
 
 	SimulationParameters sp;
+	Mode mode;
 
 	void MakeTexture(const SimulationParameters sp)
 	{
@@ -69,7 +51,7 @@ protected:
 	}
 
 public:
-	virtual void Init(SimulationParameters p_sp) = 0;
+	virtual void Init(Mode p_mode, SimulationParameters p_sp) = 0;
 	virtual void Compute() = 0;
 	virtual std::vector<float> GetPixels() { return pixels; };
 };
@@ -79,19 +61,19 @@ class CPUElasticScattering : public ElasticScattering {
 	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
 
 public:
-	virtual void Init(SimulationParameters p_sp);
+	virtual void Init(Mode p_mode, SimulationParameters p_sp);
 	virtual void Compute();
 };
 
 class GPUElasticScattering : public ElasticScattering {
-	void PrepareOpenCLKernels(Mode mode);
+	void PrepareOpenCLKernels();
 	void PrepareScatterKernel();
-	void PrepareTexKernel(Mode mode);
+	void PrepareTexKernel();
 	void PrepareLifetimeSumKernel();
 	void PrepareIntegrandKernel();
 
 public:
-	virtual void Init(SimulationParameters p_sp);
+	virtual void Init(Mode p_mode, SimulationParameters p_sp);
 	virtual void Compute();
 	void Draw();
 

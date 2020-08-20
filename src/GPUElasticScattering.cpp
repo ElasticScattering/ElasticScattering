@@ -59,9 +59,10 @@ std::string ReadShaderFile(const char* shader_file)
     return contents;
 }
 
-void GPUElasticScattering::Init(SimulationParameters p_sp)
+void GPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
 {
     sp = p_sp;
+    mode = p_mode;
 
     QueryPerformanceFrequency(&clockFrequency);
     
@@ -149,6 +150,7 @@ void GPUElasticScattering::Init(SimulationParameters p_sp)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
@@ -160,10 +162,10 @@ void GPUElasticScattering::Init(SimulationParameters p_sp)
     for (int i = 0; i < sp.impurity_count; i++)
         impurities[i] = { unif(re), unif(re) };
 
-    PrepareOpenCLKernels(sp.mode);
+    PrepareOpenCLKernels();
 }
 
-void GPUElasticScattering::PrepareOpenCLKernels(Mode mode)
+void GPUElasticScattering::PrepareOpenCLKernels()
 {
     if (mode == Mode::SIGMA_XX)
     {
@@ -174,7 +176,7 @@ void GPUElasticScattering::PrepareOpenCLKernels(Mode mode)
         PrepareScatterKernel();
         PrepareLifetimeSumKernel();
     }
-    PrepareTexKernel(mode);
+    PrepareTexKernel();
 }
 
 void GPUElasticScattering::PrepareScatterKernel()
@@ -193,70 +195,17 @@ void GPUElasticScattering::PrepareScatterKernel()
     ocl.lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
 
-    if (sp.angular_speed == 0)
-    {
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(double), (void*)&sp.region_size);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(double), (void*)&sp.particle_speed);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(double), (void*)&sp.tau);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(double), (void*)&sp.phi);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 4, sizeof(int), (void*)&sp.impurity_count);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 5, sizeof(double), (void*)&sp.impurity_radius);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 6, sizeof(cl_mem), (void*)&ocl.impurities);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 7, sizeof(cl_mem), (void*)&ocl.image);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 7, sizeof(cl_mem), (void*)&ocl.lifetimes);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-    }
-    else
-    {
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(double), (void*)&sp.region_size);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(double), (void*)&sp.particle_speed);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(double), (void*)&sp.impurity_radius);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(double), (void*)&sp.tau);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 4, sizeof(double), (void*)&sp.alpha);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 5, sizeof(double), (void*)&sp.phi);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 6, sizeof(double), (void*)&sp.angular_speed);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 7, sizeof(int), (void*)&sp.impurity_count);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 8, sizeof(cl_mem), (void*)&ocl.impurities);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 9, sizeof(cl_mem), (void*)&ocl.lifetimes);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-    }
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
-void GPUElasticScattering::PrepareTexKernel(Mode mode)
+void GPUElasticScattering::PrepareTexKernel()
 {
     {
         float* pixels = new float[4 * sp.particle_count];
@@ -373,7 +322,7 @@ void GPUElasticScattering::Compute()
     size_t global_work_size[2] = { (size_t)sp.particle_row_count, (size_t)sp.particle_row_count };
     size_t local_work_size[2] = { 16, 16 };
 
-    if (sp.mode == Mode::AVG_LIFETIME)
+    if (mode == Mode::AVG_LIFETIME)
     {
         sp.phi += 0.1;
         if (sp.phi > PI2)
@@ -381,10 +330,10 @@ void GPUElasticScattering::Compute()
         std::cout << "Phi:               " << sp.phi << std::endl;
 
         cl_int clStatus;
-
-        if (sp.angular_speed == 0) clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(double), (void*)&sp.phi);
-        else                       clStatus = clSetKernelArg(ocl.scatter_kernel, 5, sizeof(double), (void*)&sp.phi);
+        
+        clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
         CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+        
 
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.scatter_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start kernel execution.");
@@ -411,7 +360,7 @@ void GPUElasticScattering::Compute()
 
         std::cout << "GPU result: " << result / sp.particle_count << std::endl;
     }
-    else if (sp.mode == Mode::SIGMA_XX) {
+    else if (mode == Mode::SIGMA_XX) {
         cl_int clStatus;
 
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.phi_integrand, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);

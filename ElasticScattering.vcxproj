@@ -165,7 +165,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;$(SolutionDir)libs;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;$(SolutionDir)libs;$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -213,18 +213,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CPUElasticScattering.cpp" />
-    <ClCompile Include="GPUElasticScattering.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="src\CPUElasticScattering.cpp" />
+    <ClCompile Include="src\GPUElasticScattering.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Constants.h" />
-    <ClInclude Include="Details.h" />
-    <ClInclude Include="ElasticScattering.h" />
     <ClInclude Include="escl\common.h" />
-    <ClInclude Include="Test.h" />
-    <ClInclude Include="utils\ErrorMacros.h" />
-    <ClInclude Include="utils\OpenCLUtils.h" />
+    <ClInclude Include="escl\common_structs.h" />
+    <ClInclude Include="src\common_structs.h" />
+    <ClInclude Include="src\Constants.h" />
+    <ClInclude Include="src\Details.h" />
+    <ClInclude Include="src\ElasticScattering.h" />
+    <ClInclude Include="src\Shader.h" />
+    <ClInclude Include="src\Test.h" />
+    <ClInclude Include="src\utils\ErrorMacros.h" />
+    <ClInclude Include="src\utils\OpenCLUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="escl\scatter0.cl" />

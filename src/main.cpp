@@ -17,7 +17,6 @@
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
 
-
 typedef struct
 {
     bool run_tests;
@@ -116,7 +115,6 @@ int main(int argc, char **argv)
     if (error != GLEW_OK) return EXIT_FAILURE;
 
     SimulationParameters sp;
-    sp.mode               = Mode::SIGMA_XX;
     sp.region_size        = 1e-6;
     sp.particle_row_count = 1024;
     sp.particle_count     = sp.particle_row_count * sp.particle_row_count;
@@ -127,7 +125,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = 0;// -sp.alpha - 1e-10;
-    sp.magnetic_field     = 0.01;
+    sp.magnetic_field     = 30;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau = 1e-12; // 3.7e-13;
     
@@ -152,17 +150,8 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
    
-    glEnable(GL_TEXTURE_2D);
-
-    /*
-    CPUElasticScattering* ces = new CPUElasticScattering();
-    ces->Init(sp);
-    ces->Compute();
-    */
-
-    GPUElasticScattering* es = new GPUElasticScattering();
-    es->Init(sp);
-    es->Compute();
+    auto es = new GPUElasticScattering();
+    es->Init(Mode::AVG_LIFETIME, sp);
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 
@@ -173,6 +162,7 @@ int main(int argc, char **argv)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);
