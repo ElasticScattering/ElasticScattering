@@ -6,8 +6,7 @@
 
 enum class Mode {
 	AVG_LIFETIME,
-
-	CONDUCTIVITY
+	SIGMA_XX
 };
 
 typedef struct
@@ -85,10 +84,11 @@ public:
 };
 
 class GPUElasticScattering : public ElasticScattering {
-	void PrepareOpenCLKernels();
+	void PrepareOpenCLKernels(Mode mode);
 	void PrepareScatterKernel();
-	void PrepareTexKernel();
+	void PrepareTexKernel(Mode mode);
 	void PrepareLifetimeSumKernel();
+	void PrepareIntegrandKernel();
 
 public:
 	virtual void Init(SimulationParameters p_sp);

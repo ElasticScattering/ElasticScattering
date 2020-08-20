@@ -96,8 +96,8 @@ int main(int argc, char **argv)
     if (!glfwInit())
         return -1;
 
-    int width = 1000;
-    int height = 1000;
+    int width = 1024;
+    int height = 1024;
     window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
     if (!window)
     {
@@ -116,6 +116,7 @@ int main(int argc, char **argv)
     if (error != GLEW_OK) return EXIT_FAILURE;
 
     SimulationParameters sp;
+    sp.mode               = Mode::SIGMA_XX;
     sp.region_size        = 1e-6;
     sp.particle_row_count = 1024;
     sp.particle_count     = sp.particle_row_count * sp.particle_row_count;
@@ -126,7 +127,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = 0;// -sp.alpha - 1e-10;
-    sp.magnetic_field     = 30;
+    sp.magnetic_field     = 0.01;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau = 1e-12; // 3.7e-13;
     
@@ -161,6 +162,7 @@ int main(int argc, char **argv)
 
     GPUElasticScattering* es = new GPUElasticScattering();
     es->Init(sp);
+    es->Compute();
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 
@@ -171,13 +173,13 @@ int main(int argc, char **argv)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }

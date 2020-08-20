@@ -104,11 +104,11 @@ double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double r, doub
     return min(t1, t2);
 }
 
-double lifetime0(double max_lifetime, double2 pos, double2 vel, double angular_speed, bool clockwise, int impurity_count, double imp_radius,  __global double2 *imps)
+double lifetime0(double max_lifetime, double2 pos, double2 vel, double speed, double angular_speed, bool clockwise, int impurity_count, double imp_radius,  __global double2 *imps)
 {
     double lifetime = max_lifetime;
 
-    double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
+    double vf = speed; // length(vel);
     double radius = vf / angular_speed;
     double2 center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
 
@@ -144,11 +144,72 @@ __kernel void lifetime(double region_size, double speed, double imp_radius, doub
     
     double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
 
-    double2 unit = { cos(phi), sin(phi) };
-    double2 vel = unit * speed;
+    double2 vel = (double2)(cos(phi), sin(phi)) * speed;
 
     double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
     double max_lifetime = min(tau, bound_time);
     
-    lifetimes[y * row_size + x] = lifetime0(max_lifetime, pos, vel, angular_speed, clockwise, impurity_count, imp_radius, imps);
+    lifetimes[y * row_size + x] = lifetime0(max_lifetime, pos, vel, speed, angular_speed, clockwise, impurity_count, imp_radius, imps);
 }
+
+
+__kernel void sigma_xx(double region_size, double speed, double imp_radius, double tau, double alpha, double angular_speed, double wc, int impurity_count, __global double2 *imps, __global double *integrand) 
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+    
+    double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
+    bool clockwise = true;
+    if (clockwise) wc *= -1;
+
+    int steps = 249;
+    double angle_area = alpha * 2.0;
+    double step_size = angle_area / (steps-1);
+    double integral = 0;
+
+    for (int j = 0; j < 4; j++)
+    {
+        double start = -alpha + j * (PI * 0.5);
+        double total = 0.0;
+    
+        for (int i = 0; i < steps; i++)
+        {
+            double phi = start + i * step_size;
+
+            double2 vel = (double2)(cos(phi), sin(phi)) * speed;
+            
+            double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
+            double max_lifetime = min(tau, bound_time);
+    
+            double lt = lifetime0(max_lifetime, pos, vel, speed, angular_speed, clockwise, impurity_count, imp_radius, imps);
+
+	        double z = exp(-lt / tau);
+
+            double r = cos(phi) - cos(phi + wc * lt) * z;
+	        r       += wc * tau * sin(phi + wc * lt) * z;
+	        r       -= wc * tau * sin(phi);
+            r       *= tau;
+	        
+            double rxx = r * cos(phi);
+            double rxy = r * sin(phi);
+
+            bool edge_item = (i == 0 || i == steps-1);
+            bool even_i    = (i % 2) == 0;
+            double w = 0.0;
+    
+            if (edge_item) {
+                w = 1.0;
+	        } else {
+                w = even_i ? 2.0 : 4.0;
+	        }
+
+            total += rxx * w;
+	    }
+
+        integral += total * angle_area / ((steps-1) * 3.0);
+	}
+    
+	integrand[y * row_size + x] = integral;
+}
+

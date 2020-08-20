@@ -1,6 +1,7 @@
 #ifndef TEST_H
 #define TEST_H
 
+#include "ElasticScattering.h"
 #include "Details.h"
 #include <assert.h>
 #include "doctest.h"
@@ -9,6 +10,15 @@
 #define EPSILON_HIGH 0.01
 #define CHECK_APPROX(a, b)  { CHECK(abs((a)-(b)) < EPSILON); }
 #define CHECK_APPROX_HIGH(a, b)  { assert(abs((a)-(b)) < EPSILON_HIGH); }
+
+TEST_CASE("Sigma xx")
+{
+	auto e  = new CPUElasticScattering();
+	auto e2 = new GPUElasticScattering();
+
+}
+
+
 
 TEST_CASE("Cyclotron Orbit")
 {

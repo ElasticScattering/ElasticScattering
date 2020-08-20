@@ -3,6 +3,11 @@
 
 __constant double PI = 3.141592653589793238463;
 __constant double PI2 = 6.283185307179586;
+__constant double M0 = 9.109e-31;
+__constant double E = 1.602e-19;
+__constant double HBAR = 1.055e-34;
+__constant double C = 1.15e-9;
+
 
 struct Circle
 {
@@ -31,46 +36,23 @@ __kernel void sum(__global double *A, __global double *B, __local double *local_
 	}
 }
 
-
-__kernel void add_weights(__global double* A)
-{
-	int x = get_global_id(0);
-	int y = get_global_id(1);
-
-	double x_mult = 1;
-	if (x > 0) {
-		x_mult = (x % 2 == 0) 4 : 2;
-	}
-}
-
 __kernel void to_texture(__global double* lifetimes, double tau, __write_only image2d_t screen)
 {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int row_size = get_global_size(0);
 
-	float k = (float)(lifetimes[y * row_size + x] / tau);
-	write_imagef(screen, (int2)(x, y), (float4)(k, k, k, 1.0f));
-}
-
-
-__kernel void sigma_xx(double2 pos, double phi, double magnetic_field, double vf, double L, double alpha, double tau, __global double* lifetimes, __global double *sigma_xx)
-{
+	float k = (float)(lifetimes[y * row_size + x]);
+	float4 c = (float4)(k, k, k, 1.0f);
+	
 	/*
-	double T = 0;
+	if (k > 1e-12)
+		c = (float4)(0, 0, (k-1.5e-12)/5e-13, 1.0f);
+	else
+		c = (float4)(0, 0, 0, 1.0f);
+	*/
 	
-	double wc = E * B / m;
-	
-	double z = exp(-T / tau);
-	double r = cos(phi) - cos(phi + wc * T) * z;
-	r       += wc * tau * sin(phi + wc * T) * z;
-	r       -= wc * tau * sin(phi);
-	r       *= cos(phi);
-
-	double kf = m * vf / HBAR;
-	double outside = E * E * kf * kf / (2.0 * PI * PI * m * L * L * C);
-	outside *= tau / (1 + pow(E * magnetic_field * tau / m), 2);
-
-	sigma_xx[get_global_id(0)] = r * outside;*/
+	write_imagef(screen, (int2)(x, y), c);
 }
+
 #endif // CL_COMMON_H
