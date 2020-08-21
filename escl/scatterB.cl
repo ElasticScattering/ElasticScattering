@@ -104,13 +104,13 @@ double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double r, doub
     return min(t1, t2);
 }
 
-double lifetime0(double max_lifetime, double2 pos, double2 vel, double speed, double angular_speed, bool clockwise, int impurity_count, double imp_radius,  __global double2 *imps)
+double lifetime0(double max_lifetime, double2 pos, double phi, double speed, double angular_speed, bool clockwise, int impurity_count, double imp_radius,  __global double2 *imps)
 {
     double lifetime = max_lifetime;
 
-    double vf = speed; // length(vel);
-    double radius = vf / angular_speed;
-    double2 center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
+    double radius = speed / angular_speed;
+    double2 vel = (double2)(cos(phi), sin(phi)) * speed;
+    double2 center = GetCyclotronOrbit(pos, vel, radius, speed, clockwise);
 
     double impurity_radius_sq = imp_radius * imp_radius;
 
@@ -136,19 +136,16 @@ double lifetime0(double max_lifetime, double2 pos, double2 vel, double speed, do
 }
 __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global double *lifetimes) 
 {
-    bool clockwise = false;
     int x = get_global_id(0);
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
     double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
-
-    double2 vel = (double2)(cos(sp.phi), sin(sp.phi)) * sp.particle_speed;
-
-    double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, clockwise, false);
-    double max_lifetime = min(sp.tau, bound_time);
     
-    lifetimes[y * row_size + x] = lifetime0(max_lifetime, pos, vel, sp.particle_speed, sp.angular_speed, clockwise, sp.impurity_count, sp.impurity_radius, imps);
+    bool clockwise = false;
+    double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, clockwise, false);
+    
+    lifetimes[y * row_size + x] = lifetime0(min(sp.tau, bound_time), pos, sp.phi, sp.particle_speed, sp.angular_speed, clockwise, sp.impurity_count, sp.impurity_radius, imps);
 }
 
 __kernel void sigma_xx(double region_size, double speed, double imp_radius, double tau, double alpha, double angular_speed, double wc, int impurity_count, __global double2 *imps, __global double *integrand) 
@@ -158,10 +155,10 @@ __kernel void sigma_xx(double region_size, double speed, double imp_radius, doub
     int row_size = get_global_size(0);
     
     double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
-    bool clockwise = true;
+    bool clockwise = false;
     if (clockwise) wc *= -1;
 
-    int steps = 249;
+    int steps = 49;
     double angle_area = alpha * 2.0;
     double step_size = angle_area / (steps-1);
     double integral = 0;
@@ -171,16 +168,15 @@ __kernel void sigma_xx(double region_size, double speed, double imp_radius, doub
         double start = -alpha + j * (PI * 0.5);
         double total = 0.0;
     
+        bool is_even = true;
         for (int i = 0; i < steps; i++)
         {
             double phi = start + i * step_size;
 
-            double2 vel = (double2)(cos(phi), sin(phi)) * speed;
-            
             double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
             double max_lifetime = min(tau, bound_time);
     
-            double lt = lifetime0(max_lifetime, pos, vel, speed, angular_speed, clockwise, impurity_count, imp_radius, imps);
+            double lt = lifetime0(max_lifetime, pos, phi, speed, angular_speed, clockwise, impurity_count, imp_radius, imps);
 
 	        double z = exp(-lt / tau);
 
@@ -193,14 +189,16 @@ __kernel void sigma_xx(double region_size, double speed, double imp_radius, doub
             double rxy = r * sin(phi);
 
             bool edge_item = (i == 0 || i == steps-1);
-            bool even_i    = (i % 2) == 0;
-            double w = 0.0;
+            //is_even = !is_even; // faster
+            is_even = (i % 2) == 0;
+            double w;
     
             if (edge_item) {
                 w = 1.0;
 	        } else {
-                w = even_i ? 2.0 : 4.0;
+                w = is_even ? 2.0 : 4.0;
 	        }
+            
 
             total += rxx * w;
 	    }

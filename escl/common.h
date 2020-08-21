@@ -30,21 +30,42 @@ __kernel void sum(__global double *A, __global double *B, __local double *local_
 	}
 }
 
-__kernel void to_texture(__global double* lifetimes, double tau, __write_only image2d_t screen)
+__kernel void add_integral_weights_2d(__global double* A)
 {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int row_size = get_global_size(0);
 
-	float k = (float)(lifetimes[y * row_size + x]/tau);
-	float4 c = (float4)(k, k, k, 1.0f);
+	bool is_padding = (x == row_size - 1) || (y == row_size - 1);
+	bool is_edge = (x == 0) || (x == row_size - 2) || (y == 0) || (y == row_size - 2);
 	
-	/*
-	if (k > 1e-12)
-		c = (float4)(0, 0, (k-1.5e-12)/5e-13, 1.0f);
+	double w = is_padding ? 0.0 : 1.0;
+	if (!is_edge)
+	{
+		w  = (x % 2) ? 2.0 : 4.0;
+		w *= (y % 2) ? 2.0 : 4.0;
+	}
+	
+	A[y * row_size + x] = w * A[y * row_size + x];
+}
+
+__kernel void to_texture(__global double* lifetimes, double tau, __write_only image2d_t screen)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int row_size = get_global_size(0);
+	float k = (float)(lifetimes[y * row_size + x]);
+
+#if 0
+	k /= tau;
+	float4 c = (float4)(k, k, k, 1.0f);
+#else
+	float4 c;
+	if(k < 0)
+		c = (float4)(0, 0, -k / 3e-12, 1.0f);
 	else
-		c = (float4)(0, 0, 0, 1.0f);
-	*/
+		c = (float4)(k / 3e-12, 0, 0, 1.0f);
+#endif
 	
 	write_imagef(screen, (int2)(x, y), c);
 }

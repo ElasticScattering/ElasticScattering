@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 
     SimulationParameters sp;
     sp.region_size        = 1e-6;
-    sp.particle_row_count = 1024;
+    sp.particle_row_count = 256;
     sp.particle_count     = sp.particle_row_count * sp.particle_row_count;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
