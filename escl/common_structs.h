@@ -1,6 +1,6 @@
 typedef struct
 {
-	int particle_row_count;
+	int dim;
 	int particle_count;
 	int impurity_count;
 

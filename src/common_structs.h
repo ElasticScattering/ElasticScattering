@@ -2,7 +2,7 @@
 
 typedef struct
 {
-	cl_int particle_row_count;
+	cl_int dim;
 	cl_int particle_count;
 	cl_int impurity_count;
 

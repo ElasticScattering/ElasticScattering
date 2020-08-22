@@ -226,7 +226,7 @@ void GPUElasticScattering::PrepareTexKernel()
 
         glGenTextures(1, &ogl.tex);
         glBindTexture(GL_TEXTURE_2D, ogl.tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp.particle_row_count, sp.particle_row_count, 0, GL_RGBA, GL_FLOAT, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp.dim, sp.dim, 0, GL_RGBA, GL_FLOAT, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //GL_LINEAR
@@ -304,44 +304,22 @@ void GPUElasticScattering::PrepareIntegrandKernel()
     ocl.sigma_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
 
-    clStatus = clSetKernelArg(ocl.phi_integrand, 0, sizeof(double), (void*)&sp.region_size);
+    clStatus = clSetKernelArg(ocl.phi_integrand, 0, sizeof(SimulationParameters), (void*)&sp);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.phi_integrand, 1, sizeof(double), (void*)&sp.particle_speed);
+    clStatus = clSetKernelArg(ocl.phi_integrand, 2, sizeof(cl_mem), (void*)&ocl.impurities);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.phi_integrand, 2, sizeof(double), (void*)&sp.impurity_radius);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 3, sizeof(double), (void*)&sp.tau);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 4, sizeof(double), (void*)&sp.alpha);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 5, sizeof(double), (void*)&sp.angular_speed);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    double wc = E * sp.magnetic_field / (5.0 * M0);
-    clStatus = clSetKernelArg(ocl.phi_integrand, 6, sizeof(double), (void*)&wc);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 7, sizeof(int), (void*)&sp.impurity_count);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 8, sizeof(cl_mem), (void*)&ocl.impurities);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 9, sizeof(cl_mem), (void*)&ocl.sigma_xx);
+    clStatus = clSetKernelArg(ocl.phi_integrand, 3, sizeof(cl_mem), (void*)&ocl.sigma_xx);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
-void GPUElasticScattering::Compute()
+double GPUElasticScattering::Compute()
 {
     QueryPerformanceCounter(&beginClock);
 
-    size_t global_work_size[2] = { (size_t)sp.particle_row_count, (size_t)sp.particle_row_count };
-    size_t local_work_size[2] = { 16, 16 };
+    size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
+    size_t local_work_size[2]  = { 16, 16 };
 
     if (mode == Mode::AVG_LIFETIME)
     {
@@ -365,7 +343,7 @@ void GPUElasticScattering::Compute()
         CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
         const size_t half_size = sp.particle_count / 2;
-        const size_t max_work_items = MIN(sp.particle_row_count, 256);
+        const size_t max_work_items = MIN(sp.dim, 256);
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_lifetimes, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
@@ -377,12 +355,17 @@ void GPUElasticScattering::Compute()
         clEnqueueReadBuffer(ocl.queue, ocl.summed_lifetimes, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-        double result = 0;
+        double total = 0;
         for (int i = 0; i < results.size(); i++)
-            result += results[i];
+        {
+            std::cout << results[i] << ", ";
+            total += results[i];
+        }
 
-        double simulated_particle_count = (sp.particle_row_count - 1) * (sp.particle_row_count - 1);
-        std::cout << "GPU result: " << result / simulated_particle_count << std::endl;
+        double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
+        double result = total / simulated_particle_count;
+        std::cout << "GPU result: " << result << std::endl;
+        return result;
     }
     else if (mode == Mode::SIGMA_XX) {
         cl_int clStatus;
@@ -409,6 +392,8 @@ void GPUElasticScattering::Compute()
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
+
+    return 0;
 }
 
 void GPUElasticScattering::Draw()

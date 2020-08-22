@@ -76,15 +76,7 @@ int main(int argc, char **argv)
     InitParameters init;
     ParseArgs(argc, argv, &init);
 
-    if (init.run_tests)
-    {
-        doctest::Context context;
-        context.applyCommandLine(argc, argv);
-        context.setOption("no-breaks", true);
-        int res = context.run();
 
-        return 0;
-    }
 
     GLFWwindow* window;
 
@@ -114,10 +106,20 @@ int main(int argc, char **argv)
     GLenum error = glewInit();
     if (error != GLEW_OK) return EXIT_FAILURE;
 
+    if (init.run_tests)
+    {
+        doctest::Context context;
+        context.applyCommandLine(argc, argv);
+        context.setOption("no-breaks", true);
+        int res = context.run();
+
+        return 0;
+    }
+
     SimulationParameters sp;
     sp.region_size        = 1e-6;
-    sp.particle_row_count = 256;
-    sp.particle_count     = sp.particle_row_count * sp.particle_row_count;
+    sp.dim                = 256;
+    sp.particle_count     = sp.dim * sp.dim;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
     sp.impurity_count     = 100;
@@ -144,14 +146,14 @@ int main(int argc, char **argv)
     std::cout << "Tau:               " << sp.tau << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
-    FAIL_CONDITION(pow(sp.particle_row_count, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
+    FAIL_CONDITION(pow(sp.dim, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
     FAIL_CONDITION(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
     FAIL_CONDITION(sp.alpha <= 0, "Alpha should be positive.");
     FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
    
     auto es = new GPUElasticScattering();
-    es->Init(Mode::AVG_LIFETIME, sp);
+    es->Init(Mode::SIGMA_XX, sp);
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 

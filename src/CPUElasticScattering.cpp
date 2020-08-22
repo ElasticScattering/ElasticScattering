@@ -36,7 +36,7 @@ void CPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
     lifetimes.resize(sp.particle_count, 0);
 }
 
-void CPUElasticScattering::Compute()
+double CPUElasticScattering::Compute()
 {
     double total_time;
 
@@ -46,32 +46,54 @@ void CPUElasticScattering::Compute()
     std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
     QueryPerformanceCounter(&beginClock);
-    for (int j = 0; j < sp.particle_row_count; j++)
-        for (int i = 0; i < sp.particle_row_count; i++)
-        {
-            v2 pos;
-            pos.x = sp.region_size * (double(i) / sp.particle_row_count);
-            pos.y = sp.region_size * (double(j) / sp.particle_row_count);
+    if (mode == Mode::AVG_LIFETIME)
+    {
+        for (int j = 0; j < sp.dim - 1; j++)
+            for (int i = 0; i < sp.dim - 1; i++)
+            {
+                v2 pos;
+                pos.x = sp.region_size * (double(i) / sp.dim);
+                pos.y = sp.region_size * (double(j) / sp.dim);
 
-            double lifetime = sp.particle_max_lifetime;
+                double lifetime = sp.particle_max_lifetime;
 
-            v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+                v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
 
-            double res = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
-            lifetimes[j * sp.particle_row_count + i] = res;
+                double res = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
+
+                bool is_edge = (i == 0) || (i == sp.dim - 2) || (j == 0) || (j == sp.dim - 2);
+
+                double w = 1.0;
+                if (!is_edge)
+                {
+                    w  = (i % 2) ? 2.0 : 4.0;
+                    w *= (j % 2) ? 2.0 : 4.0;
+                }
+
+                lifetimes[j * sp.dim + i] = w * res;
+            }
+
+        double total = 0;
+        int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
+        for (int i = 0; i < actual_particle_count; i++) {
+            total += lifetimes[i];
         }
-    QueryPerformanceCounter(&endClock);
+        double result = total / (double)actual_particle_count;
+        std::cout << "CPU result: " << result << " s" << std::endl;
 
-    double total = 0;
-    for (int i = 0; i < sp.particle_count; i++) {
-        total += lifetimes[i];
+        return result;
     }
-    std::cout << "CPU result: " << total / sp.particle_count << " s" << std::endl;
+    
+    QueryPerformanceCounter(&endClock);
+    
+    return -99999;
 
+    /*
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
-
+    
     MakeTexture(sp);
+    */
 }
 
 double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp)

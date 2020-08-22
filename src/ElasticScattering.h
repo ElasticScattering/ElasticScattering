@@ -19,6 +19,16 @@ protected:
 	SimulationParameters sp;
 	Mode mode;
 
+public:
+	virtual void Init(Mode p_mode, SimulationParameters p_sp) = 0;
+	virtual double Compute() = 0;
+	virtual std::vector<float> GetPixels() { return pixels; };
+};
+
+class CPUElasticScattering : public ElasticScattering {
+	double ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp);
+	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
+
 	void MakeTexture(const SimulationParameters sp)
 	{
 		double itau = 1.0 / sp.particle_max_lifetime; //sp.particle_count; 
@@ -51,18 +61,8 @@ protected:
 	}
 
 public:
-	virtual void Init(Mode p_mode, SimulationParameters p_sp) = 0;
-	virtual void Compute() = 0;
-	virtual std::vector<float> GetPixels() { return pixels; };
-};
-
-class CPUElasticScattering : public ElasticScattering {
-	double ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp);
-	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
-
-public:
 	virtual void Init(Mode p_mode, SimulationParameters p_sp);
-	virtual void Compute();
+	virtual double Compute();
 };
 
 class GPUElasticScattering : public ElasticScattering {
@@ -74,7 +74,7 @@ class GPUElasticScattering : public ElasticScattering {
 
 public:
 	virtual void Init(Mode p_mode, SimulationParameters p_sp);
-	virtual void Compute();
+	virtual double Compute();
 	void Draw();
 
 	~GPUElasticScattering();

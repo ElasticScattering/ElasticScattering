@@ -148,24 +148,24 @@ __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global
     lifetimes[y * row_size + x] = lifetime0(min(sp.tau, bound_time), pos, sp.phi, sp.particle_speed, sp.angular_speed, clockwise, sp.impurity_count, sp.impurity_radius, imps);
 }
 
-__kernel void sigma_xx(double region_size, double speed, double imp_radius, double tau, double alpha, double angular_speed, double wc, int impurity_count, __global double2 *imps, __global double *integrand) 
+__kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global double *integrand)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(region_size * x, region_size * y) / (row_size-1);
+    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
     bool clockwise = false;
-    if (clockwise) wc *= -1;
+    if (clockwise) sp.angular_speed *= -1;
 
     int steps = 49;
-    double angle_area = alpha * 2.0;
+    double angle_area = sp.alpha * 2.0;
     double step_size = angle_area / (steps-1);
     double integral = 0;
 
     for (int j = 0; j < 4; j++)
     {
-        double start = -alpha + j * (PI * 0.5);
+        double start = -sp.alpha + j * (PI * 0.5);
         double total = 0.0;
     
         bool is_even = true;
@@ -173,17 +173,16 @@ __kernel void sigma_xx(double region_size, double speed, double imp_radius, doub
         {
             double phi = start + i * step_size;
 
-            double bound_time = GetBoundTime(phi, alpha, angular_speed, clockwise, false);
-            double max_lifetime = min(tau, bound_time);
+            double bound_time = GetBoundTime(phi, sp.alpha, sp.angular_speed, clockwise, false);
     
-            double lt = lifetime0(max_lifetime, pos, phi, speed, angular_speed, clockwise, impurity_count, imp_radius, imps);
+            double lt = lifetime0(min(sp.tau, bound_time), pos, phi, sp.particle_speed, sp.angular_speed, clockwise, sp.impurity_count, sp.impurity_radius, imps);
 
-	        double z = exp(-lt / tau);
+	        double z = exp(-lt / sp.tau);
 
-            double r = cos(phi) - cos(phi + wc * lt) * z;
-	        r       += wc * tau * sin(phi + wc * lt) * z;
-	        r       -= wc * tau * sin(phi);
-            r       *= tau;
+            double r = cos(phi) - cos(phi + sp.angular_speed * lt) * z;
+	        r       += sp.angular_speed * sp.tau * sin(phi + sp.angular_speed * lt) * z;
+	        r       -= sp.angular_speed * sp.tau * sin(phi);
+            r       *= sp.tau;
 	        
             double rxx = r * cos(phi);
             double rxy = r * sin(phi);
