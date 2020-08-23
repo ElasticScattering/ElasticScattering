@@ -32,9 +32,10 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
 	sp.alpha = PI / 4.0;
 	sp.phi = 0;
-	sp.magnetic_field = 0;
+	sp.magnetic_field = 30;
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12;
+	sp.integrand_steps = 29;
 
 	InitParameters ip;
 	ip.mode = Mode::AVG_LIFETIME;
@@ -63,7 +64,7 @@ TEST_CASE("Average lifetime on CPU and GPU")
 		CHECK_CPU_GPU
 	}
 	
-	SUBCASE("With magnetic field")
+	SUBCASE("Without magnetic field")
 	{
 		sp.magnetic_field = 0;
 
@@ -78,11 +79,11 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	}
 }
 
-TEST_CASE("Average lifetime on CPU and GPU")
+TEST_CASE("Comparing sigma_xx on CPU and GPU")
 {
 	SimulationParameters sp;
 	sp.region_size = 1e-6;
-	sp.dim = 128;
+	sp.dim = 64;
 	sp.particle_count = sp.dim * sp.dim;
 	sp.particle_speed = 7e5;
 	sp.particle_mass = 5 * M0;
@@ -91,12 +92,13 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
 	sp.alpha = PI / 4.0;
 	sp.phi = 0;
-	sp.magnetic_field = 0;
+	sp.magnetic_field = 30;
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12;
+	sp.integrand_steps = 9;
 
 	InitParameters ip;
-	ip.mode = Mode::AVG_LIFETIME;
+	ip.mode = Mode::SIGMA_XX;
 	ip.show_info = false;
 	ip.run_tests = true;
 
@@ -109,7 +111,7 @@ TEST_CASE("Average lifetime on CPU and GPU")
 
 	SUBCASE("More impurities") {
 		sp.particle_count = sp.dim * sp.dim;
-		sp.impurity_count = 1000;
+		sp.impurity_count = 200;
 		
 		CHECK_CPU_GPU;
 	}
@@ -122,17 +124,10 @@ TEST_CASE("Average lifetime on CPU and GPU")
 		CHECK_CPU_GPU
 	}
 	
-	SUBCASE("With magnetic field")
+	SUBCASE("Without magnetic field")
 	{
 		sp.magnetic_field = 0;
 
-		CHECK_CPU_GPU
-	}
-
-	SUBCASE("Different angle")
-	{
-		sp.phi = -sp.alpha - 1e-10;
-		
 		CHECK_CPU_GPU
 	}
 }

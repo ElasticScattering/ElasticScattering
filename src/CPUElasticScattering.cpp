@@ -78,16 +78,83 @@ double CPUElasticScattering::Compute()
 
                 main_buffer[j * sp.dim + i] = w * res;
             }
-
-        double total = 0;
-        for (int i = 0; i < sp.particle_count; i++) {
-            total += main_buffer[i];
-        }
-        
-        int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
-        return total / (double)actual_particle_count;
     }
-    
+    else if (mode == Mode::SIGMA_XX)
+    {
+        for (int j = 0; j < sp.dim; j++)
+        {
+            for (int i = 0; i < sp.dim; i++)
+            {
+                v2 pos;
+                pos.x = sp.region_size * (double(i) / sp.dim);
+                pos.y = sp.region_size * (double(j) / sp.dim);
+
+                double lifetime = sp.particle_max_lifetime;
+
+                double angle_area = sp.alpha * 2.0;
+                double step_size = angle_area / (sp.integrand_steps - 1);
+                double integral = 0;
+
+                for (int j = 0; j < 4; j++)
+                {
+                    double start = -sp.alpha + j * (PI * 0.5);
+                    double total = 0.0;
+
+                    for (int i = 0; i < sp.integrand_steps; i++)
+                    {
+                        double phi = start + i * step_size;
+
+                        v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+
+                        double lt = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
+
+                        double z = exp(-lt / sp.tau);
+
+                        double r = cos(phi) - cos(phi) * z;
+                        r += sp.angular_speed * sp.tau * sin(phi) * z;
+                        r -= sp.angular_speed * sp.tau * sin(phi);
+                        r *= sp.tau;
+
+                        double rxx = r * cos(phi);
+                        double rxy = r * sin(phi);
+
+                        bool edge_item = (i == 0 || i == sp.integrand_steps - 1);
+
+                        double w = 1.0;
+
+                        if (!edge_item) {
+                            w = ((i % 2) == 0) ? 2.0 : 4.0;
+                        }
+
+                        total += rxx * w;
+                    }
+
+                    integral += total * angle_area / ((sp.integrand_steps - 1) * 3.0);
+                }
+
+                bool is_padding = (i == sp.dim - 1) || (j == sp.dim - 1);
+                bool is_edge = (i == 0) || (i == sp.dim - 2) || (j == 0) || (j == sp.dim - 2);
+
+                double w = is_padding ? 0.0 : 1.0;
+                if (!is_edge)
+                {
+                    w = ((i % 2) == 0) ? 2.0 : 4.0;
+                    w *= ((j % 2) == 0) ? 2.0 : 4.0;
+                }
+
+                main_buffer[j * sp.dim + i] = w * integral;
+            }
+        }
+    }
+
+    double total = 0;
+    for (int i = 0; i < sp.particle_count; i++) {
+        total += main_buffer[i];
+    }
+
+    int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
+    return total / (double)actual_particle_count;
+
     QueryPerformanceCounter(&endClock);
     
     return -99999;

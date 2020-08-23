@@ -70,12 +70,8 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
 int main(int argc, char **argv)
 {
     InitParameters init;
-    //ParseArgs(argc, argv, &init);
-    init.num_iterations = 1;
-    init.mode = Mode::SIGMA_XX;
-    init.show_info = true;
-    init.run_tests = false;
-
+    ParseArgs(argc, argv, &init);
+    
     GLFWwindow* window;
 
     //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
