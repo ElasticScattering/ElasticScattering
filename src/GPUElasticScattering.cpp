@@ -26,15 +26,15 @@ typedef struct
     // Kernels
     //
 
-    // Computes a buffer of raw lifetimes.
-    cl_kernel scatter_kernel;
+    // Computes a value (sigma, raw lifetime) for a list of particles.
+    cl_kernel main_kernel;
 
     // Computes the average lifetime of all particles.
-    cl_kernel add_integral_weights;
-    cl_kernel sum_lifetimes;
+    cl_kernel add_integral_weights_kernel;
+    cl_kernel sum_kernel;
 
-    // Computes a buffer of average lifetimes, averaging many phi's for each particle.
-    cl_kernel phi_integrand;
+    // Computes a buffer of average main_buffer, averaging many phi's for each particle.
+    cl_kernel phi_integrand_kernel;
 
     // Transforms buffer values to image floats (0..1)
     cl_kernel tex_kernel;
@@ -43,9 +43,8 @@ typedef struct
     // Buffers
     //
     cl_mem impurities;
-    cl_mem lifetimes;
-    cl_mem summed_lifetimes;
-    cl_mem sigma_xx;
+    cl_mem main_buffer;
+    cl_mem sum_output;
 
     cl_mem image;
 } OCLResources;
@@ -185,24 +184,14 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 
 void GPUElasticScattering::PrepareOpenCLKernels()
 {
-    if (mode == Mode::SIGMA_XX)
-    {
-        PrepareIntegrandKernel();
-    }
-    else if (mode == Mode::AVG_LIFETIME)
-    {
-        PrepareScatterKernel();
-        PrepareLifetimeSumKernel();
-    }
+    PrepareMainKernel();
+    PrepareIntegralKernel();
     PrepareTexKernel();
 }
 
-void GPUElasticScattering::PrepareScatterKernel()
+void GPUElasticScattering::PrepareMainKernel()
 {
     cl_int clStatus;
-
-    ocl.scatter_kernel = clCreateKernel(ocl.program, "lifetime", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
     ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
@@ -210,16 +199,20 @@ void GPUElasticScattering::PrepareScatterKernel()
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
-    ocl.lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
+    ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    const char* kernel_name = (mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
+    ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    
+    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
+    clStatus = clSetKernelArg(ocl.main_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    clStatus = clSetKernelArg(ocl.main_kernel, 2, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
@@ -253,9 +246,7 @@ void GPUElasticScattering::PrepareTexKernel()
     glUseProgram(ogl.shader_program);
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 
-    auto buffer = (mode == Mode::SIGMA_XX) ? ocl.sigma_xx : ocl.lifetimes;
-
-    clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&buffer);
+    clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&sp.tau);
@@ -265,57 +256,29 @@ void GPUElasticScattering::PrepareTexKernel()
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
-void GPUElasticScattering::PrepareLifetimeSumKernel()
+void GPUElasticScattering::PrepareIntegralKernel()
 {
     cl_int clStatus;
-
-    ocl.add_integral_weights = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
+    ocl.add_integral_weights_kernel = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
-    clStatus = clSetKernelArg(ocl.add_integral_weights, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    //////////////
-    
-    ocl.sum_lifetimes = clCreateKernel(ocl.program, "sum", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
-    ocl.summed_lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count/2, nullptr, &clStatus);
+    ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count / 2, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
-    
-    clStatus = clSetKernelArg(ocl.sum_lifetimes, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.sum_lifetimes, 1, sizeof(cl_mem), (void*)&ocl.summed_lifetimes);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.sum_lifetimes, 2, sizeof(double) * MIN(sp.dim, 256), nullptr); //@todo, partial sum buffer should be synced with kernel invocation.
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-}
-
-void GPUElasticScattering::PrepareIntegrandKernel()
-{
-    cl_int clStatus;
-
-    ocl.phi_integrand = clCreateKernel(ocl.program, "sigma_xx", &clStatus);
+    ocl.sum_kernel = clCreateKernel(ocl.program, "sum", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-
-    ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
-
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
-
-    ocl.sigma_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 0, sizeof(SimulationParameters), (void*)&sp);
+    
+    clStatus = clSetKernelArg(ocl.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+    
+    clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.sum_output);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.phi_integrand, 2, sizeof(cl_mem), (void*)&ocl.impurities);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.phi_integrand, 3, sizeof(cl_mem), (void*)&ocl.sigma_xx);
+    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * MIN(sp.dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
@@ -326,71 +289,47 @@ double GPUElasticScattering::Compute()
     size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
     size_t local_work_size[2]  = { 16, 16 };
 
-    if (mode == Mode::AVG_LIFETIME)
-    {
-        /*
-        sp.phi += 0.1;
-        if (sp.phi > PI2)
-            sp.phi = 0;
-        std::cout << "Phi:               " << sp.phi << std::endl;
-        */
+    /*
+    sp.phi += 0.1;
+    if (sp.phi > PI2)
+        sp.phi = 0;
+    std::cout << "Phi:               " << sp.phi << std::endl;
+    */
 
-        cl_int clStatus;
-        
-        clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+    cl_int clStatus;
 
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.scatter_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start scatter_kernel kernel execution.");
+    //clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    //CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
+    
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
 
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
-        const size_t half_size = sp.particle_count/2;
-        const size_t max_work_items = MIN(sp.dim, 256);
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_lifetimes, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
+    const size_t half_size = sp.particle_count / 2;
+    const size_t max_work_items = MIN(sp.dim, 256);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
-        clStatus = clFinish(ocl.queue);
+    clStatus = clFinish(ocl.queue);
 
-        // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-        std::vector<double> results;
-        results.resize(half_size / max_work_items);
-        clEnqueueReadBuffer(ocl.queue, ocl.summed_lifetimes, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
+    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
+    std::vector<double> results;
+    results.resize(half_size / max_work_items);
+    clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-        double total = 0;
-        for (int i = 0; i < results.size(); i++)
-            total += results[i];
+    double total = 0;
+    for (int i = 0; i < results.size(); i++)
+        total += results[i];
 
-        double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
-        double result = total / simulated_particle_count;
-        return result;
-    }
-    else if (mode == Mode::SIGMA_XX) {
-        cl_int clStatus;
-
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.phi_integrand, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start kernel execution.");
-
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start kernel execution.");
-
-        clStatus = clFinish(ocl.queue);
-        
-        /*
-        std::vector<double> results;
-        results.resize(sp.particle_count);
-        clEnqueueReadBuffer(ocl.queue, ocl.sigma_xx, CL_TRUE, 0, sizeof(double) * sp.particle_count, results.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
-
-        for (int i = 0; i < MIN(600, results.size()); i++)
-            std::cout << results[i] << ", ";
-        */
-    }
+    double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
+    double result = total / simulated_particle_count;
+    return result;
    
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
@@ -412,10 +351,10 @@ void GPUElasticScattering::Draw()
 GPUElasticScattering::~GPUElasticScattering()
 {
     clReleaseMemObject(ocl.impurities);
-    clReleaseMemObject(ocl.lifetimes);
+    clReleaseMemObject(ocl.main_buffer);
     clReleaseMemObject(ocl.image);
-    clReleaseMemObject(ocl.summed_lifetimes);
-    clReleaseKernel(ocl.scatter_kernel);
+    clReleaseMemObject(ocl.sum_output);
+    clReleaseKernel(ocl.main_kernel);
     clReleaseKernel(ocl.tex_kernel);
     clReleaseProgram(ocl.program);
     clReleaseCommandQueue(ocl.queue);

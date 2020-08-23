@@ -1687,7 +1687,7 @@ struct DOCTEST_INTERFACE IReporter
     // or isn't in the execution range (between first and last) (safe to cache a pointer to the input)
     virtual void test_case_skipped(const TestCaseData&) = 0;
 
-    // doctest will not be managing the lifetimes of reporters given to it but this would still be nice to have
+    // doctest will not be managing the main_buffer of reporters given to it but this would still be nice to have
     virtual ~IReporter();
 
     // can obtain all currently active contexts and stringify them if one wishes to do so

@@ -75,10 +75,9 @@ public:
 
 class GPUElasticScattering : public ElasticScattering {
 	void PrepareOpenCLKernels();
-	void PrepareScatterKernel();
+	void PrepareMainKernel();
 	void PrepareTexKernel();
-	void PrepareLifetimeSumKernel();
-	void PrepareIntegrandKernel();
+	void PrepareIntegralKernel();
 
 public:
 	virtual void Init(InitParameters p_ip, SimulationParameters p_sp);
