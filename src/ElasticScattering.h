@@ -10,6 +10,14 @@ enum class Mode {
 	SIGMA_XX
 };
 
+typedef struct
+{
+	bool run_tests;
+	int num_iterations;
+	bool show_info;
+	Mode mode;
+} InitParameters;
+
 class ElasticScattering {
 protected:
 	std::vector<v2> impurities;
@@ -20,7 +28,7 @@ protected:
 	Mode mode;
 
 public:
-	virtual void Init(Mode p_mode, SimulationParameters p_sp) = 0;
+	virtual void Init(InitParameters p_ip, SimulationParameters p_sp) = 0;
 	virtual double Compute() = 0;
 	virtual std::vector<float> GetPixels() { return pixels; };
 };
@@ -61,7 +69,7 @@ class CPUElasticScattering : public ElasticScattering {
 	}
 
 public:
-	virtual void Init(Mode p_mode, SimulationParameters p_sp);
+	virtual void Init(InitParameters p_ip, SimulationParameters p_sp);
 	virtual double Compute();
 };
 
@@ -73,7 +81,7 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareIntegrandKernel();
 
 public:
-	virtual void Init(Mode p_mode, SimulationParameters p_sp);
+	virtual void Init(InitParameters p_ip, SimulationParameters p_sp);
 	virtual double Compute();
 	void Draw();
 

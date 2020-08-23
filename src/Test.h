@@ -12,9 +12,9 @@
 #define CHECK_APPROX_HIGH(a, b)  { assert(abs((a)-(b)) < EPSILON_HIGH); }
 
 #define CHECK_CPU_GPU                                                            \
-	e->Init(m, sp);                                                              \
+	e->Init(ip, sp);                                                              \
 	double cpu_result = e->Compute();                                            \
-	e2->Init(m, sp);                                                             \
+	e2->Init(ip, sp);                                                             \
 	double gpu_result = e2->Compute();                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_APPROX(cpu_result, gpu_result);  
@@ -36,7 +36,11 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12;
 
-	Mode m = Mode::AVG_LIFETIME;
+	InitParameters ip;
+	ip.mode = Mode::AVG_LIFETIME;
+	ip.show_info = false;
+	ip.run_tests = true;
+
 	auto e = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
 

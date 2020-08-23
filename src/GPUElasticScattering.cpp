@@ -72,10 +72,10 @@ std::string ReadShaderFile(const char* shader_file)
     return contents;
 }
 
-void GPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
+void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 {
     sp = p_sp;
-    mode = p_mode;
+    mode = p_ip.mode;
 
     QueryPerformanceFrequency(&clockFrequency);
     
@@ -83,16 +83,19 @@ void GPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
     char		vendorStr[256];
     
     InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
-    PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
+    if (p_ip.show_info)
+        PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     const char* source_file = (sp.angular_speed == 0) ? "scatter0.cl" : "scatterB.cl";
     QueryPerformanceCounter(&beginClock);
     CompileOpenCLProgram(ocl.deviceID, ocl.context, source_file, &ocl.program);
     QueryPerformanceCounter(&endClock);
 
-    double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
-
+    if (p_ip.show_info) {
+        double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+        std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
+    }
+    
     // OpenGL context
     GLint success;
 
@@ -167,7 +170,9 @@ void GPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
-    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    if (p_ip.show_info)
+        std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+
     std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::random_device r;
     std::default_random_engine re(0);
@@ -284,7 +289,7 @@ void GPUElasticScattering::PrepareLifetimeSumKernel()
     clStatus = clSetKernelArg(ocl.sum_lifetimes, 1, sizeof(cl_mem), (void*)&ocl.summed_lifetimes);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.sum_lifetimes, 2, sizeof(double) * 128, nullptr);
+    clStatus = clSetKernelArg(ocl.sum_lifetimes, 2, sizeof(double) * MIN(sp.dim, 256), nullptr); //@todo, partial sum buffer should be synced with kernel invocation.
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
@@ -323,10 +328,12 @@ double GPUElasticScattering::Compute()
 
     if (mode == Mode::AVG_LIFETIME)
     {
+        /*
         sp.phi += 0.1;
         if (sp.phi > PI2)
             sp.phi = 0;
         std::cout << "Phi:               " << sp.phi << std::endl;
+        */
 
         cl_int clStatus;
         
@@ -342,7 +349,7 @@ double GPUElasticScattering::Compute()
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
-        const size_t half_size = sp.particle_count / 2;
+        const size_t half_size = sp.particle_count/2;
         const size_t max_work_items = MIN(sp.dim, 256);
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_lifetimes, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
@@ -357,14 +364,10 @@ double GPUElasticScattering::Compute()
 
         double total = 0;
         for (int i = 0; i < results.size(); i++)
-        {
-            std::cout << results[i] << ", ";
             total += results[i];
-        }
 
         double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
         double result = total / simulated_particle_count;
-        std::cout << "GPU result: " << result << std::endl;
         return result;
     }
     else if (mode == Mode::SIGMA_XX) {

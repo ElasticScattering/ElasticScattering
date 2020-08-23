@@ -17,13 +17,6 @@
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
 
-typedef struct
-{
-    bool run_tests;
-    int num_iterations;
-    bool show_info;
-} InitParameters;
-
 void ProcessInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -32,7 +25,7 @@ void ProcessInput(GLFWwindow* window)
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->num_iterations = 1;
-    //p_init->mode = Mode::LIFETIME;
+    p_init->mode = Mode::AVG_LIFETIME;
     p_init->show_info = true;
     p_init->run_tests = false;
 
@@ -42,6 +35,9 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         w.assign(argv[1], strlen(argv[1]));
 
         p_init->run_tests = w == "test";
+        if (p_init->run_tests) {
+            p_init->show_info = false;
+        }
     }
     return;
     
@@ -75,8 +71,6 @@ int main(int argc, char **argv)
 {
     InitParameters init;
     ParseArgs(argc, argv, &init);
-
-
 
     GLFWwindow* window;
 
@@ -153,7 +147,7 @@ int main(int argc, char **argv)
     FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
    
     auto es = new GPUElasticScattering();
-    es->Init(Mode::SIGMA_XX, sp);
+    es->Init(init, sp);
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 

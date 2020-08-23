@@ -30,6 +30,26 @@ __kernel void sum(__global double *A, __global double *B, __local double *local_
 	}
 }
 
+__kernel void sum2(__global double* data, __global double* output, __local double* partial_sums)
+{
+	int lid = get_local_id(0);
+	int group_size = get_local_size(0);
+
+	partial_sums[lid] = data[get_global_id(0)];
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	for (int i = group_size / 2; i > 0; i >>= 1) {
+		if (lid < i) {
+			partial_sums[lid] += partial_sums[lid + i];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	if (lid == 0) {
+		output[get_group_id(0)] = partial_sums[0];
+	}
+}
+
 __kernel void add_integral_weights_2d(__global double* A)
 {
 	int x = get_global_id(0);
@@ -42,8 +62,8 @@ __kernel void add_integral_weights_2d(__global double* A)
 	double w = is_padding ? 0.0 : 1.0;
 	if (!is_edge)
 	{
-		w  = (x % 2) ? 2.0 : 4.0;
-		w *= (y % 2) ? 2.0 : 4.0;
+		w  = ((x % 2) == 0) ? 2.0 : 4.0;
+		w *= ((y % 2) == 0) ? 2.0 : 4.0;
 	}
 	
 	A[y * row_size + x] = w * A[y * row_size + x];

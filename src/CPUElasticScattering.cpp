@@ -8,23 +8,28 @@
 #include "ElasticScattering.h"
 #include "Details.h"
 
-void CPUElasticScattering::Init(Mode p_mode, SimulationParameters p_sp)
+void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 {
     sp = p_sp;
-    mode = p_mode;
+    mode = p_ip.mode;
 
     if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
     else {
         double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);
         sp.particle_max_lifetime = MIN(sp.tau, bound_time);
     }
-    std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
+
+    if (p_ip.show_info) {
+        std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
+    }
 
     // Initialize arrays.
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
-    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    if (p_ip.show_info) {
+        std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    }
     std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::random_device r;
     std::default_random_engine re(0);
@@ -43,13 +48,13 @@ double CPUElasticScattering::Compute()
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
+    //std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
     QueryPerformanceCounter(&beginClock);
     if (mode == Mode::AVG_LIFETIME)
     {
-        for (int j = 0; j < sp.dim - 1; j++)
-            for (int i = 0; i < sp.dim - 1; i++)
+        for (int j = 0; j < sp.dim; j++)
+            for (int i = 0; i < sp.dim; i++)
             {
                 v2 pos;
                 pos.x = sp.region_size * (double(i) / sp.dim);
@@ -61,27 +66,26 @@ double CPUElasticScattering::Compute()
 
                 double res = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
 
+                bool is_padding = (i == sp.dim - 1) || (j == sp.dim - 1);
                 bool is_edge = (i == 0) || (i == sp.dim - 2) || (j == 0) || (j == sp.dim - 2);
 
-                double w = 1.0;
+                double w = is_padding ? 0.0 : 1.0;
                 if (!is_edge)
                 {
-                    w  = (i % 2) ? 2.0 : 4.0;
-                    w *= (j % 2) ? 2.0 : 4.0;
+                    w  = ((i % 2) == 0) ? 2.0 : 4.0;
+                    w *= ((j % 2) == 0) ? 2.0 : 4.0;
                 }
 
                 lifetimes[j * sp.dim + i] = w * res;
             }
 
         double total = 0;
-        int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
-        for (int i = 0; i < actual_particle_count; i++) {
+        for (int i = 0; i < sp.particle_count; i++) {
             total += lifetimes[i];
         }
-        double result = total / (double)actual_particle_count;
-        std::cout << "CPU result: " << result << " s" << std::endl;
-
-        return result;
+        
+        int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
+        return total / (double)actual_particle_count;
     }
     
     QueryPerformanceCounter(&endClock);
@@ -99,7 +103,7 @@ double CPUElasticScattering::Compute()
 double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp)
 {
     const v2 unit = { cos(sp.phi), sin(sp.phi) };
-    double lifetime = sp.particle_max_lifetime;
+    double lifetime = sp.tau;
 
     for (int k = 0; k < sp.impurity_count; k++)
     {
@@ -107,7 +111,9 @@ double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const Simulati
         const double inner = (ip.x - pos.x) * unit.x + (ip.y - pos.y) * unit.y;
         const v2 projected = { pos.x + inner * unit.x, pos.y + inner * unit.y };
 
-        const double a = pow(projected.x - ip.x, 2) + pow(projected.y - ip.y, 2);
+        const double diffx = projected.x - ip.x;
+        const double diffy = projected.y - ip.y;
+        const double a = diffx*diffx + diffy*diffy;
         if (a > sp.impurity_radius_sq) {
             continue; //@Speedup, if distance is greater than current min continue as well?
         }
