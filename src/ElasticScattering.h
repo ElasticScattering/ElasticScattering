@@ -21,7 +21,7 @@ typedef struct
 class ElasticScattering {
 protected:
 	std::vector<v2> impurities;
-	std::vector<double> lifetimes;
+	std::vector<double> main_buffer;
 	std::vector<float> pixels;
 
 	SimulationParameters sp;
@@ -45,7 +45,7 @@ class CPUElasticScattering : public ElasticScattering {
 		size_t j = 0;
 		for (int i = 0; i < sp.particle_count; i++)
 		{
-			float k = float(lifetimes[i] * itau);
+			float k = float(main_buffer[i] * itau);
 			/*
 
 			if (k == 0) {

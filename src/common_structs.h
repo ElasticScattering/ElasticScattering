@@ -5,6 +5,7 @@ typedef struct
 	cl_int dim;
 	cl_int particle_count;
 	cl_int impurity_count;
+	cl_int integrand_steps;
 
 	cl_double region_size;
 	cl_double particle_max_lifetime;

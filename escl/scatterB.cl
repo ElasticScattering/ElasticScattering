@@ -158,9 +158,8 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
     bool clockwise = false;
     if (clockwise) sp.angular_speed *= -1;
 
-    int steps = 49;
     double angle_area = sp.alpha * 2.0;
-    double step_size = angle_area / (steps-1);
+    double step_size = angle_area / (sp.integrand_steps-1);
     double integral = 0;
 
     for (int j = 0; j < 4; j++)
@@ -169,7 +168,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
         double total = 0.0;
     
         bool is_even = true;
-        for (int i = 0; i < steps; i++)
+        for (int i = 0; i < sp.integrand_steps; i++)
         {
             double phi = start + i * step_size;
 
@@ -187,7 +186,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
             double rxx = r * cos(phi);
             double rxy = r * sin(phi);
 
-            bool edge_item = (i == 0 || i == steps-1);
+            bool edge_item = (i == 0 || i == sp.integrand_steps-1);
             //is_even = !is_even; // faster
             is_even = (i % 2) == 0;
             double w;
@@ -202,7 +201,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
             total += rxx * w;
 	    }
 
-        integral += total * angle_area / ((steps-1) * 3.0);
+        integral += total * angle_area / ((sp.integrand_steps-1) * 3.0);
 	}
     
 	integrand[y * row_size + x] = integral;

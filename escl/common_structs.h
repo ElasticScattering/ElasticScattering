@@ -3,6 +3,7 @@ typedef struct
 	int dim;
 	int particle_count;
 	int impurity_count;
+	int integrand_steps;
 
 	double region_size;
 	double particle_max_lifetime;

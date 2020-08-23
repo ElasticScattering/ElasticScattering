@@ -27,9 +27,9 @@ void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
-    if (p_ip.show_info) {
+    if (p_ip.show_info)
         std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
-    }
+
     std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::random_device r;
     std::default_random_engine re(0);
@@ -37,8 +37,8 @@ void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
     for (int i = 0; i < sp.impurity_count; i++)
         impurities[i] = { unif(re), unif(re) };
 
-    lifetimes.clear();
-    lifetimes.resize(sp.particle_count, 0);
+    main_buffer.clear();
+    main_buffer.resize(sp.particle_count, 0);
 }
 
 double CPUElasticScattering::Compute()
@@ -76,12 +76,12 @@ double CPUElasticScattering::Compute()
                     w *= ((j % 2) == 0) ? 2.0 : 4.0;
                 }
 
-                lifetimes[j * sp.dim + i] = w * res;
+                main_buffer[j * sp.dim + i] = w * res;
             }
 
         double total = 0;
         for (int i = 0; i < sp.particle_count; i++) {
-            total += lifetimes[i];
+            total += main_buffer[i];
         }
         
         int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);

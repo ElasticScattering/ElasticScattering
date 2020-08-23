@@ -125,9 +125,10 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = 0;// -sp.alpha - 1e-10;
-    sp.magnetic_field     = 30;
+    sp.magnetic_field     = 0;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.tau = 1e-12; // 3.7e-13;
+    sp.integrand_steps = 49;
     
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
