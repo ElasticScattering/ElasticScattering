@@ -61,6 +61,9 @@ OpenGLResources ogl;
 
 LARGE_INTEGER beginClock, endClock, clockFrequency;
 
+int sindex = 0;
+double last_result;
+
 std::string ReadShaderFile(const char* shader_file)
 {
     std::ifstream file(shader_file);
@@ -169,7 +172,8 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
     if (p_ip.show_info)
         std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
 
-    std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
+    //std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
+    std::uniform_real_distribution<double> unif(-3e-6, sp.region_size + 3e-6);
     std::random_device r;
     std::default_random_engine re(0);
 
@@ -292,10 +296,18 @@ double GPUElasticScattering::Compute()
         sp.phi = 0;
     std::cout << "Phi:               " << sp.phi << std::endl;
     */
+    /*
+    static std::vector<int> steps = { 99, 49, 25, 13, 7 };
 
+    sp.integrand_steps = steps[sindex]; 
+    if (sindex > steps.size()-2)
+        sindex = 0;
+    else
+        sindex += 1;
+        */
     cl_int clStatus;
 
-    //clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    //clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
     //CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
@@ -326,14 +338,14 @@ double GPUElasticScattering::Compute()
 
     double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
     double result = total / simulated_particle_count;
-    return result;
-   
+
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    return 0;
-}
+    std::cout << "Dim: " << sp.dim << ", Imps: " << sp.impurity_count << ", Tau: " << sp.tau << ", Result: " << result * sp.particle_speed << std::endl;
+    return result;
+ }
 
 void GPUElasticScattering::Draw()
 {

@@ -30,7 +30,6 @@ double lifetime0(double tau, double2 pos, double phi, double speed, int impurity
             time_taken.x = -((projected.y - L * unit.y) - pos.y) / vel.y;
             time_taken.y = -((projected.y + L * unit.y) - pos.y) / vel.y;
         }
-        
 
         if ((time_taken.x * time_taken.y) < 0) {
             lifetime = 0;

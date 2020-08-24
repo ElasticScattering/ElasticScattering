@@ -81,10 +81,10 @@ __kernel void to_texture(__global double* lifetimes, double tau, __write_only im
 	float4 c = (float4)(k, k, k, 1.0f);
 #else
 	float4 c;
-	if(k < 0)
-		c = (float4)(0, 0, -k / 3e-12, 1.0f);
+	if(fabs(k-tau) < 0.00001 * tau)
+		c = (float4)(0, 0, 1, 1.0f);
 	else
-		c = (float4)(k / 3e-12, 0, 0, 1.0f);
+		c = (float4)(k / tau, 0, 0, 1.0f);
 #endif
 	
 	write_imagef(screen, (int2)(x, y), c);

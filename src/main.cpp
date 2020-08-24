@@ -111,20 +111,20 @@ int main(int argc, char **argv)
     }
 
     SimulationParameters sp;
-    sp.region_size        = 1e-6;
-    sp.dim                = 256;
+    sp.region_size        = 2e-7;
+    sp.dim                = 128;
     sp.particle_count     = sp.dim * sp.dim;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
-    sp.impurity_count     = 100;
-    sp.impurity_radius    = 1.5e-8;
+    sp.impurity_count     = 50000;
+    sp.impurity_radius    = 2e-9;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.alpha              = PI / 4.0;
     sp.phi                = 0;// -sp.alpha - 1e-10;
-    sp.magnetic_field     = 0;
+    sp.magnetic_field     = 30;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
-    sp.tau = 1e-12; // 3.7e-13;
-    sp.integrand_steps = 49;
+    sp.tau                = 1e-13; // 3.7e-13;
+    sp.integrand_steps    = 49;
     
     std::cout << "\n\n+---------------------------------------------------+" << std::endl;
     std::cout << "Simulation parameters:" << std::endl;
@@ -149,6 +149,7 @@ int main(int argc, char **argv)
    
     auto es = new GPUElasticScattering();
     es->Init(init, sp);
+    es->Compute();
 
     std::cout << "+---------------------------------------------------+" << std::endl;
 
@@ -159,7 +160,7 @@ int main(int argc, char **argv)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        es->Compute();
+        //es->Compute();
         es->Draw();
 
         glfwSwapBuffers(window);

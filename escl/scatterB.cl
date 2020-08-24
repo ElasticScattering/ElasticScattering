@@ -118,15 +118,17 @@ double lifetime0(double max_lifetime, double2 pos, double phi, double speed, dou
         double2 imp_pos = imps[i];
 
         double2 d = pos - imp_pos;
-        if (impurity_radius_sq > dot(d,d))
-        {
-            lifetime = 0;
-            break;
-        }
+        
 
         if (CirclesCross(center, radius, imp_pos, imp_radius))
         {
+            if (impurity_radius_sq > dot(d,d))
+            {
+                lifetime = 0;
+            }
+
             double t = GetFirstCrossTime(center, pos, imp_pos, radius, imp_radius, angular_speed, clockwise);
+
             if (t < lifetime)
                 lifetime = t;
 		}
