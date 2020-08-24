@@ -4,6 +4,7 @@
 #include "Constants.h"
 #include <assert.h>
 
+
 inline double smod(double a, double b)
 {
     return a - b * floor(a / b);

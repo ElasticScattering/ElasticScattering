@@ -56,8 +56,8 @@ __kernel void add_integral_weights_2d(__global double* A)
 	int y = get_global_id(1);
 	int row_size = get_global_size(0);
 
-	bool is_padding = (x == row_size - 1) || (y == row_size - 1);
-	bool is_edge = (x == 0) || (x == row_size - 2) || (y == 0) || (y == row_size - 2);
+	bool is_padding = (x == (row_size - 1)) || (y == (row_size - 1));
+	bool is_edge = (x == 0) || (x == (row_size - 2)) || (y == 0) || (y == (row_size - 2));
 	
 	double w = is_padding ? 0.0 : 1.0;
 	if (!is_edge)

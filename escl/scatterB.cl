@@ -140,7 +140,7 @@ __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
+    double2 pos = (double2)(x, y) * sp.region_size / (row_size-1);
     
     bool clockwise = false;
     double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, clockwise, false);
@@ -154,7 +154,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
+    double2 pos = (double2)(x, y) * sp.region_size / (row_size-1);
     bool clockwise = false;
     if (clockwise) sp.angular_speed *= -1;
 

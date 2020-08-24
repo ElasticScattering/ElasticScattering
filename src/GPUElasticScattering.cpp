@@ -78,9 +78,6 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 
     QueryPerformanceFrequency(&clockFrequency);
     
-    char		deviceStr[256];
-    char		vendorStr[256];
-    
     InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
     if (p_ip.show_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);

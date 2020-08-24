@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <algorithm>
 
 #include <GL/glew.h>
@@ -81,8 +82,6 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
     FAIL_CONDITION(num_platforms == 0, "No platforms found.");
 
     char             platform_vendor[256];
-    char             device_version[256];
-    char             lang_version[256];
     cl_context       ctx = nullptr;
     cl_command_queue queue = nullptr;
 
@@ -133,10 +132,10 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
     };
 
     ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
-    CL_FAIL_CONDITION(!ctx, cl_status, "Couldn't create context.");
+    CL_FAIL_CONDITION(cl_status, "Couldn't create context.");
 
     queue = clCreateCommandQueueWithProperties(ctx, selected_device, 0, &cl_status);
-    CL_FAIL_CONDITION(!queue, cl_status, "Couldn't create command queue.");
+    CL_FAIL_CONDITION(cl_status, "Couldn't create command queue.");
 
     *p_deviceID = selected_device;
     *p_ctx = ctx;

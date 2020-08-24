@@ -53,7 +53,7 @@ __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global
     int x = get_global_id(0);
     int y = get_global_id(1);
     int row_size = get_global_size(0);
-    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
+    double2 pos = (double2)(x, y) * sp.region_size / (row_size-1);
 
     lifetimes[y * row_size + x] = lifetime0(sp.tau, pos, sp.phi, sp.particle_speed, sp.impurity_count, sp.impurity_radius, imps);
 }
@@ -64,7 +64,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(sp.region_size * x, sp.region_size * y) / (row_size-1);
+    double2 pos = (double2)(x, y) * sp.region_size / (row_size-1);
 
     double angle_area = sp.alpha * 2.0;
     double step_size = angle_area / (sp.integrand_steps-1);
@@ -93,14 +93,10 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
             double rxy = r * sin(phi);
 
             bool edge_item = (i == 0 || i == sp.integrand_steps-1);
-            //is_even = !is_even; // faster
-            is_even = (i % 2) == 0;
-            double w;
-    
-            if (edge_item) {
-                w = 1.0;
-	        } else {
-                w = is_even ? 2.0 : 4.0;
+            
+            double w = 1.0;
+            if (!edge_item) {
+                w = ((i % 2) == 0) ? 2.0 : 4.0;
 	        }
             
 

@@ -13,9 +13,11 @@ void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
     sp = p_sp;
     mode = p_ip.mode;
 
-    if (sp.angular_speed == 0) sp.particle_max_lifetime = sp.tau;
+    if (sp.angular_speed == 0) {
+        sp.particle_max_lifetime = sp.tau;
+    }
     else {
-        double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, true, false);
+        double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, false, false); // @todo, electorn/clockwise from parameters.
         sp.particle_max_lifetime = MIN(sp.tau, bound_time);
     }
 
@@ -57,8 +59,8 @@ double CPUElasticScattering::Compute()
             for (int i = 0; i < sp.dim; i++)
             {
                 v2 pos;
-                pos.x = sp.region_size * (double(i) / sp.dim);
-                pos.y = sp.region_size * (double(j) / sp.dim);
+                pos.x = sp.region_size * (double(i) / (sp.dim-1));
+                pos.y = sp.region_size * (double(j) / (sp.dim-1));
 
                 double lifetime = sp.particle_max_lifetime;
 
@@ -81,13 +83,13 @@ double CPUElasticScattering::Compute()
     }
     else if (mode == Mode::SIGMA_XX)
     {
-        for (int j = 0; j < sp.dim; j++)
+        for (int y = 0; y < sp.dim; y++)
         {
-            for (int i = 0; i < sp.dim; i++)
+            for (int x = 0; x < sp.dim; x++)
             {
                 v2 pos;
-                pos.x = sp.region_size * (double(i) / sp.dim);
-                pos.y = sp.region_size * (double(j) / sp.dim);
+                pos.x = sp.region_size * (double(x) / (sp.dim - 1));
+                pos.y = sp.region_size * (double(y) / (sp.dim - 1));
 
                 double lifetime = sp.particle_max_lifetime;
 
@@ -102,7 +104,7 @@ double CPUElasticScattering::Compute()
 
                     for (int i = 0; i < sp.integrand_steps; i++)
                     {
-                        double phi = start + i * step_size;
+                        sp.phi = start + i * step_size;
 
                         v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
 
@@ -110,13 +112,13 @@ double CPUElasticScattering::Compute()
 
                         double z = exp(-lt / sp.tau);
 
-                        double r = cos(phi) - cos(phi) * z;
-                        r += sp.angular_speed * sp.tau * sin(phi) * z;
-                        r -= sp.angular_speed * sp.tau * sin(phi);
+                        double r = cos(sp.phi) - cos(sp.phi) * z;
+                        r += sp.angular_speed * sp.tau * sin(sp.phi) * z;
+                        r -= sp.angular_speed * sp.tau * sin(sp.phi);
                         r *= sp.tau;
 
-                        double rxx = r * cos(phi);
-                        double rxy = r * sin(phi);
+                        double rxx = r * cos(sp.phi);
+                        double rxy = r * sin(sp.phi);
 
                         bool edge_item = (i == 0 || i == sp.integrand_steps - 1);
 
@@ -132,17 +134,17 @@ double CPUElasticScattering::Compute()
                     integral += total * angle_area / ((sp.integrand_steps - 1) * 3.0);
                 }
 
-                bool is_padding = (i == sp.dim - 1) || (j == sp.dim - 1);
-                bool is_edge = (i == 0) || (i == sp.dim - 2) || (j == 0) || (j == sp.dim - 2);
+                bool is_padding = (x == (sp.dim - 1)) || (y == (sp.dim - 1));
+                bool is_edge = (x == 0) || (x == (sp.dim - 2)) || (y == 0) || (y == (sp.dim - 2));
 
                 double w = is_padding ? 0.0 : 1.0;
                 if (!is_edge)
                 {
-                    w = ((i % 2) == 0) ? 2.0 : 4.0;
-                    w *= ((j % 2) == 0) ? 2.0 : 4.0;
+                    w  = ((x % 2) == 0) ? 2.0 : 4.0;
+                    w *= ((y % 2) == 0) ? 2.0 : 4.0;
                 }
 
-                main_buffer[j * sp.dim + i] = w * integral;
+                main_buffer[y * sp.dim + x] = w * integral;
             }
         }
     }
@@ -209,9 +211,10 @@ double CPUElasticScattering::ComputeB(const v2 pos, const v2 vel, const Simulati
 {
     const bool clockwise = true;
 
-    double vf = sqrt(vel.x * vel.x + vel.y * vel.y);
+    double vf = sp.particle_speed; // sqrt(vel.x * vel.x + vel.y * vel.y);
     double radius = vf / sp.angular_speed;
     auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
+    //std::cout << "Cyclotron orbit: (" << radius << ")" << std::endl;
 
     double lifetime = sp.particle_max_lifetime;
     for (int k = 0; k < sp.impurity_count; k++)
