@@ -31,13 +31,13 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubl
 	int number_of_operations = 2000;
 	int buffer_size = 256;
 
-	cl_device_id did;
+	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
-	InitializeOpenCL(&did, &context, &queue);
+	InitializeOpenCL(&device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(did, context, "test.cl", &program);
+	CompileOpenCLProgram(device, context, "test.cl", &program);
 
 	std::vector<double> A;
 	A.clear();
