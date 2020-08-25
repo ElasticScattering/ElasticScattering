@@ -74,6 +74,7 @@ public:
 };
 
 class GPUElasticScattering : public ElasticScattering {
+	void PrepareImpurityBuffer();
 	void PrepareOpenCLKernels();
 	void PrepareMainKernel();
 	void PrepareTexKernel();

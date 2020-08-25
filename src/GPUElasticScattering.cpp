@@ -61,9 +61,6 @@ OpenGLResources ogl;
 
 LARGE_INTEGER beginClock, endClock, clockFrequency;
 
-int sindex = 0;
-double last_result;
-
 std::string ReadShaderFile(const char* shader_file)
 {
     std::ifstream file(shader_file);
@@ -77,6 +74,33 @@ std::string ReadShaderFile(const char* shader_file)
 void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 {
     sp = p_sp;
+    sp.particle_count = sp.dim * sp.dim;
+    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+
+    if (p_ip.show_info) {
+        std::cout << "\n\n+---------------------------------------------------+" << std::endl;
+        std::cout << "Simulation parameters:" << std::endl;
+        std::cout << "Start region size: (" << sp.region_size << ", " << sp.region_size << ")" << std::endl;
+        std::cout << "Particles:         " << sp.particle_count << std::endl;
+        std::cout << "Particle speed:    " << sp.particle_speed << std::endl;
+        std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
+        std::cout << "Impurities:        " << sp.impurity_count << std::endl;
+        std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
+        std::cout << "Alpha:             " << sp.alpha << std::endl;
+        std::cout << "Phi:               " << sp.phi << std::endl;
+        std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
+        std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
+        std::cout << "Tau:               " << sp.tau << std::endl;
+        std::cout << "-----------------------------------------------------" << std::endl;
+
+        FAIL_CONDITION(pow(sp.dim, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
+        FAIL_CONDITION(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
+        FAIL_CONDITION(sp.alpha <= 0, "Alpha should be positive.");
+        FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
+        FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
+    }
+
     mode = p_ip.mode;
 
     QueryPerformanceFrequency(&clockFrequency);
@@ -165,12 +189,16 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    PrepareImpurityBuffer();
+    PrepareOpenCLKernels();
+}
 
+void GPUElasticScattering::PrepareImpurityBuffer()
+{
     impurities.clear();
     impurities.resize(sp.impurity_count);
 
-    if (p_ip.show_info)
-        std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
 
     //std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
     std::uniform_real_distribution<double> unif(-3e-6, sp.region_size + 3e-6);
@@ -179,8 +207,6 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 
     for (int i = 0; i < sp.impurity_count; i++)
         impurities[i] = { unif(re), unif(re) };
-
-    PrepareOpenCLKernels();
 }
 
 void GPUElasticScattering::PrepareOpenCLKernels()
@@ -290,25 +316,10 @@ double GPUElasticScattering::Compute()
     size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
     size_t local_work_size[2]  = { 16, 16 };
 
-    /*
-    sp.phi += 0.1;
-    if (sp.phi > PI2)
-        sp.phi = 0;
-    std::cout << "Phi:               " << sp.phi << std::endl;
-    */
-    /*
-    static std::vector<int> steps = { 99, 49, 25, 13, 7 };
-
-    sp.integrand_steps = steps[sindex]; 
-    if (sindex > steps.size()-2)
-        sindex = 0;
-    else
-        sindex += 1;
-        */
     cl_int clStatus;
 
-    //clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
-    //CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");

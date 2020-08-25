@@ -11,6 +11,10 @@
 void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 {
     sp = p_sp;
+    sp.particle_count = sp.dim * sp.dim;
+    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+
     mode = p_ip.mode;
 
     if (sp.angular_speed == 0) {
