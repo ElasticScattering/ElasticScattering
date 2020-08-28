@@ -13,7 +13,6 @@ enum class Mode {
 typedef struct
 {
 	bool run_tests;
-	int num_iterations;
 	bool show_info;
 	Mode mode;
 } InitParameters;
@@ -24,18 +23,21 @@ protected:
 	std::vector<double> main_buffer;
 	std::vector<float> pixels;
 
-	SimulationParameters sp;
+	SimulationParameters *sp = nullptr;
+	SimulationParameters *last_sp;
 	Mode mode;
 
 public:
-	virtual void Init(InitParameters p_ip, SimulationParameters p_sp) = 0;
-	virtual double Compute() = 0;
+	virtual void Init(bool show_info = false) = 0;
+	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp) = 0;
 	virtual std::vector<float> GetPixels() { return pixels; };
 };
 
 class CPUElasticScattering : public ElasticScattering {
-	double ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp);
-	double ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp);
+	void PrepareCompute(const SimulationParameters* p_sp);
+
+	double ComputeA(const v2 pos, const v2 vel);
+	double ComputeB(const v2 pos, const v2 vel);
 
 	void MakeTexture(const SimulationParameters sp)
 	{
@@ -69,20 +71,19 @@ class CPUElasticScattering : public ElasticScattering {
 	}
 
 public:
-	virtual void Init(InitParameters p_ip, SimulationParameters p_sp);
-	virtual double Compute();
+	virtual void Init(bool show_info = false);
+	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp);
 };
 
 class GPUElasticScattering : public ElasticScattering {
+	void PrepareCompute(Mode p_mode, const SimulationParameters *p_sp);
+
 	void PrepareImpurityBuffer();
-	void PrepareOpenCLKernels();
-	void PrepareMainKernel();
 	void PrepareTexKernel();
-	void PrepareIntegralKernel();
 
 public:
-	virtual void Init(InitParameters p_ip, SimulationParameters p_sp);
-	virtual double Compute();
+	virtual void Init(bool show_info = false);
+	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp);
 	void Draw();
 
 	~GPUElasticScattering();

@@ -245,7 +245,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="escl\scatter0.cl" />
-    <None Include="escl\scatterB.cl" />
+    <None Include="escl\scatter.cl" />
     <None Include="escl\test.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

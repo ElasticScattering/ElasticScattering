@@ -71,50 +71,21 @@ std::string ReadShaderFile(const char* shader_file)
     return contents;
 }
 
-void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
+void GPUElasticScattering::Init(bool show_info)
 {
-    sp = p_sp;
-    sp.particle_count = sp.dim * sp.dim;
-    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-
-    if (p_ip.show_info) {
-        std::cout << "\n\n+---------------------------------------------------+" << std::endl;
-        std::cout << "Simulation parameters:" << std::endl;
-        std::cout << "Start region size: (" << sp.region_size << ", " << sp.region_size << ")" << std::endl;
-        std::cout << "Particles:         " << sp.particle_count << std::endl;
-        std::cout << "Particle speed:    " << sp.particle_speed << std::endl;
-        std::cout << "Particle mass:     " << sp.particle_mass << std::endl;
-        std::cout << "Impurities:        " << sp.impurity_count << std::endl;
-        std::cout << "Impurity radius:   " << sp.impurity_radius << std::endl;
-        std::cout << "Alpha:             " << sp.alpha << std::endl;
-        std::cout << "Phi:               " << sp.phi << std::endl;
-        std::cout << "Magnetic field:    " << sp.magnetic_field << std::endl;
-        std::cout << "Angular speed:     " << sp.angular_speed << std::endl;
-        std::cout << "Tau:               " << sp.tau << std::endl;
-        std::cout << "-----------------------------------------------------" << std::endl;
-
-        FAIL_CONDITION(pow(sp.dim, 2) != sp.particle_count, "Particles couldn't be placed in a square grid");
-        FAIL_CONDITION(sp.alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
-        FAIL_CONDITION(sp.alpha <= 0, "Alpha should be positive.");
-        FAIL_CONDITION(sp.angular_speed < 0, "Angular speed (w) should be positive");
-        FAIL_CONDITION(sp.magnetic_field < 0, "Magnetic field strength (B) should be positive");
-    }
-
-    mode = p_ip.mode;
-
-    QueryPerformanceFrequency(&clockFrequency);
-    
     InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
-    if (p_ip.show_info)
+
+    if (show_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
-    const char* source_file = (sp.angular_speed == 0) ? "scatter0.cl" : "scatterB.cl";
+    QueryPerformanceFrequency(&clockFrequency);
+
+    const char* source_file = "scatter.cl";
     QueryPerformanceCounter(&beginClock);
     CompileOpenCLProgram(ocl.deviceID, ocl.context, source_file, &ocl.program);
     QueryPerformanceCounter(&endClock);
 
-    if (p_ip.show_info) {
+    if (show_info) {
         double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
         std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
     }
@@ -188,52 +159,90 @@ void GPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-    PrepareImpurityBuffer();
-    PrepareOpenCLKernels();
 }
 
-void GPUElasticScattering::PrepareImpurityBuffer()
-{
-    impurities.clear();
-    impurities.resize(sp.impurity_count);
-
-    std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
-
-    //std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
-    std::uniform_real_distribution<double> unif(-3e-6, sp.region_size + 3e-6);
-    std::random_device r;
-    std::default_random_engine re(0);
-
-    for (int i = 0; i < sp.impurity_count; i++)
-        impurities[i] = { unif(re), unif(re) };
-}
-
-void GPUElasticScattering::PrepareOpenCLKernels()
-{
-    PrepareMainKernel();
-    PrepareIntegralKernel();
-    PrepareTexKernel();
-}
-
-void GPUElasticScattering::PrepareMainKernel()
+void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameters* p_sp)
 {
     cl_int clStatus;
 
-    ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+    sp = new SimulationParameters;
+    sp->region_size = p_sp->region_size;
+    sp->dim = p_sp->dim;
+    sp->particle_speed = p_sp->particle_speed;
+    sp->particle_mass = p_sp->particle_mass;
+    sp->impurity_count = p_sp->impurity_count;
+    sp->impurity_radius = p_sp->impurity_radius;
+    sp->alpha = p_sp->alpha;
+    sp->phi = p_sp->phi;
+    sp->magnetic_field = p_sp->magnetic_field;
+    sp->tau = p_sp->tau;
+    sp->integrand_steps = p_sp->integrand_steps;
+    sp->clockwise = p_sp->clockwise;
 
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
+    sp->particle_count = sp->dim * sp->dim;
+    sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+    sp->angular_speed = E * sp->magnetic_field / sp->particle_mass;
 
-    ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+    if (false) {
+        std::cout << "\n\n+---------------------------------------------------+" << std::endl;
+        std::cout << "Simulation parameters:" << std::endl;
+        std::cout << "Start region size: (" << sp->region_size << ", " << sp->region_size << ")" << std::endl;
+        std::cout << "Particle speed:    " << sp->particle_speed << std::endl;
+        std::cout << "Particle mass:     " << sp->particle_mass << std::endl;
+        std::cout << "Impurity radius:   " << sp->impurity_radius << std::endl;
+        std::cout << "Alpha:             " << sp->alpha << std::endl;
+        std::cout << "Phi:               " << sp->phi << std::endl;
+        std::cout << "Magnetic field:    " << sp->magnetic_field << std::endl;
+        std::cout << "Angular speed:     " << sp->angular_speed << std::endl;
+        std::cout << "Tau:               " << sp->tau << std::endl;
+        std::cout << "-----------------------------------------------------" << std::endl;
 
-    const char* kernel_name = (mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
-    ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+        FAIL_CONDITION(pow(sp->dim, 2) != sp->particle_count, "Particles couldn't be placed in a square grid");
+        FAIL_CONDITION(sp->alpha > (PI / 4.0), "Alpha should not be greater than pi/4.");
+        FAIL_CONDITION(sp->alpha <= 0, "Alpha should be positive.");
+        FAIL_CONDITION(sp->angular_speed < 0, "Angular speed (w) should be positive");
+        FAIL_CONDITION(sp->magnetic_field < 0, "Magnetic field strength (B) should be positive");
+    }
+
+    bool first_run = (last_sp == nullptr);
+
+    if (first_run || sp->impurity_count != last_sp->impurity_count) {
+        std::cout << "Impurities:        " << sp->impurity_count << std::endl;
+        PrepareImpurityBuffer();
+    }
+
+    if (first_run) {
+        ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    }
     
-    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
+    if (first_run || sp->particle_count != last_sp->particle_count) {
+        std::cout << "Particles:         " << sp->particle_count << std::endl;
+
+        ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp->particle_count, nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+
+        ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp->particle_count / 2, nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
+
+        PrepareTexKernel();
+    }
+
+    if (first_run || p_mode != mode) {
+        const char* kernel_name = (mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
+        ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    }
+    
+    if (first_run) {
+        ocl.add_integral_weights_kernel = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+
+        ocl.sum_kernel = clCreateKernel(ocl.program, "sum", &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    }
+
+    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)sp);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.main_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
@@ -241,17 +250,61 @@ void GPUElasticScattering::PrepareMainKernel()
 
     clStatus = clSetKernelArg(ocl.main_kernel, 2, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.sum_output);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * MIN(sp->dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&sp->tau);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+}
+
+void GPUElasticScattering::PrepareImpurityBuffer()
+{
+    impurities.clear();
+    impurities.resize(sp->impurity_count);
+
+    std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
+
+    std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
+    //std::uniform_real_distribution<double> unif(-3e-6, sp->region_size + 3e-6);
+    std::random_device r;
+    std::default_random_engine re(0);
+
+    for (int i = 0; i < sp->impurity_count; i++)
+        impurities[i] = { unif(re), unif(re) };
+
+    cl_int clStatus;
+    ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 }
 
 void GPUElasticScattering::PrepareTexKernel()
 {
     {
-        float* pixels = new float[4 * sp.particle_count];
-        memset(pixels, 0, 4L * sp.particle_count);
+        float* pixels = new float[4 * sp->particle_count];
+        memset(pixels, 0, 4L * sp->particle_count);
 
         glGenTextures(1, &ogl.tex);
         glBindTexture(GL_TEXTURE_2D, ogl.tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp.dim, sp.dim, 0, GL_RGBA, GL_FLOAT, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp->dim, sp->dim, 0, GL_RGBA, GL_FLOAT, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //GL_LINEAR
@@ -264,77 +317,38 @@ void GPUElasticScattering::PrepareTexKernel()
 
     cl_int clStatus; 
 
-    ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-    
     ocl.image = clCreateFromGLTexture(ocl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, ogl.tex, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create GLInterop texture.");
 
     glUseProgram(ogl.shader_program);
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
-
-    clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&sp.tau);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 }
 
-void GPUElasticScattering::PrepareIntegralKernel()
+double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_sp)
 {
-    cl_int clStatus;
-    ocl.add_integral_weights_kernel = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    PrepareCompute(p_mode, p_sp);
 
-    clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-
-    ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp.particle_count / 2, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
-
-    ocl.sum_kernel = clCreateKernel(ocl.program, "sum", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-    
-    clStatus = clSetKernelArg(ocl.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-    
-    clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.sum_output);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * MIN(sp.dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-}
-
-double GPUElasticScattering::Compute()
-{
     QueryPerformanceCounter(&beginClock);
 
-    size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
-    size_t local_work_size[2]  = { 16, 16 };
+    size_t global_work_size[2] = { (size_t)sp->dim, (size_t)sp->dim };
+    size_t local_work_size[2]  = { 8, 8 };
 
     cl_int clStatus;
-
-    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)&sp);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
     
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
-
+    
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
-    const size_t half_size = sp.particle_count / 2;
-    const size_t max_work_items = MIN(sp.dim, 256);
+    const size_t half_size = sp->particle_count / 2;
+    const size_t max_work_items = MIN(sp->dim, 256);
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
-
+    
     clStatus = clFinish(ocl.queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
@@ -347,15 +361,17 @@ double GPUElasticScattering::Compute()
     for (int i = 0; i < results.size(); i++)
         total += results[i];
 
-    double simulated_particle_count = (sp.dim - 1) * (sp.dim - 1);
+    double simulated_particle_count = (sp->dim - 1) * (sp->dim - 1);
     double result = total / simulated_particle_count;
 
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
+    //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    std::cout << "Dim: " << sp.dim << ", Imps: " << sp.impurity_count << ", Tau: " << sp.tau << ", Result: " << result * sp.particle_speed << std::endl;
-    return result;
+    //std::cout << "Dim: " << sp->dim << ", Imps: " << sp->impurity_count << ", Tau: " << sp->tau << ", Result: " << result * sp->particle_speed << std::endl;
+
+    last_sp = sp;
+    //return result;
  }
 
 void GPUElasticScattering::Draw()

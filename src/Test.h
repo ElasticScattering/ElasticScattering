@@ -19,10 +19,8 @@
 #define CHECK_APPROX_LOW(a, b)  { assert(abs((a)-(b)) < EPSILON_LOW_PRECISION); }
 
 #define CHECK_CPU_GPU                                                            \
-	e->Init(ip, sp);                                                              \
-	double cpu_result = e->Compute();                                            \
-	e2->Init(ip, sp);                                                             \
-	double gpu_result = e2->Compute();                                           \
+	double cpu_result = e->Compute(m, &sp);                                            \
+	double gpu_result = e2->Compute(m, &sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_ALMOST(cpu_result, gpu_result);  
 
@@ -113,19 +111,18 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	sp.impurity_radius = 1.5e-8;
 	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
 	sp.alpha = PI / 4.0;
-	sp.phi = 0;// -sp.alpha - 1e-10;
+	sp.phi = 0;
 	sp.magnetic_field = 0;
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-	sp.tau = 1e-12; // 3.7e-13;
+	sp.tau = 1e-12;
 	sp.integrand_steps = 49;
+	sp.clockwise = 1;
 
-	InitParameters ip;
-	ip.mode = Mode::AVG_LIFETIME;
-	ip.show_info = false;
-	ip.run_tests = true;
+	Mode m = Mode::AVG_LIFETIME;
 
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
+	e2->Init(false);
 
 	SUBCASE("Standard test") {
 		CHECK_CPU_GPU
@@ -159,6 +156,13 @@ TEST_CASE("Average lifetime on CPU and GPU")
 
 		CHECK_CPU_GPU
 	}
+
+	SUBCASE("Clockwise")
+	{
+		sp.clockwise = !sp.clockwise;
+
+		CHECK_CPU_GPU
+	}
 }
 
 
@@ -179,11 +183,9 @@ TEST_CASE("Comparing sigma_xx on CPU and GPU")
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12; // 3.7e-13;
 	sp.integrand_steps = 9;
+	sp.clockwise = false;
 
-	InitParameters ip;
-	ip.mode = Mode::SIGMA_XX;
-	ip.show_info = false;
-	ip.run_tests = true;
+	Mode m = Mode::SIGMA_XX;
 
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
@@ -209,6 +211,13 @@ TEST_CASE("Comparing sigma_xx on CPU and GPU")
 	SUBCASE("Without magnetic field")
 	{
 		sp.magnetic_field = 0;
+
+		CHECK_CPU_GPU
+	}
+
+	SUBCASE("Clockwise")
+	{
+		sp.clockwise = !sp.clockwise;
 
 		CHECK_CPU_GPU
 	}

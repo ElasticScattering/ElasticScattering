@@ -8,47 +8,64 @@
 #include "ElasticScattering.h"
 #include "Details.h"
 
-void CPUElasticScattering::Init(InitParameters p_ip, SimulationParameters p_sp)
+void CPUElasticScattering::Init(bool show_info)
 {
-    sp = p_sp;
-    sp.particle_count = sp.dim * sp.dim;
-    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+}
 
-    mode = p_ip.mode;
+void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
+    sp = new SimulationParameters;
+    sp->region_size = p_sp->region_size;
+    sp->dim = p_sp->dim;
+    sp->particle_speed = p_sp->particle_speed;
+    sp->particle_mass = p_sp->particle_mass;
+    sp->impurity_count = p_sp->impurity_count;
+    sp->impurity_radius = p_sp->impurity_radius;
+    sp->alpha = p_sp->alpha;
+    sp->phi = p_sp->phi;
+    sp->magnetic_field = p_sp->magnetic_field;
+    sp->tau = p_sp->tau;
+    sp->integrand_steps = p_sp->integrand_steps;
+    sp->clockwise = p_sp->clockwise;
 
-    if (sp.angular_speed == 0) {
-        sp.particle_max_lifetime = sp.tau;
+    sp->particle_count = sp->dim * sp->dim;
+    sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+    sp->angular_speed = E * sp->magnetic_field / sp->particle_mass;
+
+    if (sp->angular_speed == 0) {
+        sp->particle_max_lifetime = sp->tau;
     }
     else {
-        double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, false, false); // @todo, electorn/clockwise from parameters.
-        sp.particle_max_lifetime = MIN(sp.tau, bound_time);
+        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, false, false); // @todo, electorn/clockwise from parameters.
+        sp->particle_max_lifetime = MIN(sp->tau, bound_time);
     }
 
-    if (p_ip.show_info) {
-        std::cout << "Particle max lifetime: " << sp.particle_max_lifetime << std::endl;
+    if (false) {
+        std::cout << "Particle max lifetime: " << sp->particle_max_lifetime << std::endl;
     }
 
     // Initialize arrays.
     impurities.clear();
-    impurities.resize(sp.impurity_count);
+    impurities.resize(sp->impurity_count);
 
-    if (p_ip.show_info)
-        std::cout << "Impurity region: " << -sp.particle_speed * sp.tau << ", " << sp.region_size + sp.particle_speed * sp.tau << std::endl;
+    if (false)
+        std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
 
-    std::uniform_real_distribution<double> unif(-sp.particle_speed * sp.tau, sp.region_size + sp.particle_speed * sp.tau);
+    std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
     std::random_device r;
     std::default_random_engine re(0);
 
-    for (int i = 0; i < sp.impurity_count; i++)
+    for (int i = 0; i < sp->impurity_count; i++)
         impurities[i] = { unif(re), unif(re) };
 
     main_buffer.clear();
-    main_buffer.resize(sp.particle_count, 0);
+    main_buffer.resize(sp->particle_count, 0);
 }
 
-double CPUElasticScattering::Compute()
+double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_sp)
 {
+    PrepareCompute(p_sp);
+    mode = p_mode;
+
     double total_time;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
@@ -59,72 +76,71 @@ double CPUElasticScattering::Compute()
     QueryPerformanceCounter(&beginClock);
     if (mode == Mode::AVG_LIFETIME)
     {
-        for (int j = 0; j < sp.dim; j++)
-            for (int i = 0; i < sp.dim; i++)
+        for (int j = 0; j < sp->dim-1; j++)
+            for (int i = 0; i < sp->dim-1; i++)
             {
                 v2 pos;
-                pos.x = sp.region_size * (double(i) / (sp.dim-1));
-                pos.y = sp.region_size * (double(j) / (sp.dim-1));
+                pos.x = sp->region_size * (double(i) / (sp->dim - 2));
+                pos.y = sp->region_size * (double(j) / (sp->dim - 2));
 
-                double lifetime = sp.particle_max_lifetime;
+                double lifetime = sp->particle_max_lifetime;
 
-                v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+                v2 vel = { sp->particle_speed * cos(sp->phi), sp->particle_speed * sin(sp->phi) };
 
-                double res = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
+                double res = (sp->angular_speed == 0) ? ComputeA(pos, vel) : ComputeB(pos, vel);
 
-                bool is_padding = (i == sp.dim - 1) || (j == sp.dim - 1);
-                bool is_edge = (i == 0) || (i == sp.dim - 2) || (j == 0) || (j == sp.dim - 2);
+                bool is_edge = (i == 0) || (i == sp->dim - 2) || (j == 0) || (j == sp->dim - 2);
 
-                double w = is_padding ? 0.0 : 1.0;
+                double w = 1.0;
                 if (!is_edge)
                 {
                     w  = ((i % 2) == 0) ? 2.0 : 4.0;
                     w *= ((j % 2) == 0) ? 2.0 : 4.0;
                 }
 
-                main_buffer[j * sp.dim + i] = w * res;
+                main_buffer[j * sp->dim + i] = w * res;
             }
     }
     else if (mode == Mode::SIGMA_XX)
     {
-        for (int y = 0; y < sp.dim; y++)
+        for (int y = 0; y < sp->dim-1; y++)
         {
-            for (int x = 0; x < sp.dim; x++)
+            for (int x = 0; x < sp->dim-1; x++)
             {
                 v2 pos;
-                pos.x = sp.region_size * (double(x) / (sp.dim - 1));
-                pos.y = sp.region_size * (double(y) / (sp.dim - 1));
+                pos.x = sp->region_size * (double(x) / (sp->dim - 2));
+                pos.y = sp->region_size * (double(y) / (sp->dim - 2));
 
-                double lifetime = sp.particle_max_lifetime;
+                double lifetime = sp->particle_max_lifetime;
 
-                double angle_area = sp.alpha * 2.0;
-                double step_size = angle_area / (sp.integrand_steps - 1);
+                double angle_area = sp->alpha * 2.0;
+                double step_size = angle_area / (sp->integrand_steps - 1);
                 double integral = 0;
 
                 for (int j = 0; j < 4; j++)
                 {
-                    double start = -sp.alpha + j * (PI * 0.5);
+                    double start = -sp->alpha + j * (PI * 0.5);
                     double total = 0.0;
 
-                    for (int i = 0; i < sp.integrand_steps; i++)
+                    for (int i = 0; i < sp->integrand_steps; i++)
                     {
-                        sp.phi = start + i * step_size;
+                        sp->phi = start + i * step_size;
 
-                        v2 vel = { sp.particle_speed * cos(sp.phi), sp.particle_speed * sin(sp.phi) };
+                        v2 vel = { sp->particle_speed * cos(sp->phi), sp->particle_speed * sin(sp->phi) };
 
-                        double lt = (sp.angular_speed == 0) ? ComputeA(pos, vel, sp) : ComputeB(pos, vel, sp);
+                        double lt = (sp->angular_speed == 0) ? ComputeA(pos, vel) : ComputeB(pos, vel);
 
-                        double z = exp(-lt / sp.tau);
+                        double z = exp(-lt / sp->tau);
 
-                        double r = cos(sp.phi) - cos(sp.phi) * z;
-                        r += sp.angular_speed * sp.tau * sin(sp.phi) * z;
-                        r -= sp.angular_speed * sp.tau * sin(sp.phi);
-                        r *= sp.tau;
+                        double r = cos(sp->phi) - cos(sp->phi) * z;
+                        r += sp->angular_speed * sp->tau * sin(sp->phi) * z;
+                        r -= sp->angular_speed * sp->tau * sin(sp->phi);
+                        r *= sp->tau;
 
-                        double rxx = r * cos(sp.phi);
-                        double rxy = r * sin(sp.phi);
+                        double rxx = r * cos(sp->phi);
+                        double rxy = r * sin(sp->phi);
 
-                        bool edge_item = (i == 0 || i == sp.integrand_steps - 1);
+                        bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
 
                         double w = 1.0;
 
@@ -135,30 +151,29 @@ double CPUElasticScattering::Compute()
                         total += rxx * w;
                     }
 
-                    integral += total * angle_area / ((sp.integrand_steps - 1) * 3.0);
+                    integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
                 }
 
-                bool is_padding = (x == (sp.dim - 1)) || (y == (sp.dim - 1));
-                bool is_edge = (x == 0) || (x == (sp.dim - 2)) || (y == 0) || (y == (sp.dim - 2));
+                bool is_edge = (x == 0) || (x == (sp->dim - 2)) || (y == 0) || (y == (sp->dim - 2));
 
-                double w = is_padding ? 0.0 : 1.0;
+                double w = 1.0;
                 if (!is_edge)
                 {
                     w  = ((x % 2) == 0) ? 2.0 : 4.0;
                     w *= ((y % 2) == 0) ? 2.0 : 4.0;
                 }
 
-                main_buffer[y * sp.dim + x] = w * integral;
+                main_buffer[y * sp->dim + x] = w * integral;
             }
         }
     }
 
     double total = 0;
-    for (int i = 0; i < sp.particle_count; i++) {
+    for (int i = 0; i < sp->particle_count; i++) {
         total += main_buffer[i];
     }
 
-    int actual_particle_count = (sp.dim - 1) * (sp.dim - 1);
+    int actual_particle_count = (sp->dim - 1) * (sp->dim - 1);
     return total / (double)actual_particle_count;
 
     QueryPerformanceCounter(&endClock);
@@ -173,12 +188,12 @@ double CPUElasticScattering::Compute()
     */
 }
 
-double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const SimulationParameters sp)
+double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel)
 {
-    const v2 unit = { cos(sp.phi), sin(sp.phi) };
-    double lifetime = sp.tau;
+    const v2 unit = { cos(sp->phi), sin(sp->phi) };
+    double lifetime = sp->tau;
 
-    for (int k = 0; k < sp.impurity_count; k++)
+    for (int k = 0; k < sp->impurity_count; k++)
     {
         const v2 ip = impurities[k];
         const double inner = (ip.x - pos.x) * unit.x + (ip.y - pos.y) * unit.y;
@@ -187,11 +202,11 @@ double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const Simulati
         const double diffx = projected.x - ip.x;
         const double diffy = projected.y - ip.y;
         const double a = diffx*diffx + diffy*diffy;
-        if (a > sp.impurity_radius_sq) {
+        if (a > sp->impurity_radius_sq) {
             continue; //@Speedup, if distance is greater than current min continue as well?
         }
 
-        double L = sqrt(sp.impurity_radius_sq - a);
+        double L = sqrt(sp->impurity_radius_sq - a);
 
         v2 time_taken;
         if (vel.x != 0) time_taken = { -((projected.x - L * unit.x) - pos.x) / vel.x, -((projected.x + L * unit.x) - pos.x) / vel.x };
@@ -211,29 +226,26 @@ double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel, const Simulati
     return lifetime;
 }
 
-double CPUElasticScattering::ComputeB(const v2 pos, const v2 vel, const SimulationParameters sp)
+double CPUElasticScattering::ComputeB(const v2 pos, const v2 vel)
 {
-    const bool clockwise = true;
+    double vf = sp->particle_speed; // sqrt(vel.x * vel.x + vel.y * vel.y);
+    double radius = vf / sp->angular_speed;
+    auto center = GetCyclotronOrbit(pos, vel, radius, vf, sp->clockwise);
 
-    double vf = sp.particle_speed; // sqrt(vel.x * vel.x + vel.y * vel.y);
-    double radius = vf / sp.angular_speed;
-    auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
-    //std::cout << "Cyclotron orbit: (" << radius << ")" << std::endl;
-
-    double lifetime = sp.particle_max_lifetime;
-    for (int k = 0; k < sp.impurity_count; k++)
+    double lifetime = sp->particle_max_lifetime;
+    for (int k = 0; k < sp->impurity_count; k++)
     {
         const v2 ip = impurities[k];
 
-        if (sp.impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
+        if (sp->impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
         {
             lifetime = 0;
             break;
         }
 
-        if (CirclesCross(center, radius, ip, sp.impurity_radius))
+        if (CirclesCross(center, radius, ip, sp->impurity_radius))
         {
-            double t = GetFirstCrossTime(center, pos, ip, radius, sp.impurity_radius, sp.angular_speed, clockwise);
+            double t = GetFirstCrossTime(center, pos, ip, radius, sp->impurity_radius, sp->angular_speed, sp->clockwise);
 
             assert(t >= 0);
 

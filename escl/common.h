@@ -30,6 +30,7 @@ __kernel void sum(__global double *A, __global double *B, __local double *local_
 	}
 }
 
+/*
 __kernel void sum2(__global double* data, __global double* output, __local double* partial_sums)
 {
 	int lid = get_local_id(0);
@@ -49,6 +50,7 @@ __kernel void sum2(__global double* data, __global double* output, __local doubl
 		output[get_group_id(0)] = partial_sums[0];
 	}
 }
+*/
 
 __kernel void add_integral_weights_2d(__global double* A)
 {
@@ -76,7 +78,7 @@ __kernel void to_texture(__global double* lifetimes, double tau, __write_only im
 	int row_size = get_global_size(0);
 	float k = (float)(lifetimes[y * row_size + x]);
 
-#if 0
+#if 1
 	k /= tau;
 	float4 c = (float4)(k, k, k, 1.0f);
 #else
@@ -89,12 +91,5 @@ __kernel void to_texture(__global double* lifetimes, double tau, __write_only im
 	
 	write_imagef(screen, (int2)(x, y), c);
 }
-
-/*
-__kernel void struct_test(__global StructTest* st)
-{
-	st.test1 *= st.test2;
-}
-*/
 
 #endif // CL_COMMON_H

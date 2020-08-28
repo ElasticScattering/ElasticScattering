@@ -1,16 +1,17 @@
 typedef struct
 {
-	int dim;
-	int particle_count;
+	int dim; //-                           
+	int particle_count; //-
 	int impurity_count;
-	int integrand_steps;
+	int integrand_steps; //~
+	int clockwise;
 
 	double region_size;
-	double particle_max_lifetime;
+	double particle_max_lifetime; //~
 	double particle_speed;      // v
-	double particle_mass;       // m
+	double particle_mass;       // m,-
 	double impurity_radius;     // r
-	double impurity_radius_sq;  // r^2
+	double impurity_radius_sq;  // r^2,~
 	double tau;
 
 	double alpha;
