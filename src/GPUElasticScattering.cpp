@@ -61,6 +61,8 @@ OpenGLResources ogl;
 
 LARGE_INTEGER beginClock, endClock, clockFrequency;
 
+double last_result;
+
 std::string ReadShaderFile(const char* shader_file)
 {
     std::ifstream file(shader_file);
@@ -161,9 +163,21 @@ void GPUElasticScattering::Init(bool show_info)
     glBindVertexArray(0);
 }
 
-void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameters* p_sp)
+bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameters* p_sp)
 {
     cl_int clStatus;
+
+    bool first_run = (last_sp == nullptr);
+
+    bool nothing_changed = !first_run && mode == p_mode &&
+        (sp->region_size == p_sp->region_size         && sp->dim == p_sp->dim &&
+         sp->particle_speed == p_sp->particle_speed   && sp->particle_mass == p_sp->particle_mass &&
+         sp->impurity_count == p_sp->impurity_count   && sp->impurity_radius == p_sp->impurity_radius &&
+         sp->alpha == p_sp->alpha                     && sp->phi == p_sp->phi &&
+         sp->magnetic_field == p_sp->magnetic_field   && sp->tau == p_sp->tau && 
+         sp->integrand_steps == p_sp->integrand_steps && sp->clockwise == p_sp->clockwise);
+
+    if (nothing_changed) return false;
 
     sp = new SimulationParameters;
     sp->region_size = p_sp->region_size;
@@ -204,7 +218,6 @@ void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
         FAIL_CONDITION(sp->magnetic_field < 0, "Magnetic field strength (B) should be positive");
     }
 
-    bool first_run = (last_sp == nullptr);
 
     if (first_run || sp->impurity_count != last_sp->impurity_count) {
         std::cout << "Impurities:        " << sp->impurity_count << std::endl;
@@ -273,6 +286,8 @@ void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    return true;
 }
 
 void GPUElasticScattering::PrepareImpurityBuffer()
@@ -328,7 +343,8 @@ void GPUElasticScattering::PrepareTexKernel()
 
 double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_sp)
 {
-    PrepareCompute(p_mode, p_sp);
+    bool need_update = PrepareCompute(p_mode, p_sp);
+    if (!need_update) return last_result;
 
     QueryPerformanceCounter(&beginClock);
 
@@ -370,7 +386,9 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
+    std::cout << "Total: " << total << ", Result:" << result << std::endl;
     last_sp = sp;
+    last_result = result;
     return result;
  }
 

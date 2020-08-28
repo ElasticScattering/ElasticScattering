@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 
-    Mode mode = Mode::AVG_LIFETIME;
+    Mode mode = Mode::SIGMA_XX;
 
     auto es = new GPUElasticScattering();
     es->Init(false);

@@ -76,7 +76,7 @@ public:
 };
 
 class GPUElasticScattering : public ElasticScattering {
-	void PrepareCompute(Mode p_mode, const SimulationParameters *p_sp);
+	bool PrepareCompute(Mode p_mode, const SimulationParameters *p_sp);
 
 	void PrepareImpurityBuffer();
 	void PrepareTexKernel();
