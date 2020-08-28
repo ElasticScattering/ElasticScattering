@@ -229,6 +229,7 @@ void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
 
     if (first_run || p_mode != mode) {
+        mode = p_mode;
         const char* kernel_name = (p_mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
         ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
@@ -266,7 +267,8 @@ void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&sp->tau);
+    double scale = (mode == Mode::AVG_LIFETIME) ? sp->tau : sp->tau*3.0;
+    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&scale);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
@@ -368,11 +370,8 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    //std::cout << "Dim: " << sp->dim << ", Imps: " << sp->impurity_count << ", Tau: " << sp->tau << ", Result: " << result * sp->particle_speed << std::endl;
-
     last_sp = sp;
-    mode = p_mode;
-    //return result;
+    return result;
  }
 
 void GPUElasticScattering::Draw()

@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     */
 
     sp.integrand_steps    = 49;
-    sp.clockwise          = 1; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
+    sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
     sp.region_size = 1e-6;
     sp.dim = 128;
     sp.particle_speed = 7e5;
@@ -150,20 +150,23 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 
+    Mode mode = Mode::AVG_LIFETIME;
+
     auto es = new GPUElasticScattering();
     es->Init(false);
-    es->Compute(Mode::AVG_LIFETIME, &sp);
+    es->Compute(mode, &sp);
 
     static v2      tau_bounds = { 1e-13, 1e-10 };
-    static cl_int2 integrand_steps_bounds = { 3, 99 };
+    //static cl_int2 integrand_steps_bounds = { 3, 99 };
 
     static cl_int2 count_bounds = { 1, 50000 };
     static v2      radius_bounds = { 1e-10, 1e-7 };
     static v2      region_bounds = { 1e-8,  1e-4 };
 
-    static v2      particle_speed_bounds = { 2e2, 10e8 };
+    static v2      particle_speed_bounds = { 1e6, 1e9 };
     static v2      phi_bounds = { 0, PI2 };
     static v2      magnetic_field_bounds = { 0, 80 };
+    static bool sync_immediate = true;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -179,43 +182,61 @@ int main(int argc, char **argv)
         {
             ImGui::Begin("Elastic scattering");
 
-            static int m = 0;
+            static int m = (int)mode;
 
             ImGui::RadioButton("LT", &m, (int)Mode::AVG_LIFETIME); ImGui::SameLine();
             ImGui::RadioButton("SXX", &m, (int)Mode::SIGMA_XX);
-            //ImGui::RadioButton("SXY", &init.mode, Mode::SIGMA_XY); 
+            //ImGui::RadioButton("SXY", &init.mode, Mode::SIGMA_XY);
 
-            ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%e", ImGuiSliderFlags_Logarithmic);
-            ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%f", 1.0f);
-            ImGui::SliderInt("Integrand steps", &sp.integrand_steps, integrand_steps_bounds.x, integrand_steps_bounds.y);
+            mode = (Mode)m;
+            if (mode != Mode::AVG_LIFETIME) {
+                ImGui::Text("Phi steps");
+                ImGui::RadioButton("7",  &sp.integrand_steps,  7); ImGui::SameLine();
+                ImGui::RadioButton("13", &sp.integrand_steps, 13); ImGui::SameLine();
+                ImGui::RadioButton("25", &sp.integrand_steps, 25); ImGui::SameLine();
+                ImGui::RadioButton("49", &sp.integrand_steps, 49); ImGui::SameLine();
+                ImGui::RadioButton("99", &sp.integrand_steps, 99);
+            }
+
+            ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%e");
+            ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%f");
+
+            ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
             ImGui::Text("Particle count");
-            ImGui::RadioButton("64x64", &sp.dim, 64); ImGui::SameLine();
-            ImGui::RadioButton("128x128", &sp.dim, 128); ImGui::SameLine();
-            ImGui::RadioButton("256x256", &sp.dim, 256); ImGui::SameLine();
+            ImGui::RadioButton("64x64",     &sp.dim,   64); ImGui::SameLine();
+            ImGui::RadioButton("128x128",   &sp.dim,  128); ImGui::SameLine();
+            ImGui::RadioButton("256x256",   &sp.dim,  256); ImGui::SameLine();
             ImGui::RadioButton("1024x1024", &sp.dim, 1024);
 
-            ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%e", 1.0f);
-            ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%f", 1.0f);
+            ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%e");
+            
+            if (mode == Mode::AVG_LIFETIME) {
+                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%f", 1.0f);
+            }
 
+            ImGui::Dummy(ImVec2(0.0f, 10.0f));
+
+            ImGui::Text("Impurities");
             ImGui::SliderInt("Count", &sp.impurity_count, count_bounds.x, count_bounds.y);
-            ImGui::SliderScalar("Region", ImGuiDataType_Double, &sp.region_size, &region_bounds.x, &region_bounds.y, "%e", 1.0f);
-            ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%e", 1.0f);
+            ImGui::SliderScalar("Region", ImGuiDataType_Double, &sp.region_size, &region_bounds.x, &region_bounds.y, "%e");
+            ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%e");
 
-            if (ImGui::Button("Compute")) {
-                std::cout << "Mode: " << m << std::endl;
-                es->Compute((Mode)m, &sp);
+            ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+            ImGui::Checkbox("Sync immediately", &sync_immediate);
+
+            if (sync_immediate || (ImGui::Button("Compute"))) {
+                double res = es->Compute((Mode)m, &sp);
+                ImGui::Text("Result: %e", res);
             }
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::End();
-
-
-            es->Compute((Mode)m, &sp);
-            es->Draw();
         }
 
+        es->Draw();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
