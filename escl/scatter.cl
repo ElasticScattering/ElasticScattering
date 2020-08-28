@@ -190,7 +190,7 @@ __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global
 
     if ((x < (row_size - 1)) && (y < (row_size - 1))) {
         //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
-        double2 pos = (double2)(x, y) * sp.region_size / (row_size-1); 
+        double2 pos = (double2)(x, y) * sp.region_size / (row_size-2); 
     
         double particle_lifetime;
         if (sp.angular_speed != 0) {
@@ -211,11 +211,8 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(x, y) * sp.region_size / (row_size-1);
+    double2 pos = (double2)(x, y) * sp.region_size / (row_size-2);
     
-    bool clockwise = (sp.clockwise == 1);
-    if (clockwise) sp.angular_speed *= -1;
-
     double angle_area = sp.alpha * 2.0;
     double step_size = angle_area / (sp.integrand_steps-1);
     double integral = 0;
@@ -228,34 +225,36 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
         bool is_even = true;
         for (int i = 0; i < sp.integrand_steps; i++)
         {
-            double phi = start + i * step_size;
+            sp.phi = start + i * step_size;
 
             double particle_lifetime;
             if (sp.angular_speed != 0) {
-                double bound_time = GetBoundTime(phi, sp.alpha, sp.angular_speed, clockwise, false);
+                bool clockwise = (sp.clockwise == 1);
+                if (clockwise) sp.angular_speed *= -1;
+
+                double bound_time = GetBoundTime(sp.phi, sp.alpha, sp.angular_speed, clockwise, false);
                 particle_lifetime = lifetimeB(min(sp.tau, bound_time), pos, clockwise, sp, imps);
-			}else {
+			} else {
                 particle_lifetime = lifetime0(sp.tau, pos, sp, imps);
 			}
 
 	        double z = exp(-particle_lifetime / sp.tau);
 
-            double r = cos(phi) - cos(phi + sp.angular_speed * particle_lifetime) * z;
-	        r       += sp.angular_speed * sp.tau * sin(phi + sp.angular_speed * particle_lifetime) * z;
-	        r       -= sp.angular_speed * sp.tau * sin(phi);
+            double r = cos(sp.phi) - cos(sp.phi + sp.angular_speed * particle_lifetime) * z;
+	        r       += sp.angular_speed * sp.tau * sin(sp.phi + sp.angular_speed * particle_lifetime) * z;
+	        r       -= sp.angular_speed * sp.tau * sin(sp.phi);
             r       *= sp.tau;
 	        
-            double rxx = r * cos(phi);
-            double rxy = r * sin(phi);
+            double rxx = r * cos(sp.phi);
+            double rxy = r * sin(sp.phi);
 
-            bool edge_item = (i == 0 || i == sp.integrand_steps-1);
+            bool edge_item = (i == 0 || i == row_size-1);
             is_even = (i % 2) == 0;
             double w = 1.0;
     
             if (!edge_item) {
                 w = is_even ? 2.0 : 4.0;
 	        }
-            
 
             total += rxx * w;
 	    }

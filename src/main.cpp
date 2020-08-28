@@ -203,12 +203,14 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%e", 1.0f);
 
             if (ImGui::Button("Compute")) {
+                std::cout << "Mode: " << m << std::endl;
                 es->Compute((Mode)m, &sp);
             }
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::End();
+
 
             es->Compute((Mode)m, &sp);
             es->Draw();

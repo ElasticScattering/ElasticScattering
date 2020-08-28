@@ -229,7 +229,7 @@ void GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
 
     if (first_run || p_mode != mode) {
-        const char* kernel_name = (mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
+        const char* kernel_name = (p_mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
         ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
@@ -371,6 +371,7 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_
     //std::cout << "Dim: " << sp->dim << ", Imps: " << sp->impurity_count << ", Tau: " << sp->tau << ", Result: " << result * sp->particle_speed << std::endl;
 
     last_sp = sp;
+    mode = p_mode;
     //return result;
  }
 
