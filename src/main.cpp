@@ -168,6 +168,8 @@ int main(int argc, char **argv)
     static v2      magnetic_field_bounds = { 0, 80 };
     static bool sync_immediate = true;
 
+    double last_result = 0;
+
     while (!glfwWindowShouldClose(window))
     {
         ProcessInput(window);
@@ -224,12 +226,14 @@ int main(int argc, char **argv)
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
+            bool update = ImGui::Button("Compute"); ImGui::SameLine();
             ImGui::Checkbox("Sync immediately", &sync_immediate);
 
-            if (sync_immediate || (ImGui::Button("Compute"))) {
-                double res = es->Compute((Mode)m, &sp);
-                ImGui::Text("Result: %e", res);
+            if (sync_immediate || update) {
+                last_result = es->Compute((Mode)m, &sp);
             }
+            
+            ImGui::Text("Result: %e", last_result);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

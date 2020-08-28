@@ -341,7 +341,7 @@ void GPUElasticScattering::PrepareTexKernel()
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
 
-double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_sp)
+double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_sp)
 {
     bool need_update = PrepareCompute(p_mode, p_sp);
     if (!need_update) return last_result;
@@ -349,16 +349,16 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_
     QueryPerformanceCounter(&beginClock);
 
     size_t global_work_size[2] = { (size_t)sp->dim, (size_t)sp->dim };
-    size_t local_work_size[2]  = { 8, 8 };
+    size_t local_work_size[2] = { 16, 16 };
 
     cl_int clStatus;
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
-    
+
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
-    
+
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
@@ -366,7 +366,7 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters *p_
     const size_t max_work_items = MIN(sp->dim, 256);
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
-    
+
     clStatus = clFinish(ocl.queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html

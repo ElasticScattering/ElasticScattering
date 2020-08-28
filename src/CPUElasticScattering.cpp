@@ -73,11 +73,12 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
 
     //std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
 
+    int limit = sp->dim - 1;
     QueryPerformanceCounter(&beginClock);
     if (mode == Mode::AVG_LIFETIME)
     {
-        for (int j = 0; j < sp->dim-1; j++)
-            for (int i = 0; i < sp->dim-1; i++)
+        for (int j = 0; j < limit; j++)
+            for (int i = 0; i < limit; i++)
             {
                 v2 pos;
                 pos.x = sp->region_size * (double(i) / (sp->dim - 2));
@@ -103,9 +104,9 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     }
     else if (mode == Mode::SIGMA_XX)
     {
-        for (int y = 0; y < sp->dim-1; y++)
+        for (int y = 0; y < limit; y++)
         {
-            for (int x = 0; x < sp->dim-1; x++)
+            for (int x = 0; x < limit; x++)
             {
                 v2 pos;
                 pos.x = sp->region_size * (double(x) / (sp->dim - 2));
@@ -140,7 +141,7 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
                         double rxx = r * cos(sp->phi);
                         double rxy = r * sin(sp->phi);
 
-                        bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
+                        bool edge_item = (i == 0 || i == sp->dim - 1);
 
                         double w = 1.0;
 
@@ -169,16 +170,13 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     }
 
     double total = 0;
-    for (int i = 0; i < sp->particle_count; i++) {
-        total += main_buffer[i];
-    }
+    for (int j = 0; j < limit; j++)
+        for (int i = 0; i < limit; i++)
+            total += main_buffer[j*sp->dim + i];
 
     int actual_particle_count = (sp->dim - 1) * (sp->dim - 1);
-    return total / (double)actual_particle_count;
 
     QueryPerformanceCounter(&endClock);
-    
-    return -99999;
 
     /*
     total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
@@ -186,6 +184,8 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     
     MakeTexture(sp);
     */
+    
+    return total / (double)actual_particle_count;
 }
 
 double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel)

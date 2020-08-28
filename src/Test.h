@@ -19,8 +19,8 @@
 #define CHECK_APPROX_LOW(a, b)  { assert(abs((a)-(b)) < EPSILON_LOW_PRECISION); }
 
 #define CHECK_CPU_GPU                                                            \
-	double cpu_result = e->Compute(m, &sp);                                            \
-	double gpu_result = e2->Compute(m, &sp);                                           \
+	cpu_result = e->Compute(m, &sp);                                            \
+	gpu_result = e2->Compute(m, &sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_ALMOST(cpu_result, gpu_result);  
 
@@ -99,7 +99,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubl
 	}
 }
 
-TEST_CASE("Average lifetime on CPU and GPU")
+TEST_CASE("Comparing kernel results on CPU and GPU")
 {
 	SimulationParameters sp;
 	sp.region_size = 1e-6;
@@ -115,7 +115,7 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	sp.magnetic_field = 0;
 	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12;
-	sp.integrand_steps = 49;
+	sp.integrand_steps = 9;
 	sp.clockwise = 1;
 
 	Mode m = Mode::AVG_LIFETIME;
@@ -124,101 +124,45 @@ TEST_CASE("Average lifetime on CPU and GPU")
 	auto e2 = new GPUElasticScattering();
 	e2->Init(false);
 
-	SUBCASE("Standard test") {
+	double cpu_result, gpu_result;
+
+	SUBCASE("Average lifetime") {
+		CHECK_CPU_GPU
+
+			sp.phi = -sp.alpha - 1e-10;
+		CHECK_CPU_GPU
+
+			sp.impurity_count = 200;
+		CHECK_CPU_GPU;
+
+		sp.impurity_radius = 1.5e-8;
+		CHECK_CPU_GPU
+
+			sp.magnetic_field = 0;
+		CHECK_CPU_GPU
+
+			sp.clockwise = !sp.clockwise;
 		CHECK_CPU_GPU
 	}
 
-	SUBCASE("Different angle")
-	{
+	SUBCASE("Average sigma_xx") {
+		Mode m = Mode::SIGMA_XX;
+		
+		CHECK_CPU_GPU
+
 		sp.phi = -sp.alpha - 1e-10;
-
 		CHECK_CPU_GPU
-	}
 
-	SUBCASE("More impurities") {
 		sp.impurity_count = 200;
-		
 		CHECK_CPU_GPU;
-	}
-	
-	SUBCASE("Larger impurities")
-	{
+
 		sp.impurity_radius = 1.5e-8;
-		sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-
 		CHECK_CPU_GPU
-	}
-	
-	SUBCASE("Without magnetic field")
-	{
+
 		sp.magnetic_field = 0;
-		sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-
 		CHECK_CPU_GPU
-	}
 
-	SUBCASE("Clockwise")
-	{
 		sp.clockwise = !sp.clockwise;
-
-		CHECK_CPU_GPU
-	}
-}
-
-
-TEST_CASE("Comparing sigma_xx on CPU and GPU")
-{
-	SimulationParameters sp;
-	sp.region_size = 1e-6;
-	sp.dim = 64;
-	sp.particle_count = sp.dim * sp.dim;
-	sp.particle_speed = 7e5;
-	sp.particle_mass = 5 * M0;
-	sp.impurity_count = 100;
-	sp.impurity_radius = 1.5e-8;
-	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-	sp.alpha = PI / 4.0;
-	sp.phi = 0;// -sp.alpha - 1e-10;
-	sp.magnetic_field = 0;
-	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-	sp.tau = 1e-12; // 3.7e-13;
-	sp.integrand_steps = 9;
-	sp.clockwise = false;
-
-	Mode m = Mode::SIGMA_XX;
-
-	auto e  = new CPUElasticScattering();
-	auto e2 = new GPUElasticScattering();
-
-	SUBCASE("Standard test") {
-		CHECK_CPU_GPU
-	}
-
-	SUBCASE("More impurities") {
-		sp.impurity_count = 200;
-		
-		CHECK_CPU_GPU;
-	}
-	
-	SUBCASE("Larger impurities")
-	{
-		sp.impurity_radius = 1.5e-8;
-		sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-
-		CHECK_CPU_GPU
-	}
-	
-	SUBCASE("Without magnetic field")
-	{
-		sp.magnetic_field = 0;
-
-		CHECK_CPU_GPU
-	}
-
-	SUBCASE("Clockwise")
-	{
-		sp.clockwise = !sp.clockwise;
-
 		CHECK_CPU_GPU
 	}
 }

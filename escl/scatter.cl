@@ -203,6 +203,9 @@ __kernel void lifetime(SimulationParameters sp, __global double2 *imps, __global
 
         lifetimes[y * row_size + x] = particle_lifetime;
 	}
+    else { 
+        lifetimes[y * row_size + x] = 0;
+	}
 }
 
 __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global double *integrand)

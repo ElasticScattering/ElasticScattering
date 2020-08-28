@@ -84,6 +84,7 @@ class GPUElasticScattering : public ElasticScattering {
 public:
 	virtual void Init(bool show_info = false);
 	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp);
+
 	void Draw();
 
 	~GPUElasticScattering();
