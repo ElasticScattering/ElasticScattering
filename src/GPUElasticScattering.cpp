@@ -175,7 +175,8 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
          sp->impurity_count == p_sp->impurity_count   && sp->impurity_radius == p_sp->impurity_radius &&
          sp->alpha == p_sp->alpha                     && sp->phi == p_sp->phi &&
          sp->magnetic_field == p_sp->magnetic_field   && sp->tau == p_sp->tau && 
-         sp->integrand_steps == p_sp->integrand_steps && sp->clockwise == p_sp->clockwise);
+         sp->integrand_steps == p_sp->integrand_steps && sp->clockwise == p_sp->clockwise &&
+         sp->region_extends == p_sp->region_extends);
 
     if (nothing_changed) return false;
 
@@ -186,6 +187,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     sp->particle_mass = p_sp->particle_mass;
     sp->impurity_count = p_sp->impurity_count;
     sp->impurity_radius = p_sp->impurity_radius;
+    sp->region_extends = p_sp->region_extends;
     sp->alpha = p_sp->alpha;
     sp->phi = p_sp->phi;
     sp->magnetic_field = p_sp->magnetic_field;
@@ -219,7 +221,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
 
 
-    if (first_run || sp->impurity_count != last_sp->impurity_count) {
+    if (first_run || (sp->impurity_count != last_sp->impurity_count || sp->region_extends != last_sp->region_extends || sp->region_size != last_sp->region_size)) {
         //std::cout << "Impurities:        " << sp->impurity_count << std::endl;
         PrepareImpurityBuffer();
     }
@@ -297,8 +299,8 @@ void GPUElasticScattering::PrepareImpurityBuffer()
 
     //std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
 
-    std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
-    //std::uniform_real_distribution<double> unif(-3e-6, sp->region_size + 3e-6);
+    //std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
+    std::uniform_real_distribution<double> unif(-sp->region_extends, sp->region_size + sp->region_extends);
     std::random_device r;
     std::default_random_engine re(0);
 
@@ -379,16 +381,24 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     for (int i = 0; i < results.size(); i++)
         total += results[i];
 
-    double simulated_particle_count = (sp->dim - 1) * (sp->dim - 1);
-    double result = total / simulated_particle_count;
+    double z = sp->region_size / (sp->dim - 2);
+    double result = total * z * z / 9.0;
+
     if (mode != Mode::AVG_LIFETIME)
         result = FinishSigmaXX(result);
+    else
+        result /= pow(sp->region_size, 2.0);
 
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    //std::cout << "Total: " << total << ", Result:" << result << std::endl;
+    double kf = sp->particle_mass * sp->particle_speed / HBAR;
+    double n  = kf * kf / (PI2 * C);
+    double formula = n * E * E * sp->tau / sp->particle_mass;
+    
+    std::cout << "\nFormula:" << formula << std::endl;
+    std::cout << "Result :" << result << std::endl;
     last_sp = sp;
     last_result = result;
     return result;

@@ -177,8 +177,9 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
         for (int i = 0; i < limit; i++)
             total += main_buffer[j*sp->dim + i];
 
-    int actual_particle_count = (sp->dim - 1) * (sp->dim - 1);
-    double result = total / (double)actual_particle_count;
+    double z = sp->region_size / (sp->dim - 2);
+    double result = total * z * z / 9.0;
+
     if (mode != Mode::AVG_LIFETIME)
         result = FinishSigmaXX(result);
 

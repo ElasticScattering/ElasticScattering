@@ -31,7 +31,7 @@ protected:
 		double kf = sp->particle_mass * sp->particle_speed / HBAR;
 		double outside = E * E * kf * kf / (2.0 * PI2 * sp->particle_mass * sp->region_size * sp->region_size * C);
 		double v = E * sp->magnetic_field * sp->tau / sp->particle_mass;
-		outside *= sp->tau / (1.0 + v * v);
+		outside /= (1.0 + v * v);
 
 		return outside * res;
 	};
