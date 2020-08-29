@@ -46,11 +46,11 @@ class CPUElasticScattering : public ElasticScattering {
 	void PrepareCompute(const SimulationParameters* p_sp);
 
 	double ComputeA(const v2 pos, const v2 vel);
-	double ComputeB(const v2 pos, const v2 vel);
+	double ComputeB(double particle_max_lifetime, const v2 pos, const v2 vel, bool clockwise);
 
 	void MakeTexture(const SimulationParameters sp)
 	{
-		double itau = 1.0 / sp.particle_max_lifetime; //sp.particle_count; 
+		double itau = 1.0 / sp.tau; //sp.particle_count; 
 		pixels.clear();
 		pixels.resize(sp.particle_count * 3L);
 		size_t j = 0;

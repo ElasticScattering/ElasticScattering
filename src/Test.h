@@ -16,13 +16,21 @@
 #define EPSILON_HIGH 1e-20
 #define CHECK_ALMOST(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON_HIGH, p_msg); }
 #define CHECK_APPROX(a, b)  { CHECK(abs((a)-(b)) < EPSILON); }
+#define CHECK_APPROX_MSG(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON, p_msg); }
 #define CHECK_APPROX_LOW(a, b)  { assert(abs((a)-(b)) < EPSILON_LOW_PRECISION); }
 
-#define CHECK_CPU_GPU(p_msg)                                                            \
+#define CHECK_CPU_GPU_ALMOST(p_msg)                                                            \
 	cpu_result = e->Compute(m, &sp);                                            \
 	gpu_result = e2->Compute(m, &sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_ALMOST(cpu_result, gpu_result, p_msg);  
+
+#define CHECK_CPU_GPU_APPROX(p_msg)                                                            \
+	cpu_result = e->Compute(m, &sp);                                            \
+	gpu_result = e2->Compute(m, &sp);                                           \
+	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
+	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
+
 
 TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubles") 
 {
@@ -126,39 +134,43 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	double cpu_result, gpu_result;
 
-	CHECK_CPU_GPU("Default parameters")
+	CHECK_CPU_GPU_ALMOST("Default parameters")
 
 	sp.phi = -sp.alpha - 1e-10;
-	CHECK_CPU_GPU("Different phi")
+	CHECK_CPU_GPU_ALMOST("Different phi")
 
 	sp.impurity_count = 200;
-	CHECK_CPU_GPU("More impurities");
+	CHECK_CPU_GPU_ALMOST("More impurities");
 
 	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU("Larger impurities")
+	CHECK_CPU_GPU_ALMOST("Larger impurities")
 
 	sp.magnetic_field = 30;
-	CHECK_CPU_GPU("Magnetic field on")
+	CHECK_CPU_GPU_ALMOST("Magnetic field on")
 
 	sp.clockwise = 0;
-	CHECK_CPU_GPU("Clockwise off")
+	CHECK_CPU_GPU_ALMOST("Clockwise off")
 
 	// SIGMA //
 	m = Mode::SIGMA_XX;
+	sp.impurity_count = 100;
+	sp.impurity_radius = 1.5e-8;
+	sp.clockwise = 1;
+	sp.magnetic_field = 0;
 
-	CHECK_CPU_GPU("SXX - Default parameters")
+	CHECK_CPU_GPU_APPROX("SXX - Default parameters")
 
 	sp.impurity_count = 200;
-	CHECK_CPU_GPU("SXX - More impurities");
+	CHECK_CPU_GPU_APPROX("SXX - More impurities");
 
 	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU("SXX - Larger impurities")
+	CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
 
 	sp.magnetic_field = 30;
-	CHECK_CPU_GPU("SXX - Magnetic field on")
+	CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
 
 	sp.clockwise = 0;
-	CHECK_CPU_GPU("SXX - Clockwise off")
+	CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
 }
 
 TEST_CASE("Cyclotron Orbit")

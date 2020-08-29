@@ -7,7 +7,6 @@ typedef struct
 	int clockwise;
 
 	double region_size;
-	double particle_max_lifetime; //~
 	double particle_speed;      // v
 	double particle_mass;       // m,-
 	double impurity_radius;     // r

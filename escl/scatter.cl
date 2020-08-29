@@ -1,4 +1,5 @@
 #include "escl/common.h"
+#include "escl/util.h"
 
 double smod(double a, double b)
 {
@@ -214,7 +215,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
     int y = get_global_id(1);
     int row_size = get_global_size(0);
     
-    double2 pos = (double2)(x, y) * sp.region_size / (row_size-2);
+    double2 pos = (double2)(x, y) * (sp.region_size / (row_size-2));
     
     double angle_area = sp.alpha * 2.0;
     double step_size = angle_area / (sp.integrand_steps-1);
@@ -251,7 +252,7 @@ __kernel void sigma_xx(SimulationParameters sp, __global double2 *imps, __global
             double rxx = r * cos(sp.phi);
             double rxy = r * sin(sp.phi);
 
-            bool edge_item = (i == 0 || i == row_size-1);
+            bool edge_item = (i == 0 || i == sp.integrand_steps-1);
             is_even = (i % 2) == 0;
             double w = 1.0;
     

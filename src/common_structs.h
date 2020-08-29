@@ -7,9 +7,9 @@ typedef struct
 	cl_int impurity_count;
 	cl_int integrand_steps;
 	cl_int clockwise;
+	cl_int xx;
 
 	cl_double region_size;
-	cl_double particle_max_lifetime;
 	cl_double particle_speed;      // v
 	cl_double particle_mass;       // m
 	cl_double impurity_radius;     // r

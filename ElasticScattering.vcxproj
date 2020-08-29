@@ -226,6 +226,7 @@
   <ItemGroup>
     <ClInclude Include="escl\common.h" />
     <ClInclude Include="escl\common_structs.h" />
+    <ClInclude Include="escl\util.h" />
     <ClInclude Include="libs\imgui\imconfig.h" />
     <ClInclude Include="libs\imgui\imgui.h" />
     <ClInclude Include="libs\imgui\imgui_impl_glfw.h" />
