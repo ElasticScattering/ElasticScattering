@@ -220,7 +220,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
 
 
     if (first_run || sp->impurity_count != last_sp->impurity_count) {
-        std::cout << "Impurities:        " << sp->impurity_count << std::endl;
+        //std::cout << "Impurities:        " << sp->impurity_count << std::endl;
         PrepareImpurityBuffer();
     }
 
@@ -230,7 +230,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
     
     if (first_run || sp->particle_count != last_sp->particle_count) {
-        std::cout << "Particles:         " << sp->particle_count << std::endl;
+        //std::cout << "Particles:         " << sp->particle_count << std::endl;
 
         ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp->particle_count, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
@@ -295,7 +295,7 @@ void GPUElasticScattering::PrepareImpurityBuffer()
     impurities.clear();
     impurities.resize(sp->impurity_count);
 
-    std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
+    //std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
 
     std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
     //std::uniform_real_distribution<double> unif(-3e-6, sp->region_size + 3e-6);
@@ -381,12 +381,14 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
 
     double simulated_particle_count = (sp->dim - 1) * (sp->dim - 1);
     double result = total / simulated_particle_count;
+    if (mode != Mode::AVG_LIFETIME)
+        result = FinishSigmaXX(result);
 
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
-    std::cout << "Total: " << total << ", Result:" << result << std::endl;
+    //std::cout << "Total: " << total << ", Result:" << result << std::endl;
     last_sp = sp;
     last_result = result;
     return result;

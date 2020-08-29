@@ -27,6 +27,15 @@ protected:
 	SimulationParameters *last_sp;
 	Mode mode;
 
+	double FinishSigmaXX(double res) {
+		double kf = sp->particle_mass * sp->particle_speed / HBAR;
+		double outside = E * E * kf * kf / (2.0 * PI2 * sp->particle_mass * sp->region_size * sp->region_size * C);
+		double v = E * sp->magnetic_field * sp->tau / sp->particle_mass;
+		outside *= sp->tau / (1.0 + v * v);
+
+		return outside * res;
+	};
+
 public:
 	virtual void Init(bool show_info = false) = 0;
 	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp) = 0;

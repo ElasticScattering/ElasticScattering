@@ -35,7 +35,7 @@ void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
         sp->particle_max_lifetime = sp->tau;
     }
     else {
-        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, false, false); // @todo, electorn/clockwise from parameters.
+        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, (sp->clockwise == 1), false); // @todo, electorn/clockwise from parameters.
         sp->particle_max_lifetime = MIN(sp->tau, bound_time);
     }
 
@@ -170,11 +170,14 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     }
 
     double total = 0;
-    for (int j = 0; j < limit; j++)
-        for (int i = 0; i < limit; i++)
+    for (int j = 0; j < sp->dim; j++)
+        for (int i = 0; i < sp->dim; i++)
             total += main_buffer[j*sp->dim + i];
 
     int actual_particle_count = (sp->dim - 1) * (sp->dim - 1);
+    double result = total / (double)actual_particle_count;
+    if (mode != Mode::AVG_LIFETIME)
+        result = FinishSigmaXX(result);
 
     QueryPerformanceCounter(&endClock);
 
@@ -185,7 +188,7 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     MakeTexture(sp);
     */
     
-    return total / (double)actual_particle_count;
+    return result;
 }
 
 double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel)

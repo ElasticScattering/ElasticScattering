@@ -14,15 +14,15 @@
 #define EPSILON 0.0001
 #define EPSILON_LOW_PRECISION 0.01
 #define EPSILON_HIGH 1e-20
-#define CHECK_ALMOST(a, b)  { CHECK(abs((a)-(b)) < EPSILON_HIGH); }
+#define CHECK_ALMOST(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON_HIGH, p_msg); }
 #define CHECK_APPROX(a, b)  { CHECK(abs((a)-(b)) < EPSILON); }
 #define CHECK_APPROX_LOW(a, b)  { assert(abs((a)-(b)) < EPSILON_LOW_PRECISION); }
 
-#define CHECK_CPU_GPU                                                            \
+#define CHECK_CPU_GPU(p_msg)                                                            \
 	cpu_result = e->Compute(m, &sp);                                            \
 	gpu_result = e2->Compute(m, &sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
-	CHECK_ALMOST(cpu_result, gpu_result);  
+	CHECK_ALMOST(cpu_result, gpu_result, p_msg);  
 
 TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubles") 
 {
@@ -95,7 +95,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubl
 	for (int j = 0; j < buffer_size; j++) {
 		//std::cout << " " << cpu_results[j] << "     " << gpu_results[j] << "     " << abs(gpu_results[j] - cpu_results[j]) << std::endl;
 
-		CHECK_ALMOST(cpu_results[j], gpu_results[j]);
+		CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
 	}
 }
 
@@ -126,45 +126,39 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	double cpu_result, gpu_result;
 
-	SUBCASE("Average lifetime") {
-		CHECK_CPU_GPU
+	CHECK_CPU_GPU("Default parameters")
 
-			sp.phi = -sp.alpha - 1e-10;
-		CHECK_CPU_GPU
+	sp.phi = -sp.alpha - 1e-10;
+	CHECK_CPU_GPU("Different phi")
 
-			sp.impurity_count = 200;
-		CHECK_CPU_GPU;
+	sp.impurity_count = 200;
+	CHECK_CPU_GPU("More impurities");
 
-		sp.impurity_radius = 1.5e-8;
-		CHECK_CPU_GPU
+	sp.impurity_radius = 1.5e-7;
+	CHECK_CPU_GPU("Larger impurities")
 
-			sp.magnetic_field = 0;
-		CHECK_CPU_GPU
+	sp.magnetic_field = 30;
+	CHECK_CPU_GPU("Magnetic field on")
 
-			sp.clockwise = !sp.clockwise;
-		CHECK_CPU_GPU
-	}
+	sp.clockwise = 0;
+	CHECK_CPU_GPU("Clockwise off")
 
-	SUBCASE("Average sigma_xx") {
-		Mode m = Mode::SIGMA_XX;
-		
-		CHECK_CPU_GPU
+	// SIGMA //
+	m = Mode::SIGMA_XX;
 
-		sp.phi = -sp.alpha - 1e-10;
-		CHECK_CPU_GPU
+	CHECK_CPU_GPU("SXX - Default parameters")
 
-		sp.impurity_count = 200;
-		CHECK_CPU_GPU;
+	sp.impurity_count = 200;
+	CHECK_CPU_GPU("SXX - More impurities");
 
-		sp.impurity_radius = 1.5e-8;
-		CHECK_CPU_GPU
+	sp.impurity_radius = 1.5e-7;
+	CHECK_CPU_GPU("SXX - Larger impurities")
 
-		sp.magnetic_field = 0;
-		CHECK_CPU_GPU
+	sp.magnetic_field = 30;
+	CHECK_CPU_GPU("SXX - Magnetic field on")
 
-		sp.clockwise = !sp.clockwise;
-		CHECK_CPU_GPU
-	}
+	sp.clockwise = 0;
+	CHECK_CPU_GPU("SXX - Clockwise off")
 }
 
 TEST_CASE("Cyclotron Orbit")
