@@ -167,6 +167,7 @@ int main(int argc, char **argv)
     static v2      phi_bounds = { 0, PI2 };
     static v2      magnetic_field_bounds = { 0, 80 };
     static bool sync_immediate = true;
+    static bool is_electron = (sp.clockwise == 1);
 
     double last_result = 0;
 
@@ -202,6 +203,8 @@ int main(int argc, char **argv)
 
             ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%e");
             ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%f");
+            ImGui::Checkbox("Clockwise", &is_electron);
+            sp.clockwise = is_electron ? 1 : 0;
 
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
