@@ -17,8 +17,6 @@
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
 
-
-
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
@@ -30,9 +28,6 @@ void ProcessInput(GLFWwindow* window)
 }
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
-    
-    p_init->mode = Mode::AVG_LIFETIME;
-    p_init->show_info = true;
     p_init->run_tests = false;
 
     if (argc == 2) {
@@ -41,35 +36,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         w.assign(argv[1], strlen(argv[1]));
 
         p_init->run_tests = w == "test";
-        if (p_init->run_tests) {
-            p_init->show_info = false;
-        }
     }
-    return;
-    
-    if (argc != 3) {
-        std::cout << "Usage: ElasticScattering [lifetime | distance | stats | conductivity] [show | no-show]" << std::endl;
-        std::cout << "Usage: ElasticScattering [test]" << std::endl;
-        exit(0);
-    }
-
-    
-    /*
-    std::unordered_map<std::string, Mode> modes
-    {
-        {"lifetime",     Mode::LIFETIME},
-        {"distance",     Mode::AVG_DISTANCE},
-        {"stats",        Mode::STATS},
-        {"conductivity", Mode::CONDUCTIVITY}
-    };
-    std::string key;
-    key.assign(argv[2], strlen(argv[2]));
-    auto iterator = modes.find(key);
-    FAIL_CONDITION(iterator == modes.end(), "Couldn't understand second command line argument.");
-    p_init->mode = iterator->second;
-    */
-
-    p_init->show_info = strcmp(argv[3], "show");
 }
 
 int main(int argc, char **argv)

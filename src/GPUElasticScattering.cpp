@@ -1,8 +1,5 @@
 #include <windows.h>
 
-#include <random>
-#include <limits>
-
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -10,7 +7,7 @@
 
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
-#include "Details.h"
+
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
@@ -21,8 +18,6 @@ typedef struct
     cl_context context;
     cl_program program;
     cl_command_queue queue;
-
-
 
     //
     // Kernels
@@ -98,11 +93,11 @@ void GPUElasticScattering::Init(bool show_info)
     // OpenGL context
     GLint success;
 
-    std::string source = ReadShaderFile("shaders/shader.vs");
+    std::string source = ReadShaderFile("src/shaders/shader.vs");
     char* vsource = new char[source.length() + 1];
     std::copy_n(source.c_str(), source.length() + 1, vsource);
 
-    source = ReadShaderFile("shaders/shader.fs");
+    source = ReadShaderFile("src/shaders/shader.fs");
     char* fsource = new char[source.length() + 1];
     std::copy_n(source.c_str(), source.length() + 1, fsource);
 
@@ -184,23 +179,23 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     if (nothing_changed) return false;
 
     sp = new SimulationParameters;
-    sp->region_size     = p_sp->region_size;
-    sp->dim             = p_sp->dim;
-    sp->particle_speed  = p_sp->particle_speed;
-    sp->particle_mass   = p_sp->particle_mass;
-    sp->impurity_count  = p_sp->impurity_count;
-    sp->impurity_radius = p_sp->impurity_radius;
-    sp->region_extends  = p_sp->region_extends;
-    sp->alpha           = p_sp->alpha;
-    sp->phi             = p_sp->phi;
-    sp->magnetic_field  = p_sp->magnetic_field;
-    sp->tau             = p_sp->tau;
-    sp->integrand_steps = p_sp->integrand_steps;
-    sp->clockwise       = p_sp->clockwise;
+    sp->region_size        = p_sp->region_size;
+    sp->region_extends     = p_sp->region_extends;
+    sp->dim                = p_sp->dim;
+    sp->particle_speed     = p_sp->particle_speed;
+    sp->particle_mass      = p_sp->particle_mass;
+    sp->impurity_count     = p_sp->impurity_count;
+    sp->impurity_radius    = p_sp->impurity_radius;
+    sp->alpha              = p_sp->alpha;
+    sp->phi                = p_sp->phi;
+    sp->magnetic_field     = p_sp->magnetic_field;
+    sp->tau                = p_sp->tau;
+    sp->integrand_steps    = p_sp->integrand_steps;
+    sp->clockwise          = p_sp->clockwise;
 
-    sp->particle_count = sp->dim * sp->dim;
+    sp->particle_count     = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
-    sp->angular_speed = E * sp->magnetic_field / sp->particle_mass;
+    sp->angular_speed      = E * sp->magnetic_field / sp->particle_mass;
 
     if (false) {
         std::cout << "\n\n+---------------------------------------------------+" << std::endl;
@@ -285,7 +280,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.sum_output);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * MIN(sp->dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
+    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * min(sp->dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
@@ -303,18 +298,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
 
 void GPUElasticScattering::PrepareImpurityBuffer()
 {
-    impurities.clear();
-    impurities.resize(sp->impurity_count);
-
-    //std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
-
-    //std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
-    std::uniform_real_distribution<double> unif(-sp->region_extends, sp->region_size + sp->region_extends);
-    std::random_device r;
-    std::default_random_engine re(0);
-
-    for (int i = 0; i < sp->impurity_count; i++)
-        impurities[i] = { unif(re), unif(re) };
+    GenerateImpurities();
 
     cl_int clStatus;
     ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
@@ -374,7 +358,7 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
     const size_t half_size = sp->particle_count / 2;
-    const size_t max_work_items = MIN(sp->dim, 256);
+    const size_t max_work_items = min(sp->dim, 256);
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
@@ -386,24 +370,14 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-    double total = 0;
-    for (int i = 0; i < results.size(); i++)
-        total += results[i];
-
-    double z = sp->region_size / (sp->dim - 2);
-    double result = total * z * z / 9.0;
-
-    if (mode != Mode::AVG_LIFETIME)
-        result = FinishSigmaXX(result);
-    else
-        result /= pow(sp->region_size, 2.0);
+    double result = ComputeResult(results);
 
     QueryPerformanceCounter(&endClock);
     double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     //std::cout << "Simulation time: " << total_time * 1000 << " ms" << std::endl;
 
     double kf = sp->particle_mass * sp->particle_speed / HBAR;
-    double n  = kf * kf / (PI2 * C);
+    double n  = kf * kf / (PI2 * C1);
     double formula = n * E * E * sp->tau / sp->particle_mass;
     
     std::cout << "\nFormula:" << formula << std::endl;
@@ -425,6 +399,7 @@ void GPUElasticScattering::Draw()
 
 GPUElasticScattering::~GPUElasticScattering()
 {
+    clReleaseMemObject(ocl.parameters); 
     clReleaseMemObject(ocl.impurities);
     clReleaseMemObject(ocl.main_buffer);
     clReleaseMemObject(ocl.image);

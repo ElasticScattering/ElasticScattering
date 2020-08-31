@@ -19,9 +19,3 @@ typedef struct
 	double magnetic_field;      // B
 	double angular_speed;       // w
 } SimulationParameters;
-
-typedef struct
-{
-	double2 position;
-	double radius;
-} Circle;

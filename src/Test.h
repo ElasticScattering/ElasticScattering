@@ -2,7 +2,6 @@
 #define TEST_H
 
 #include "ElasticScattering.h"
-#include "Details.h"
 #include "utils/OpenCLUtils.h"
 
 #include <assert.h>
@@ -32,7 +31,7 @@
 	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
 
 
-TEST_CASE("Generic gpu/cpu precision test by performing many operations on doubles") 
+TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values") 
 {
 	int number_of_operations = 2000;
 	int buffer_size = 256;
@@ -112,19 +111,21 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	SimulationParameters sp;
 	sp.region_size = 1e-6;
 	sp.dim = 64;
-	sp.particle_count = sp.dim * sp.dim;
 	sp.particle_speed = 7e5;
 	sp.particle_mass = 5 * M0;
 	sp.impurity_count = 100;
 	sp.impurity_radius = 1.5e-8;
-	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
 	sp.alpha = PI / 4.0;
 	sp.phi = 0;
 	sp.magnetic_field = 0;
-	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
 	sp.tau = 1e-12;
 	sp.integrand_steps = 9;
 	sp.clockwise = 1;
+	
+	sp.particle_count = sp.dim * sp.dim;
+	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+	sp.region_extends = sp.particle_speed * sp.tau;
 
 	Mode m = Mode::AVG_LIFETIME;
 
@@ -270,8 +271,8 @@ TEST_CASE("Circle Crosspoints")
 	SUBCASE("Symmetric")
 	{
 		auto ps = GetCrossPoints({ -1, 0 }, 1.5, { 1, 0 }, 1.5);
-		v2 p1 = ps.first;
-		v2 p2 = ps.second;
+		v2 p1 = { ps.x, ps.y };
+		v2 p2 = { ps.z, ps.w };
 		CHECK(p1.x == 0);
 		CHECK(abs(p1.y) == sqrt(1.5 * 1.5 - 1));
 
@@ -282,8 +283,8 @@ TEST_CASE("Circle Crosspoints")
 	SUBCASE("Somewhat Symmetric")
 	{
 		auto ps = GetCrossPoints({ 0, 0 }, 1, { 1, 1 }, 1.5);
-		v2 p1 = ps.first;
-		v2 p2 = ps.second;
+		v2 p1 = { ps.x, ps.y };
+		v2 p2 = { ps.z, ps.w };
 		CHECK_APPROX(1,			  pow(p1.x, 2)     + pow(p1.y, 2));
 		CHECK_APPROX(pow(1.5, 2), pow(p1.x - 1, 2) + pow(p1.y - 1, 2));
 
@@ -294,8 +295,8 @@ TEST_CASE("Circle Crosspoints")
 	SUBCASE("Asymmetric")
 	{
 		auto ps = GetCrossPoints({ 100, 0 }, 100, { -1, 0 }, 1.5);
-		v2 p1 = ps.first;
-		v2 p2 = ps.second;
+		v2 p1 = { ps.x, ps.y };
+		v2 p2 = { ps.z, ps.w };
 
 		CHECK_APPROX(pow(100, 2), pow(p1.x - 100, 2) + pow(p1.y, 2));
 		CHECK_APPROX(pow(1.5, 2), pow(p1.x + 1, 2)   + pow(p1.y, 2));
@@ -307,8 +308,9 @@ TEST_CASE("Circle Crosspoints")
 	SUBCASE("Asymmetric, inside")
 	{
 		auto ps = GetCrossPoints({ 100, -0.5 }, 100, { 1, 0.5 }, 1.5);
-		v2 p1 = ps.first;
-		v2 p2 = ps.second;
+		v2 p1 = { ps.x, ps.y };
+		v2 p2 = { ps.z, ps.w };
+
 		CHECK_APPROX(pow(100, 2), pow(p1.x - 100, 2) + pow(p1.y + 0.5, 2));
 		CHECK_APPROX(pow(1.5, 2), pow(p1.x - 1, 2)   + pow(p1.y - 0.5, 2));
 

@@ -1,52 +1,160 @@
 #include <windows.h>
 
-#include <random>
-#include <limits>
 #include <assert.h>
 #include <iostream>
 
 #include "ElasticScattering.h"
-#include "Details.h"
 
 void CPUElasticScattering::Init(bool show_info)
 {
 }
 
 void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
+    bool first_run = (last_sp == nullptr);
+
+    bool need_impurity_update = first_run || (sp->impurity_count != last_sp->impurity_count || sp->region_extends != last_sp->region_extends || sp->region_size != last_sp->region_size);
+    bool need_particle_update = first_run || (sp->dim != last_sp->dim);
+
     sp = new SimulationParameters;
-    sp->region_size = p_sp->region_size;
-    sp->dim = p_sp->dim;
-    sp->particle_speed = p_sp->particle_speed;
-    sp->particle_mass = p_sp->particle_mass;
-    sp->impurity_count = p_sp->impurity_count;
-    sp->impurity_radius = p_sp->impurity_radius;
-    sp->alpha = p_sp->alpha;
-    sp->phi = p_sp->phi;
-    sp->magnetic_field = p_sp->magnetic_field;
-    sp->tau = p_sp->tau;
-    sp->integrand_steps = p_sp->integrand_steps;
-    sp->clockwise = p_sp->clockwise;
+    sp->region_size        = p_sp->region_size;
+    sp->region_extends     = p_sp->region_extends;
+    sp->dim                = p_sp->dim;
+    sp->particle_speed     = p_sp->particle_speed;
+    sp->particle_mass      = p_sp->particle_mass;
+    sp->impurity_count     = p_sp->impurity_count;
+    sp->impurity_radius    = p_sp->impurity_radius;
+    sp->alpha              = p_sp->alpha;
+    sp->phi                = p_sp->phi;
+    sp->magnetic_field     = p_sp->magnetic_field;
+    sp->tau                = p_sp->tau;
+    sp->integrand_steps    = p_sp->integrand_steps;
+    sp->clockwise          = p_sp->clockwise;
 
-    sp->particle_count = sp->dim * sp->dim;
+    sp->particle_count     = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
-    sp->angular_speed = E * sp->magnetic_field / sp->particle_mass;
+    sp->angular_speed      = E * sp->magnetic_field / sp->particle_mass;
+    sp->region_extends     = sp->particle_speed * sp->tau;
 
-    // Initialize arrays.
-    impurities.clear();
-    impurities.resize(sp->impurity_count);
+    if (need_impurity_update)
+        GenerateImpurities();
 
-    if (false)
-        std::cout << "Impurity region: " << -sp->particle_speed * sp->tau << ", " << sp->region_size + sp->particle_speed * sp->tau << std::endl;
+    if (need_particle_update) {
+        main_buffer.clear();
+        main_buffer.resize(sp->particle_count, 0);
+    }
+}
 
-    std::uniform_real_distribution<double> unif(-sp->particle_speed * sp->tau, sp->region_size + sp->particle_speed * sp->tau);
-    std::random_device r;
-    std::default_random_engine re(0);
+void CPUElasticScattering::SigmaXX()
+{
+    int limit = sp->dim - 1;
+    auto imps = impurities.data();
 
-    for (int i = 0; i < sp->impurity_count; i++)
-        impurities[i] = { unif(re), unif(re) };
+    for (int y = 0; y < limit; y++)
+    {
+        for (int x = 0; x < limit; x++)
+        {
+            v2 pos;
+            pos.x = sp->region_size * (x / (double)(sp->dim - 2));
+            pos.y = sp->region_size * (y / (double)(sp->dim - 2));
 
-    main_buffer.clear();
-    main_buffer.resize(sp->particle_count, 0);
+            double angle_area = sp->alpha * 2.0;
+            double step_size = angle_area / (sp->integrand_steps - 1);
+            double integral = 0;
+
+            for (int j = 0; j < 4; j++)
+            {
+                double start = -sp->alpha + j * (PI * 0.5);
+                double total = 0.0;
+
+                for (int i = 0; i < sp->integrand_steps; i++)
+                {
+                    sp->phi = start + i * step_size;
+
+                    double particle_lifetime;
+                    if (sp->angular_speed != 0) {
+                        bool clockwise = (sp->clockwise == 1);
+                        if (clockwise) sp->angular_speed *= -1;
+
+                        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
+                        particle_lifetime = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, imps);
+                    }
+                    else {
+                        particle_lifetime = lifetime0(pos, sp, imps);
+                    }
+
+                    double z = exp(-particle_lifetime / sp->tau);
+
+                    double r = cos(sp->phi) - cos(sp->phi + sp->angular_speed * particle_lifetime) * z;
+                    r += sp->angular_speed * sp->tau * sin(sp->phi + sp->angular_speed * particle_lifetime) * z;
+                    r -= sp->angular_speed * sp->tau * sin(sp->phi);
+                    r *= sp->tau;
+
+                    double rxx = r * cos(sp->phi);
+                    double rxy = r * sin(sp->phi);
+
+                    bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
+
+                    double w = 1.0;
+
+                    if (!edge_item) {
+                        w = ((i % 2) == 0) ? 2.0 : 4.0;
+                    }
+
+                    total += rxx * w;
+                }
+
+                integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
+            }
+
+            bool is_edge = (x == 0) || (x == (sp->dim - 2)) || (y == 0) || (y == (sp->dim - 2));
+
+            double w = 1.0;
+            if (!is_edge)
+            {
+                w = ((x % 2) == 0) ? 2.0 : 4.0;
+                w *= ((y % 2) == 0) ? 2.0 : 4.0;
+            }
+
+            main_buffer[y * sp->dim + x] = w * integral;
+        }
+    }
+}
+
+void CPUElasticScattering::Lifetime()
+{
+    int limit = sp->dim - 1;
+
+    auto imps = impurities.data();
+
+    for (int j = 0; j < limit; j++)
+        for (int i = 0; i < limit; i++)
+        {
+            v2 pos;
+            pos.x = sp->region_size * (i / (double)(sp->dim - 2));
+            pos.y = sp->region_size * (j / (double)(sp->dim - 2));
+
+            double particle_lifetime;
+            if (sp->angular_speed != 0) {
+                bool clockwise = (sp->clockwise == 1);
+
+                double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
+                particle_lifetime = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, imps);
+            }
+            else {
+                particle_lifetime = lifetime0(pos, sp, imps);
+            }
+
+            bool is_edge = (i == 0) || (i == sp->dim - 2) || (j == 0) || (j == sp->dim - 2);
+
+            double w = 1.0;
+            if (!is_edge)
+            {
+                w = ((i % 2) == 0) ? 2.0 : 4.0;
+                w *= ((j % 2) == 0) ? 2.0 : 4.0;
+            }
+
+            main_buffer[j * sp->dim + i] = w * particle_lifetime;
+        }
 }
 
 double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_sp)
@@ -54,212 +162,20 @@ double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     PrepareCompute(p_sp);
     mode = p_mode;
 
-    double total_time;
-
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    //std::cout << "Simulating elastic scattering on the CPU..." << std::endl;
-
-    int limit = sp->dim - 1;
     QueryPerformanceCounter(&beginClock);
-    if (mode == Mode::AVG_LIFETIME)
-    {
-        for (int j = 0; j < limit; j++)
-            for (int i = 0; i < limit; i++)
-            {
-                v2 pos;
-                pos.x = sp->region_size * (i / (double)(sp->dim - 2));
-                pos.y = sp->region_size * (j / (double)(sp->dim - 2));
+    
+    if      (mode == Mode::AVG_LIFETIME) Lifetime();
+    else if (mode == Mode::SIGMA_XX)     SigmaXX();
 
-                v2 vel = { sp->particle_speed * cos(sp->phi), sp->particle_speed * sin(sp->phi) };
-
-                double particle_lifetime;
-                if (sp->angular_speed != 0) {
-                    bool clockwise = (sp->clockwise == 1);
-
-                    double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
-                    particle_lifetime = ComputeB(MIN(sp->tau, bound_time), pos, vel, clockwise);
-                }
-                else {
-                    particle_lifetime = ComputeA(pos, vel);
-                }
-
-                bool is_edge = (i == 0) || (i == sp->dim - 2) || (j == 0) || (j == sp->dim - 2);
-
-                double w = 1.0;
-                if (!is_edge)
-                {
-                    w  = ((i % 2) == 0) ? 2.0 : 4.0;
-                    w *= ((j % 2) == 0) ? 2.0 : 4.0;
-                }
-
-                main_buffer[j * sp->dim + i] = w * particle_lifetime;
-            }
-    }
-    else if (mode == Mode::SIGMA_XX)
-    {
-        for (int y = 0; y < limit; y++)
-        {
-            for (int x = 0; x < limit; x++)
-            {
-                v2 pos;
-                pos.x = sp->region_size * (x / (double)(sp->dim - 2));
-                pos.y = sp->region_size * (y / (double)(sp->dim - 2));
-
-                double angle_area = sp->alpha * 2.0;
-                double step_size = angle_area / (sp->integrand_steps - 1);
-                double integral = 0;
-
-                for (int j = 0; j < 4; j++)
-                {
-                    double start = -sp->alpha + j * (PI * 0.5);
-                    double total = 0.0;
-
-                    for (int i = 0; i < sp->integrand_steps; i++)
-                    {
-                        sp->phi = start + i * step_size;
-
-                        v2 vel = { sp->particle_speed * cos(sp->phi), sp->particle_speed * sin(sp->phi) };
-
-                        double particle_lifetime;
-                        if (sp->angular_speed != 0) {
-                            bool clockwise = (sp->clockwise == 1);
-                            if (clockwise) sp->angular_speed *= -1;
-
-                            double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
-                            particle_lifetime = ComputeB(MIN(sp->tau, bound_time), pos, vel, clockwise);
-                        }
-                        else {
-                            particle_lifetime = ComputeA(pos, vel);
-                        }
-
-                        double z = exp(-particle_lifetime / sp->tau);
-
-                        double r = cos(sp->phi) - cos(sp->phi + sp->angular_speed * particle_lifetime) * z;
-                        r += sp->angular_speed * sp->tau * sin(sp->phi + sp->angular_speed * particle_lifetime) * z;
-                        r -= sp->angular_speed * sp->tau * sin(sp->phi);
-                        r *= sp->tau;
-
-                        double rxx = r * cos(sp->phi);
-                        double rxy = r * sin(sp->phi);
-
-                        bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
-
-                        double w = 1.0;
-
-                        if (!edge_item) {
-                            w = ((i % 2) == 0) ? 2.0 : 4.0;
-                        }
-
-                        total += rxx * w;
-                    }
-
-                    integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
-                }
-
-                bool is_edge = (x == 0) || (x == (sp->dim - 2)) || (y == 0) || (y == (sp->dim - 2));
-
-                double w = 1.0;
-                if (!is_edge)
-                {
-                    w  = ((x % 2) == 0) ? 2.0 : 4.0;
-                    w *= ((y % 2) == 0) ? 2.0 : 4.0;
-                }
-
-                main_buffer[y * sp->dim + x] = w * integral;
-            }
-        }
-    }
-
-    double total = 0;
-    for (int j = 0; j < limit; j++)
-        for (int i = 0; i < limit; i++)
-            total += main_buffer[j*sp->dim + i];
-
-    double z = sp->region_size / (sp->dim - 2);
-    double result = total * z * z / 9.0;
-
-    if (mode != Mode::AVG_LIFETIME)
-        result = FinishSigmaXX(result);
+    double result = ComputeResult(main_buffer);
 
     QueryPerformanceCounter(&endClock);
 
-    /*
-    total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-    std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
-    
-    MakeTexture(sp);
-    */
+    //double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+    //std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
     
     return result;
-}
-
-double CPUElasticScattering::ComputeA(const v2 pos, const v2 vel)
-{
-    const v2 unit = { cos(sp->phi), sin(sp->phi) };
-    double lifetime = sp->tau;
-
-    for (int k = 0; k < sp->impurity_count; k++)
-    {
-        const v2 ip = impurities[k];
-        const double inner = (ip.x - pos.x) * unit.x + (ip.y - pos.y) * unit.y;
-        const v2 projected = { pos.x + inner * unit.x, pos.y + inner * unit.y };
-
-        const double diffx = projected.x - ip.x;
-        const double diffy = projected.y - ip.y;
-        const double a = diffx*diffx + diffy*diffy;
-        if (a > sp->impurity_radius_sq) {
-            continue; //@Speedup, if distance is greater than current min continue as well?
-        }
-
-        double L = sqrt(sp->impurity_radius_sq - a);
-
-        v2 time_taken;
-        if (vel.x != 0) time_taken = { -((projected.x - L * unit.x) - pos.x) / vel.x, -((projected.x + L * unit.x) - pos.x) / vel.x };
-        else            time_taken = { -((projected.y - L * unit.y) - pos.y) / vel.y, -((projected.y + L * unit.y) - pos.y) / vel.y };
-
-        if ((time_taken.x * time_taken.y) < 0)
-            return 0;
-
-        if (time_taken.x > 0 && time_taken.x < lifetime) {
-            lifetime = time_taken.x;
-        }
-        if (time_taken.y > 0 && time_taken.y < lifetime) {
-            lifetime = time_taken.y;
-        }
-    }
-
-    return lifetime;
-}
-
-double CPUElasticScattering::ComputeB(double particle_max_lifetime, const v2 pos, const v2 vel, bool clockwise)
-{
-    double vf = sp->particle_speed; // sqrt(vel.x * vel.x + vel.y * vel.y);
-    double radius = vf / sp->angular_speed;
-    auto center = GetCyclotronOrbit(pos, vel, radius, vf, clockwise);
-
-    double lifetime = particle_max_lifetime;
-    for (int k = 0; k < sp->impurity_count; k++)
-    {
-        const v2 ip = impurities[k];
-
-        if (sp->impurity_radius_sq > pow(pos.x - ip.x, 2) + pow(pos.y - ip.y, 2))
-        {
-            lifetime = 0;
-            break;
-        }
-
-        if (CirclesCross(center, radius, ip, sp->impurity_radius))
-        {
-            double t = GetFirstCrossTime(center, pos, ip, radius, sp->impurity_radius, sp->angular_speed, clockwise);
-
-            assert(t >= 0);
-
-            if (t < lifetime)
-                lifetime = t;
-        }
-    }
-
-    return lifetime;
 }

@@ -146,7 +146,7 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
 {
     cl_int clStatus;
     
-    std::string relative_path("escl/");
+    std::string relative_path("src/escl/");
     relative_path.append(p_soure_file);
     std::fstream kernelFile(relative_path);
     std::string content((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
@@ -157,8 +157,7 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
     CL_FAIL_CONDITION(clStatus, "Couldn't create program.");
 
     // "-cl-opt-disable"
-
-    clStatus = clBuildProgram(program, 1, &p_device_id, NULL, NULL, NULL);
+    clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
     if (clStatus != CL_SUCCESS) {
         size_t len;
         char buffer[4086];

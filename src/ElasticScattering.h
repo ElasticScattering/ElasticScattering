@@ -2,8 +2,8 @@
 #define ELASTIC_SCATTERING_H
 
 #include <vector>
-#include "Constants.h"
-#include "common_structs.h"
+#include "escl/common.h"
+#include <random>
 
 enum class Mode {
 	AVG_LIFETIME,
@@ -13,15 +13,11 @@ enum class Mode {
 typedef struct
 {
 	bool run_tests;
-	bool show_info;
-	Mode mode;
 } InitParameters;
 
 class ElasticScattering {
 protected:
 	std::vector<v2> impurities;
-	std::vector<double> main_buffer;
-	std::vector<float> pixels;
 
 	SimulationParameters *sp = nullptr;
 	SimulationParameters *last_sp;
@@ -29,55 +25,53 @@ protected:
 
 	double FinishSigmaXX(double res) {
 		double kf = sp->particle_mass * sp->particle_speed / HBAR;
-		double outside = E * E * kf * kf / (2.0 * PI2 * sp->particle_mass * sp->region_size * sp->region_size * C);
+		double outside = E * E * kf * kf / (2.0 * PI2 * sp->particle_mass * sp->region_size * sp->region_size * C1);
 		double v = E * sp->magnetic_field * sp->tau / sp->particle_mass;
 		outside /= (1.0 + v * v);
 
 		return outside * res;
 	};
 
+	void GenerateImpurities() {
+		impurities.clear();
+		impurities.resize(sp->impurity_count);
+
+		std::uniform_real_distribution<double> unif(-sp->region_extends, sp->region_size + sp->region_extends);
+		std::random_device r;
+		std::default_random_engine re(0);
+
+		for (int i = 0; i < sp->impurity_count; i++)
+			impurities[i] = { unif(re), unif(re) };
+	};
+
+	double ComputeResult(const std::vector<double> &results) {
+		double total;
+		for (int i = 0; i < results.size(); i++)
+			total += results[i];
+
+		double z = sp->region_size / (sp->dim - 2);
+		double result = total * z * z / 9.0;
+
+		if (mode != Mode::AVG_LIFETIME)
+			result = FinishSigmaXX(result);
+		else
+			result /= pow(sp->region_size, 2.0);
+
+		return result;
+	}
+
 public:
 	virtual void Init(bool show_info = false) = 0;
 	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp) = 0;
-	virtual std::vector<float> GetPixels() { return pixels; };
 };
 
 class CPUElasticScattering : public ElasticScattering {
+	std::vector<double> main_buffer;
+
 	void PrepareCompute(const SimulationParameters* p_sp);
 
-	double ComputeA(const v2 pos, const v2 vel);
-	double ComputeB(double particle_max_lifetime, const v2 pos, const v2 vel, bool clockwise);
-
-	void MakeTexture(const SimulationParameters sp)
-	{
-		double itau = 1.0 / sp.tau; //sp.particle_count; 
-		pixels.clear();
-		pixels.resize(sp.particle_count * 3L);
-		size_t j = 0;
-		for (int i = 0; i < sp.particle_count; i++)
-		{
-			float k = float(main_buffer[i] * itau);
-			/*
-
-			if (k == 0) {
-				pixels[j] = 1.0f;
-				pixels[j + 1L] = 138.0 / 255.0;
-				pixels[j + 2L] = 1.0 / 255.0;
-			}
-			*/
-			if (k == 0) {
-				pixels[j] = 0.0f;
-				pixels[j + 1L] = 0.0f;
-				pixels[j + 2L] = 0.0f;
-			}
-			else {
-				pixels[j] = k;
-				pixels[j + 1L] = k;
-				pixels[j + 2L] = k;
-			}
-			j += 3;
-		}
-	}
+	void Lifetime();
+	void SigmaXX();
 
 public:
 	virtual void Init(bool show_info = false);

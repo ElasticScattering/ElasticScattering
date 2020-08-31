@@ -224,9 +224,6 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="escl\common.h" />
-    <ClInclude Include="escl\common_structs.h" />
-    <ClInclude Include="escl\util.h" />
     <ClInclude Include="libs\imgui\imconfig.h" />
     <ClInclude Include="libs\imgui\imgui.h" />
     <ClInclude Include="libs\imgui\imgui_impl_glfw.h" />
@@ -236,18 +233,19 @@
     <ClInclude Include="libs\imgui\imstb_textedit.h" />
     <ClInclude Include="libs\imgui\imstb_truetype.h" />
     <ClInclude Include="src\common_structs.h" />
-    <ClInclude Include="src\Constants.h" />
-    <ClInclude Include="src\Details.h" />
     <ClInclude Include="src\ElasticScattering.h" />
+    <ClInclude Include="src\escl\common.h" />
+    <ClInclude Include="src\escl\common_structs.h" />
+    <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Test.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="escl\scatter0.cl" />
-    <None Include="escl\scatter.cl" />
-    <None Include="escl\test.cl" />
+    <None Include="src\escl\scatter.cl" />
+    <None Include="src\escl\scatter0.cl" />
+    <None Include="src\escl\test.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
