@@ -22,6 +22,8 @@ typedef struct
     cl_program program;
     cl_command_queue queue;
 
+
+
     //
     // Kernels
     //
@@ -42,6 +44,7 @@ typedef struct
     //
     // Buffers
     //
+    cl_mem parameters;
     cl_mem impurities;
     cl_mem main_buffer;
     cl_mem sum_output;
@@ -227,6 +230,9 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
 
     if (first_run) {
+        ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(SimulationParameters), nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+
         ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
@@ -258,7 +264,10 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
 
-    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(SimulationParameters), (void*)sp);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(SimulationParameters), (void*)sp, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.main_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);

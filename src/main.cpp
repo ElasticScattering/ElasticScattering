@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
 
-    Mode mode = Mode::SIGMA_XX;
+    Mode mode = Mode::AVG_LIFETIME;
 
     auto es = new GPUElasticScattering();
     es->Init(false);
