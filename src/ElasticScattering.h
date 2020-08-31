@@ -57,7 +57,7 @@ protected:
 		else
 			result /= pow(sp->region_size, 2.0);
 
-		return result;
+		return result * sp->particle_speed;
 	}
 
 public:

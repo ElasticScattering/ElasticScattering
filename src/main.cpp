@@ -191,7 +191,7 @@ int main(int argc, char **argv)
                 last_result = es->Compute((Mode)m, &sp);
             }
             
-            ImGui::Text("Result: %e", last_result);
+            ImGui::Text("Mean free path: %e", last_result);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
