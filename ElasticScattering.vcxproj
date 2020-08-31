@@ -232,10 +232,8 @@
     <ClInclude Include="libs\imgui\imstb_rectpack.h" />
     <ClInclude Include="libs\imgui\imstb_textedit.h" />
     <ClInclude Include="libs\imgui\imstb_truetype.h" />
-    <ClInclude Include="src\common_structs.h" />
     <ClInclude Include="src\ElasticScattering.h" />
     <ClInclude Include="src\escl\common.h" />
-    <ClInclude Include="src\escl\common_structs.h" />
     <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Test.h" />
@@ -244,7 +242,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\escl\scatter.cl" />
-    <None Include="src\escl\scatter0.cl" />
     <None Include="src\escl\test.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

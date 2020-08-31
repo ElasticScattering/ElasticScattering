@@ -29,6 +29,7 @@ void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
     sp->tau                = p_sp->tau;
     sp->integrand_steps    = p_sp->integrand_steps;
     sp->clockwise          = p_sp->clockwise;
+    sp->mode               = p_sp->mode;
 
     sp->particle_count     = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
@@ -44,7 +45,7 @@ void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
     }
 }
 
-void CPUElasticScattering::SigmaXX()
+void CPUElasticScattering::LifetimePhi()
 {
     int limit = sp->dim - 1;
     auto imps = impurities.data();
@@ -61,51 +62,8 @@ void CPUElasticScattering::SigmaXX()
             double step_size = angle_area / (sp->integrand_steps - 1);
             double integral = 0;
 
-            for (int j = 0; j < 4; j++)
-            {
-                double start = -sp->alpha + j * (PI * 0.5);
-                double total = 0.0;
-
-                for (int i = 0; i < sp->integrand_steps; i++)
-                {
-                    sp->phi = start + i * step_size;
-
-                    double particle_lifetime;
-                    if (sp->angular_speed != 0) {
-                        bool clockwise = (sp->clockwise == 1);
-                        if (clockwise) sp->angular_speed *= -1;
-
-                        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
-                        particle_lifetime = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, imps);
-                    }
-                    else {
-                        particle_lifetime = lifetime0(pos, sp, imps);
-                    }
-
-                    double z = exp(-particle_lifetime / sp->tau);
-
-                    double r = cos(sp->phi) - cos(sp->phi + sp->angular_speed * particle_lifetime) * z;
-                    r += sp->angular_speed * sp->tau * sin(sp->phi + sp->angular_speed * particle_lifetime) * z;
-                    r -= sp->angular_speed * sp->tau * sin(sp->phi);
-                    r *= sp->tau;
-
-                    double rxx = r * cos(sp->phi);
-                    double rxy = r * sin(sp->phi);
-
-                    bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
-
-                    double w = 1.0;
-
-                    if (!edge_item) {
-                        w = ((i % 2) == 0) ? 2.0 : 4.0;
-                    }
-
-                    total += rxx * w;
-                }
-
-                integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
-            }
-
+            integral += phi_lifetime(pos, sp, imps);
+      
             bool is_edge = (x == 0) || (x == (sp->dim - 2)) || (y == 0) || (y == (sp->dim - 2));
 
             double w = 1.0;
@@ -157,18 +115,17 @@ void CPUElasticScattering::Lifetime()
         }
 }
 
-double CPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_sp)
+double CPUElasticScattering::Compute(const SimulationParameters* p_sp)
 {
     PrepareCompute(p_sp);
-    mode = p_mode;
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
     QueryPerformanceCounter(&beginClock);
     
-    if      (mode == Mode::AVG_LIFETIME) Lifetime();
-    else if (mode == Mode::SIGMA_XX)     SigmaXX();
+    if      (sp->mode == MODE_DIR_LIFETIME) Lifetime();
+    else                                    LifetimePhi();
 
     double result = ComputeResult(main_buffer);
 

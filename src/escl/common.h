@@ -1,7 +1,9 @@
 #ifndef CL_COMMON_H
 #define CL_COMMON_H
 
-#include "common_structs.h"
+#ifndef DEVICE_PROGRAM
+    #include "math.h"
+#endif
 
 #define PI   3.141592653589793238463
 #define PI2  6.283185307179586
@@ -10,11 +12,17 @@
 #define HBAR 1.055e-34
 #define C1   1.15e-9
 
+#define MODE_DIR_LIFETIME 0
+#define MODE_PHI_LIFETIME 1
+#define MODE_SIGMA_XX 2
+#define MODE_SIGMA_XY 3
+
+//Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
+#define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
+
 #ifdef DEVICE_PROGRAM
     #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
 #else
-    #include "math.h"
-
     #define BUFFER_ARGS SimulationParameters* sp, double2* impurities
 
     struct v4 {
@@ -60,8 +68,34 @@
     #define double2 v2
     #define double4 v4
 
-    inline double dot(double2 a, double2 b) { return a.x*b.x + b.y*b.y; }
+    inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
 #endif
+    inline bool IsSigma(int m) { return (m == MODE_SIGMA_XX || m == MODE_SIGMA_XY); }
+
+typedef struct
+{
+    int mode;
+    int dim; //-                           
+    int particle_count; //-
+    int impurity_count;
+    int integrand_steps; //~
+    int clockwise;
+
+    double region_size;
+    double region_extends;
+    double particle_speed;      // v
+    double particle_mass;       // m,-
+    double impurity_radius;     // r
+    double impurity_radius_sq;  // r^2,~
+    double tau;
+
+    double alpha;
+    double phi;
+    double magnetic_field;      // B
+    double angular_speed;       // w
+} SimulationParameters;
+
+
 
 
 inline double smod(double a, double b)
@@ -245,6 +279,67 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
     }
 
     return lifetime;
+}
+
+inline double phi_lifetime(double2 pos, BUFFER_ARGS)
+{
+    bool clockwise = (sp->clockwise == 1);
+    if (clockwise) sp->angular_speed *= -1;
+
+    double angle_area = sp->alpha * 2.0;
+    double step_size = angle_area / (sp->integrand_steps - 1);
+    
+    double integral = 0;
+    for (int j = 0; j < 4; j++)
+    {
+        double start = -sp->alpha + j * (PI * 0.5);
+        double total = 0.0;
+
+        bool is_even = true;
+        for (int i = 0; i < sp->integrand_steps; i++)
+        {
+            sp->phi = start + i * step_size;
+
+            double result;
+            if (sp->angular_speed != 0) {
+                double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
+                result = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, impurities);
+            }
+            else {
+                result = lifetime0(pos, sp, impurities);
+            }
+
+            if (sp->mode == MODE_SIGMA_XX || sp->mode == MODE_SIGMA_XY)
+            {
+                double z = exp(-result / sp->tau);
+
+                double r = cos(sp->phi) - cos(sp->phi + sp->angular_speed * result) * z;
+                r += sp->angular_speed * sp->tau * sin(sp->phi + sp->angular_speed * result) * z;
+                r -= sp->angular_speed * sp->tau * sin(sp->phi);
+                r *= sp->tau;
+
+                double v;
+                if (sp->mode == MODE_SIGMA_XX) v = cos(sp->phi);
+                else                           v = sin(sp->phi);
+
+                result = r * v;
+            }
+
+            bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
+            is_even = (i % 2) == 0;
+            double w = 1.0;
+
+            if (!edge_item) {
+                w = is_even ? 2.0 : 4.0;
+            }
+
+            total += result * w;
+        }
+
+        integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
+    }
+
+    return integral;
 }
 
 #endif // CL_COMMON_H

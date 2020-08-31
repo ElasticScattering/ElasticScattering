@@ -30,9 +30,6 @@ typedef struct
     cl_kernel add_integral_weights_kernel;
     cl_kernel sum_kernel;
 
-    // Computes a buffer of average main_buffer, averaging many phi's for each particle.
-    cl_kernel phi_integrand_kernel;
-
     // Transforms buffer values to image floats (0..1)
     cl_kernel tex_kernel;
 
@@ -161,13 +158,13 @@ void GPUElasticScattering::Init(bool show_info)
     glBindVertexArray(0);
 }
 
-bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameters* p_sp)
+bool GPUElasticScattering::PrepareCompute(const SimulationParameters* p_sp)
 {
     cl_int clStatus;
 
     bool first_run = (last_sp == nullptr);
 
-    bool nothing_changed = !first_run && mode == p_mode &&
+    bool nothing_changed = !first_run && sp->mode == p_sp->mode &&
         (sp->region_size == p_sp->region_size         && sp->dim == p_sp->dim &&
          sp->particle_speed == p_sp->particle_speed   && sp->particle_mass == p_sp->particle_mass &&
          sp->impurity_count == p_sp->impurity_count   && sp->impurity_radius == p_sp->impurity_radius &&
@@ -192,6 +189,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     sp->tau                = p_sp->tau;
     sp->integrand_steps    = p_sp->integrand_steps;
     sp->clockwise          = p_sp->clockwise;
+    sp->mode               = p_sp->mode;
 
     sp->particle_count     = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
@@ -233,8 +231,6 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     }
     
     if (first_run || sp->particle_count != last_sp->particle_count) {
-        //std::cout << "Particles:         " << sp->particle_count << std::endl;
-
         ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * sp->particle_count, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
 
@@ -244,9 +240,8 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
         PrepareTexKernel();
     }
 
-    if (first_run || p_mode != mode) {
-        mode = p_mode;
-        const char* kernel_name = (p_mode == Mode::AVG_LIFETIME) ? "lifetime" : "sigma_xx";
+    if (first_run || sp->mode != last_sp->mode) {
+        const char* kernel_name = (sp->mode == MODE_DIR_LIFETIME) ? "lifetime" : "lifetime_phi";
         ocl.main_kernel = clCreateKernel(ocl.program, kernel_name, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
@@ -286,7 +281,7 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    double scale = (mode == Mode::AVG_LIFETIME) ? sp->tau : sp->tau*3.0;
+    double scale = IsSigma(sp->mode) ? sp->tau : sp->tau*3.0;
     clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&scale);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
@@ -336,9 +331,9 @@ void GPUElasticScattering::PrepareTexKernel()
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
 
-double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_sp)
+double GPUElasticScattering::Compute(const SimulationParameters* p_sp)
 {
-    bool need_update = PrepareCompute(p_mode, p_sp);
+    bool need_update = PrepareCompute(p_sp);
     if (!need_update) return last_result;
 
     QueryPerformanceCounter(&beginClock);
@@ -379,7 +374,8 @@ double GPUElasticScattering::Compute(Mode p_mode, const SimulationParameters* p_
     double kf = sp->particle_mass * sp->particle_speed / HBAR;
     double n  = kf * kf / (PI2 * C1);
     double formula = n * E * E * sp->tau / sp->particle_mass;
-    
+    formula *= sp->particle_speed;
+
     std::cout << "\nFormula:" << formula << std::endl;
     std::cout << "Result :" << result << std::endl;
     last_sp = sp;

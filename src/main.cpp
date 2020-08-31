@@ -104,12 +104,11 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
-
-    Mode mode = Mode::AVG_LIFETIME;
+    sp.mode               = MODE_DIR_LIFETIME;
 
     auto es = new GPUElasticScattering();
     es->Init(false);
-    es->Compute(mode, &sp);
+    es->Compute(&sp);
 
     static v2      tau_bounds            = { 1e-13, 1e-10 };
     static cl_int2 count_bounds          = { 1, 50000 };
@@ -139,14 +138,16 @@ int main(int argc, char **argv)
         {
             ImGui::Begin("Elastic scattering");
 
-            static int m = (int)mode;
+            static int m = sp.mode;
 
-            ImGui::RadioButton("LT", &m, (int)Mode::AVG_LIFETIME); ImGui::SameLine();
-            ImGui::RadioButton("SXX", &m, (int)Mode::SIGMA_XX);
-            //ImGui::RadioButton("SXY", &init.mode, Mode::SIGMA_XY);
+            ImGui::RadioButton("LT", &m, (int)MODE_DIR_LIFETIME); ImGui::SameLine();
+            ImGui::RadioButton("PHI", &m, (int)MODE_PHI_LIFETIME); ImGui::SameLine();
+            ImGui::RadioButton("S-XX", &m, (int)MODE_SIGMA_XX); ImGui::SameLine();
+            ImGui::RadioButton("S-XY", &m, (int)MODE_SIGMA_XY);
 
-            mode = (Mode)m;
-            if (mode != Mode::AVG_LIFETIME) {
+            sp.mode = m;
+
+            if (IsSigma(sp.mode)) {
                 ImGui::Text("Phi steps");
                 ImGui::RadioButton("7",  &sp.integrand_steps,  7); ImGui::SameLine();
                 ImGui::RadioButton("13", &sp.integrand_steps, 13); ImGui::SameLine();
@@ -170,7 +171,7 @@ int main(int argc, char **argv)
 
             ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%e");
             
-            if (mode == Mode::AVG_LIFETIME) {
+            if (!IsSigma(sp.mode)) {
                 ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%f", 1.0f);
             }
 
@@ -188,11 +189,10 @@ int main(int argc, char **argv)
             ImGui::Checkbox("Sync immediately", &sync_immediate);
 
             if (sync_immediate || update) {
-                last_result = es->Compute((Mode)m, &sp);
+                last_result = es->Compute(&sp);
             }
             
             ImGui::Text("Mean free path: %e", last_result);
-
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::End();

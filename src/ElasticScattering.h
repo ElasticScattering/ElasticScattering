@@ -5,11 +5,6 @@
 #include "escl/common.h"
 #include <random>
 
-enum class Mode {
-	AVG_LIFETIME,
-	SIGMA_XX
-};
-
 typedef struct
 {
 	bool run_tests;
@@ -21,7 +16,6 @@ protected:
 
 	SimulationParameters *sp = nullptr;
 	SimulationParameters *last_sp;
-	Mode mode;
 
 	double FinishSigmaXX(double res) {
 		double kf = sp->particle_mass * sp->particle_speed / HBAR;
@@ -45,14 +39,14 @@ protected:
 	};
 
 	double ComputeResult(const std::vector<double> &results) {
-		double total;
+		double total = 0;
 		for (int i = 0; i < results.size(); i++)
 			total += results[i];
 
 		double z = sp->region_size / (sp->dim - 2);
 		double result = total * z * z / 9.0;
 
-		if (mode != Mode::AVG_LIFETIME)
+		if (IsSigma(sp->mode))
 			result = FinishSigmaXX(result);
 		else
 			result /= pow(sp->region_size, 2.0);
@@ -62,7 +56,7 @@ protected:
 
 public:
 	virtual void Init(bool show_info = false) = 0;
-	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp) = 0;
+	virtual double Compute(const SimulationParameters* p_sp) = 0;
 };
 
 class CPUElasticScattering : public ElasticScattering {
@@ -71,22 +65,22 @@ class CPUElasticScattering : public ElasticScattering {
 	void PrepareCompute(const SimulationParameters* p_sp);
 
 	void Lifetime();
-	void SigmaXX();
+	void LifetimePhi();
 
 public:
 	virtual void Init(bool show_info = false);
-	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp);
+	virtual double Compute(const SimulationParameters* p_sp);
 };
 
 class GPUElasticScattering : public ElasticScattering {
-	bool PrepareCompute(Mode p_mode, const SimulationParameters *p_sp);
+	bool PrepareCompute(const SimulationParameters *p_sp);
 
 	void PrepareImpurityBuffer();
 	void PrepareTexKernel();
 
 public:
 	virtual void Init(bool show_info = false);
-	virtual double Compute(Mode p_mode, const SimulationParameters* p_sp);
+	virtual double Compute(const SimulationParameters* p_sp);
 
 	void Draw();
 
