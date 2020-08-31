@@ -121,35 +121,22 @@ int main(int argc, char **argv)
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
     SimulationParameters sp;
-    /*
-    sp.region_size        = 2e-7;
+    sp.integrand_steps    = 49;
+    sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
+    sp.region_size        = 1e-7; //lager
     sp.dim                = 128;
     sp.particle_speed     = 7e5;
     sp.particle_mass      = 5 * M0;
-    sp.impurity_count     = 50000;
-    sp.impurity_radius    = 2e-9;
+    sp.impurity_count     = 100;     // hoog
+    sp.impurity_radius    = 2e-9; //1.5e-8;
     sp.alpha              = PI / 4.0;
-    sp.phi                = 0;
+    sp.phi                = 0;// -sp.alpha - 1e-10;
     sp.magnetic_field     = 0;
-    sp.tau                = 1e-13;
-    */
-
-    sp.integrand_steps    = 49;
-    sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
-    sp.region_size = 1e-7; //lager
-    sp.dim = 128;
-    sp.particle_speed = 7e5;
-    sp.particle_mass = 5 * M0;
-    sp.impurity_count = 100;     // hoog
-    sp.impurity_radius = 2e-9; //1.5e-8;
-    sp.alpha = PI / 4.0;
-    sp.phi = 0;// -sp.alpha - 1e-10;
-    sp.magnetic_field = 0;
-    sp.tau = 1e-12; // 3.7e-13;
-    sp.particle_count = sp.dim * sp.dim;
+    sp.tau                = 1e-12; // 3.7e-13;
+    sp.particle_count     = sp.dim * sp.dim;
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-    sp.region_extends = sp.particle_speed* sp.tau; // 3e-6;
+    sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
+    sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
 
     Mode mode = Mode::SIGMA_XX;
 
@@ -157,19 +144,17 @@ int main(int argc, char **argv)
     es->Init(false);
     es->Compute(mode, &sp);
 
-    static v2      tau_bounds = { 1e-13, 1e-10 };
-    //static cl_int2 integrand_steps_bounds = { 3, 99 };
-
-    static cl_int2 count_bounds = { 1, 50000 };
-    static v2      radius_bounds = { 1e-10, 1e-7 };
-    static v2      region_bounds = { 1e-8,  1e-4 };
-    static v2      extends_bounds = { 1e-7,  1e-4 };
+    static v2      tau_bounds            = { 1e-13, 1e-10 };
+    static cl_int2 count_bounds          = { 1, 50000 };
+    static v2      radius_bounds         = { 1e-10, 1e-7 };
+    static v2      region_bounds         = { 1e-8,  1e-4 };
+    static v2      extends_bounds        = { 1e-7,  1e-4 };
 
     static v2      particle_speed_bounds = { 1e6, 1e9 };
-    static v2      phi_bounds = { 0, PI2 };
+    static v2      phi_bounds            = { 0, PI2 };
     static v2      magnetic_field_bounds = { 0, 80 };
-    static bool sync_immediate = true;
-    static bool is_electron = (sp.clockwise == 1);
+    static bool sync_immediate           = true;
+    static bool is_electron              = (sp.clockwise == 1);
 
     double last_result = 0;
 

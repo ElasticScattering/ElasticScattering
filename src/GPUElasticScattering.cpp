@@ -181,19 +181,19 @@ bool GPUElasticScattering::PrepareCompute(Mode p_mode, const SimulationParameter
     if (nothing_changed) return false;
 
     sp = new SimulationParameters;
-    sp->region_size = p_sp->region_size;
-    sp->dim = p_sp->dim;
-    sp->particle_speed = p_sp->particle_speed;
-    sp->particle_mass = p_sp->particle_mass;
-    sp->impurity_count = p_sp->impurity_count;
+    sp->region_size     = p_sp->region_size;
+    sp->dim             = p_sp->dim;
+    sp->particle_speed  = p_sp->particle_speed;
+    sp->particle_mass   = p_sp->particle_mass;
+    sp->impurity_count  = p_sp->impurity_count;
     sp->impurity_radius = p_sp->impurity_radius;
-    sp->region_extends = p_sp->region_extends;
-    sp->alpha = p_sp->alpha;
-    sp->phi = p_sp->phi;
-    sp->magnetic_field = p_sp->magnetic_field;
-    sp->tau = p_sp->tau;
+    sp->region_extends  = p_sp->region_extends;
+    sp->alpha           = p_sp->alpha;
+    sp->phi             = p_sp->phi;
+    sp->magnetic_field  = p_sp->magnetic_field;
+    sp->tau             = p_sp->tau;
     sp->integrand_steps = p_sp->integrand_steps;
-    sp->clockwise = p_sp->clockwise;
+    sp->clockwise       = p_sp->clockwise;
 
     sp->particle_count = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
