@@ -3,19 +3,12 @@
 
 #ifndef DEVICE_PROGRAM
     #include "math.h"
+    #include "escl/constants.h"
+#else
+    #include "src/escl/constants.h"
 #endif
 
-#define PI   3.141592653589793238463
-#define PI2  6.283185307179586
-#define M0   9.109e-31
-#define E    1.602e-19
-#define HBAR 1.055e-34
-#define C1   1.15e-9
 
-#define MODE_DIR_LIFETIME 0
-#define MODE_PHI_LIFETIME 1
-#define MODE_SIGMA_XX 2
-#define MODE_SIGMA_XY 3
 
 //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
 #define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));

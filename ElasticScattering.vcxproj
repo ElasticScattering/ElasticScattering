@@ -234,6 +234,7 @@
     <ClInclude Include="libs\imgui\imstb_truetype.h" />
     <ClInclude Include="src\ElasticScattering.h" />
     <ClInclude Include="src\escl\common.h" />
+    <ClInclude Include="src\escl\constants.h" />
     <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Test.h" />

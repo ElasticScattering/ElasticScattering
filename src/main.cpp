@@ -156,8 +156,8 @@ int main(int argc, char **argv)
                 ImGui::RadioButton("99", &sp.integrand_steps, 99);
             }
 
-            ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%e");
-            ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%f");
+            ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%.2e");
+            ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%.2f");
             ImGui::Checkbox("Clockwise", &is_electron);
             sp.clockwise = is_electron ? 1 : 0;
 
@@ -169,19 +169,19 @@ int main(int argc, char **argv)
             ImGui::RadioButton("256x256",   &sp.dim,  256); ImGui::SameLine();
             ImGui::RadioButton("1024x1024", &sp.dim, 1024);
 
-            ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%e");
+            ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%.2e");
             
             if (!IsSigma(sp.mode)) {
-                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%f", 1.0f);
+                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%.2f", 1.0f);
             }
 
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
             ImGui::Text("Impurities");
             ImGui::SliderInt("Count", &sp.impurity_count, count_bounds.x, count_bounds.y);
-            ImGui::SliderScalar("Region", ImGuiDataType_Double, &sp.region_size, &region_bounds.x, &region_bounds.y, "%e");
-            ImGui::SliderScalar("Extends", ImGuiDataType_Double, &sp.region_extends, &extends_bounds.x, &extends_bounds.y, "%e");
-            ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%e");
+            ImGui::SliderScalar("Region", ImGuiDataType_Double, &sp.region_size, &region_bounds.x, &region_bounds.y, "%.2e");
+            ImGui::SliderScalar("Extends", ImGuiDataType_Double, &sp.region_extends, &extends_bounds.x, &extends_bounds.y, "%.2e");
+            ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
                 last_result = es->Compute(&sp);
             }
             
-            ImGui::Text("Mean free path: %e", last_result);
+            ImGui::Text("Mean free path: %.3e", last_result);
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::End();

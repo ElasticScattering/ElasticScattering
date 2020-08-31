@@ -281,11 +281,14 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters* p_sp)
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    double scale = IsSigma(sp->mode) ? sp->tau : sp->tau*3.0;
-    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(double), (void*)&scale);
+    clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(int), (void*)&sp->mode);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(cl_mem), (void*)&ocl.image);
+    //double scale = IsSigma(sp->mode) ? sp->tau : sp->tau*3.0;
+    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(double), (void*)&sp->tau);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 3, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     return true;
