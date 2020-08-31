@@ -13,5 +13,4 @@
 #define MODE_SIGMA_XX 2
 #define MODE_SIGMA_XY 3
 
-
 #endif // CL_CONSTANTS
