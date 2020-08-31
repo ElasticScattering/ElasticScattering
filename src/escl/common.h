@@ -63,6 +63,20 @@
 
     inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
 #endif
+    //inline bool IsEdge(int i, int j, int dim) { return (i == 0) || (i == dim) || (j == 0) || (j == dim); }
+
+    inline bool IsEdge(int i, int j, int dim) { return (i == 0) || (i == (dim - 2)) || (j == 0) || (j == (dim - 2)); }
+    inline bool IsPadding(int i, int j, int dim) { return (i == (dim-1)) || (j == (dim-1)); }
+    inline double GetWeight(int i, int j, int dim) {
+        double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
+        if (!IsEdge(i, j, dim))
+        {
+            w  = ((i % 2) == 0) ? 2.0 : 4.0;
+            w *= ((j % 2) == 0) ? 2.0 : 4.0;
+        }
+
+        return w;
+    }
     inline bool IsSigma(int m) { return (m == MODE_SIGMA_XX || m == MODE_SIGMA_XY); }
 
 typedef struct
@@ -88,8 +102,6 @@ typedef struct
     double magnetic_field;      // B
     double angular_speed;       // w
 } SimulationParameters;
-
-
 
 
 inline double smod(double a, double b)
@@ -275,6 +287,18 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
     return lifetime;
 }
 
+inline double single_lifetime(double2 pos, BUFFER_ARGS) {
+    if (sp->angular_speed != 0) {
+        bool clockwise = (sp->clockwise == 1);
+        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
+ 
+        return lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, impurities);
+    }
+    else {
+        return lifetime0(pos, sp, impurities);
+    }
+}
+
 inline double phi_lifetime(double2 pos, BUFFER_ARGS)
 {
     bool clockwise = (sp->clockwise == 1);
@@ -319,7 +343,7 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
                 result = r * v;
             }
 
-            bool edge_item = (i == 0 || i == sp->integrand_steps - 1);
+            bool edge_item = i == 0 || i == (sp->integrand_steps - 1);
             is_even = (i % 2) == 0;
             double w = 1.0;
 

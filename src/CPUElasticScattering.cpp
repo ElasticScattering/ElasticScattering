@@ -5,10 +5,6 @@
 
 #include "ElasticScattering.h"
 
-void CPUElasticScattering::Init(bool show_info)
-{
-}
-
 void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
     bool first_run = (last_sp == nullptr);
 
@@ -47,76 +43,6 @@ void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
     }
 }
 
-void CPUElasticScattering::LifetimePhi()
-{
-    int limit = sp->dim - 1;
-    auto imps = impurities.data();
-
-    for (int y = 0; y < limit; y++)
-    {
-        for (int x = 0; x < limit; x++)
-        {
-            v2 pos;
-            pos.x = sp->region_size * (x / (double)(sp->dim - 2));
-            pos.y = sp->region_size * (y / (double)(sp->dim - 2));
-
-            double angle_area = sp->alpha * 2.0;
-            double step_size = angle_area / (sp->integrand_steps - 1);
-            double integral = 0;
-
-            integral += phi_lifetime(pos, sp, imps);
-      
-            bool is_edge = (x == 0) || (x == (sp->dim - 2)) || (y == 0) || (y == (sp->dim - 2));
-
-            double w = 1.0;
-            if (!is_edge)
-            {
-                w = ((x % 2) == 0) ? 2.0 : 4.0;
-                w *= ((y % 2) == 0) ? 2.0 : 4.0;
-            }
-
-            main_buffer[y * sp->dim + x] = w * integral;
-        }
-    }
-}
-
-void CPUElasticScattering::Lifetime()
-{
-    int limit = sp->dim - 1;
-
-    auto imps = impurities.data();
-
-    for (int j = 0; j < limit; j++)
-        for (int i = 0; i < limit; i++)
-        {
-            v2 pos;
-            pos.x = sp->region_size * (i / (double)(sp->dim - 2));
-            pos.y = sp->region_size * (j / (double)(sp->dim - 2));
-
-            double particle_lifetime;
-            if (sp->angular_speed != 0) {
-                bool clockwise = (sp->clockwise == 1);
-
-                double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
-                particle_lifetime = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, imps);
-            }
-            else {
-                particle_lifetime = lifetime0(pos, sp, imps);
-            }
-
-            bool is_edge = (i == 0) || (i == sp->dim - 2) || (j == 0) || (j == sp->dim - 2);
-
-            double w = 1.0;
-            if (!is_edge)
-            {
-                w = ((i % 2) == 0) ? 2.0 : 4.0;
-                w *= ((j % 2) == 0) ? 2.0 : 4.0;
-            }
-
-            main_buffer[j * sp->dim + i] = w * particle_lifetime;
-        }
-}
-
 double CPUElasticScattering::Compute(const SimulationParameters* p_sp)
 {
     PrepareCompute(p_sp);
@@ -126,8 +52,18 @@ double CPUElasticScattering::Compute(const SimulationParameters* p_sp)
 
     QueryPerformanceCounter(&beginClock);
     
-    if      (sp->mode == MODE_DIR_LIFETIME) Lifetime();
-    else                                    LifetimePhi();
+    int limit = sp->dim - 1;
+    auto imps = impurities.data();
+
+    for (int j = 0; j < limit; j++)
+        for (int i = 0; i < limit; i++)
+        {
+            v2 pos(i, j);
+            pos = pos * (sp->region_size / (double)(sp->dim - 2));
+
+            double particle_result = (sp->mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp, imps) : phi_lifetime(pos, sp, imps);
+            main_buffer[j * sp->dim + i] = particle_result * GetWeight(i, j, sp->dim);
+        }
 
     double result = ComputeResult(main_buffer);
 

@@ -48,17 +48,7 @@ __kernel void add_integral_weights_2d(__global double* A)
 	int y = get_global_id(1);
 	int row_size = get_global_size(0);
 
-	bool is_padding = (x == (row_size - 1)) || (y == (row_size - 1));
-	bool is_edge = (x == 0) || (x == (row_size - 2)) || (y == 0) || (y == (row_size - 2));
-
-	double w = is_padding ? 0.0 : 1.0;
-	if (!is_edge)
-	{
-		w = ((x % 2) == 0) ? 2.0 : 4.0;
-		w *= ((y % 2) == 0) ? 2.0 : 4.0;
-	}
-
-	A[y * row_size + x] = w * A[y * row_size + x];
+	A[y * row_size + x] = GetWeight(x, y, row_size) * A[y * row_size + x];
 }
 
 __kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)

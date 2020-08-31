@@ -43,7 +43,6 @@ protected:
 	};
 
 public:
-	virtual void Init(bool show_info = false) = 0;
 	virtual double Compute(const SimulationParameters* p_sp) = 0;
 
 	unsigned GenerateImpurities(bool p_random = true) {
@@ -69,11 +68,7 @@ class CPUElasticScattering : public ElasticScattering {
 
 	void PrepareCompute(const SimulationParameters* p_sp);
 
-	void Lifetime();
-	void LifetimePhi();
-
 public:
-	virtual void Init(bool show_info = false);
 	virtual double Compute(const SimulationParameters* p_sp);
 };
 
@@ -82,7 +77,7 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareTexKernel();
 
 public:
-	virtual void Init(bool show_info = false);
+	void Init(bool show_info = false);
 	virtual double Compute(const SimulationParameters* p_sp);
 	
 	void Draw();
