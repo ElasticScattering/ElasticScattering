@@ -73,6 +73,7 @@ typedef struct
     int impurity_count;
     int integrand_steps; //~
     int clockwise;
+    unsigned int impurity_seed;
 
     double region_size;
     double region_extends;

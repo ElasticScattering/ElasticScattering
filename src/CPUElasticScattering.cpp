@@ -29,7 +29,9 @@ void CPUElasticScattering::PrepareCompute(const SimulationParameters *p_sp) {
     sp->tau                = p_sp->tau;
     sp->integrand_steps    = p_sp->integrand_steps;
     sp->clockwise          = p_sp->clockwise;
+    
     sp->mode               = p_sp->mode;
+    sp->impurity_seed      = p_sp->impurity_seed;
 
     sp->particle_count     = sp->dim * sp->dim;
     sp->impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;

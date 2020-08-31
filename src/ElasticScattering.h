@@ -15,7 +15,7 @@ protected:
 	std::vector<v2> impurities;
 
 	SimulationParameters *sp = nullptr;
-	SimulationParameters *last_sp;
+	SimulationParameters *last_sp = nullptr;
 
 	double FinishSigmaXX(double res) {
 		double kf = sp->particle_mass * sp->particle_speed / HBAR;
@@ -26,19 +26,7 @@ protected:
 		return outside * res;
 	};
 
-	void GenerateImpurities() {
-		impurities.clear();
-		impurities.resize(sp->impurity_count);
-
-		std::uniform_real_distribution<double> unif(-sp->region_extends, sp->region_size + sp->region_extends);
-		std::random_device r;
-		std::default_random_engine re(0);
-
-		for (int i = 0; i < sp->impurity_count; i++)
-			impurities[i] = { unif(re), unif(re) };
-	};
-
-	double ComputeResult(const std::vector<double> &results) {
+	double ComputeResult(const std::vector<double>& results) {
 		double total = 0;
 		for (int i = 0; i < results.size(); i++)
 			total += results[i];
@@ -52,11 +40,28 @@ protected:
 			result /= pow(sp->region_size, 2.0);
 
 		return result * sp->particle_speed;
-	}
+	};
 
 public:
 	virtual void Init(bool show_info = false) = 0;
 	virtual double Compute(const SimulationParameters* p_sp) = 0;
+
+	unsigned GenerateImpurities(bool p_random = true) {
+		impurities.clear();
+		impurities.resize(sp->impurity_count);
+
+		std::uniform_real_distribution<double> unif(-sp->region_extends, sp->region_size + sp->region_extends);
+
+		std::random_device random_device; 
+		unsigned int seed = p_random ? random_device() : 0;
+		
+		std::default_random_engine re(seed);
+		
+		for (int i = 0; i < sp->impurity_count; i++)
+			impurities[i] = { unif(re), unif(re) };
+
+		return seed;
+	};
 };
 
 class CPUElasticScattering : public ElasticScattering {
@@ -74,14 +79,12 @@ public:
 
 class GPUElasticScattering : public ElasticScattering {
 	bool PrepareCompute(const SimulationParameters *p_sp);
-
-	void PrepareImpurityBuffer();
 	void PrepareTexKernel();
 
 public:
 	virtual void Init(bool show_info = false);
 	virtual double Compute(const SimulationParameters* p_sp);
-
+	
 	void Draw();
 
 	~GPUElasticScattering();

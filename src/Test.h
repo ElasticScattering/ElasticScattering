@@ -128,6 +128,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.region_extends = sp.particle_speed * sp.tau;
 
 	sp.mode = MODE_DIR_LIFETIME;
+	sp.impurity_seed = 0;
 
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
@@ -146,12 +147,16 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.impurity_radius = 1.5e-7;
 	CHECK_CPU_GPU_ALMOST("Larger impurities")
 
+	sp.impurity_seed = 1;
+	CHECK_CPU_GPU_ALMOST("Different impurity seed")
+
 	sp.magnetic_field = 30;
 	CHECK_CPU_GPU_ALMOST("Magnetic field on")
 
 	sp.clockwise = 0;
 	CHECK_CPU_GPU_ALMOST("Clockwise off")
 
+	
 	// SIGMA //
 	sp.mode = MODE_SIGMA_XX;
 	sp.impurity_count = 100;
@@ -166,6 +171,9 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	sp.impurity_radius = 1.5e-7;
 	CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
+
+	sp.impurity_seed = 1;
+	CHECK_CPU_GPU_ALMOST("Different impurity seed")
 
 	sp.magnetic_field = 30;
 	CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")

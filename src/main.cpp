@@ -104,7 +104,9 @@ int main(int argc, char **argv)
     sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
     sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
+    
     sp.mode               = MODE_DIR_LIFETIME;
+    sp.impurity_seed      = 0;
 
     auto es = new GPUElasticScattering();
     es->Init(false);
@@ -182,13 +184,16 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Region", ImGuiDataType_Double, &sp.region_size, &region_bounds.x, &region_bounds.y, "%.2e");
             ImGui::SliderScalar("Extends", ImGuiDataType_Double, &sp.region_extends, &extends_bounds.x, &extends_bounds.y, "%.2e");
             ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
+            bool impurities_updated = ImGui::Button("New seed");
+            if (impurities_updated)
+                sp.impurity_seed = es->GenerateImpurities();
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
             bool update = ImGui::Button("Compute"); ImGui::SameLine();
             ImGui::Checkbox("Sync immediately", &sync_immediate);
 
-            if (sync_immediate || update) {
+            if (sync_immediate || update || impurities_updated) {
                 last_result = es->Compute(&sp);
             }
             
