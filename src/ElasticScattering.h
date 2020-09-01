@@ -26,7 +26,7 @@ protected:
 
 public:
 	virtual double Compute(const SimulationParameters &p_sp) = 0;
-	unsigned GenerateImpurities(const SimulationParameters& p_sp, bool p_random = true);
+	unsigned GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 };
 
 class CPUElasticScattering : public ElasticScattering {

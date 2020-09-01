@@ -11,7 +11,7 @@ unsigned ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp,
 	std::uniform_real_distribution<double> unif(-p_sp.region_extends, p_sp.region_size + p_sp.region_extends);
 
 	std::random_device random_device;
-	unsigned int seed = p_random ? random_device() : 0;
+	unsigned int seed = p_random ? random_device() : p_sp.impurity_seed;
 
 	std::default_random_engine re(seed);
 

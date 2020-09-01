@@ -320,7 +320,6 @@ double GPUElasticScattering::Compute(const SimulationParameters &p_sp)
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
     double result = ComputeResult(results);
-    result *= sp.particle_speed;
 
     double kf = M * sp.particle_speed / HBAR;
     double n  = kf * kf / (PI2 * C1);

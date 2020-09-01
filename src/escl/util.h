@@ -42,15 +42,6 @@ __kernel void sum2(__global double* data, __global double* output, __local doubl
 }
 */
 
-__kernel void add_integral_weights_2d(__global double* A)
-{
-	int x = get_global_id(0);
-	int y = get_global_id(1);
-	int row_size = get_global_size(0);
-
-	A[y * row_size + x] = GetWeight(x, y, row_size) * A[y * row_size + x];
-}
-
 __kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
 {
 	int x = get_global_id(0);

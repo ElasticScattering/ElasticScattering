@@ -187,7 +187,7 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
             bool impurities_updated = ImGui::Button("New seed");
             if (impurities_updated)
-                sp.impurity_seed = es->GenerateImpurities(sp);
+                sp.impurity_seed = es->GenerateImpurities(sp, true);
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 

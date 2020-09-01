@@ -361,4 +361,15 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
     return integral;
 }
 
+#ifdef DEVICE_PROGRAM
+__kernel void add_integral_weights_2d(__global double* A)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+
+    A[y * row_size + x] = GetWeight(x, y, row_size) * A[y * row_size + x];
+}
+#endif
+
 #endif // CL_COMMON_H
