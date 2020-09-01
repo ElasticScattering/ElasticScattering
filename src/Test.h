@@ -19,14 +19,14 @@
 #define CHECK_APPROX_LOW(a, b)  { assert(abs((a)-(b)) < EPSILON_LOW_PRECISION); }
 
 #define CHECK_CPU_GPU_ALMOST(p_msg)                                                            \
-	cpu_result = e->Compute(&sp);                                            \
-	gpu_result = e2->Compute(&sp);                                           \
+	cpu_result = e->Compute(sp);                                            \
+	gpu_result = e2->Compute(sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_ALMOST(cpu_result, gpu_result, p_msg);  
 
 #define CHECK_CPU_GPU_APPROX(p_msg)                                                            \
-	cpu_result = e->Compute(&sp);                                            \
-	gpu_result = e2->Compute(&sp);                                           \
+	cpu_result = e->Compute(sp);                                            \
+	gpu_result = e2->Compute(sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
 
@@ -93,16 +93,11 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	std::vector<double> cpu_results;
 	cpu_results.resize(buffer_size);
 
-	for (int j = 0; j < buffer_size; j++)
-		for (int i = 0; i < number_of_operations; i++)
-			cpu_results[j] += A[j] * sqrt(abs(sin((double)i)));
-
-	//std::cout << "|CPU            |GPU            |Diff " << std::endl; 
-
 	for (int j = 0; j < buffer_size; j++) {
-		//std::cout << " " << cpu_results[j] << "     " << gpu_results[j] << "     " << abs(gpu_results[j] - cpu_results[j]) << std::endl;
-
-		CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
+		for (int i = 0; i < number_of_operations; i++) {
+			cpu_results[j] += A[j] * sqrt(abs(sin((double)i)));
+			CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
+		}
 	}
 }
 

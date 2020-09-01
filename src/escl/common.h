@@ -15,8 +15,12 @@
 
 #ifdef DEVICE_PROGRAM
     #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
+
+    #define MIN(p_a, p_b) min((p_a), p_b)
 #else
-    #define BUFFER_ARGS SimulationParameters* sp, double2* impurities
+    #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
+    
+    #define MIN(p_a, p_b) ((p_a) < (p_b)) ? (p_a) : (p_b)
 
     struct v4 {
         double x, y, z, w;
@@ -62,6 +66,7 @@
     #define double4 v4
 
     inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
+
 #endif
     //inline bool IsEdge(int i, int j, int dim) { return (i == 0) || (i == dim) || (j == 0) || (j == dim); }
 
@@ -205,9 +210,38 @@ inline double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double 
 
     double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
     double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
-    return min(t1, t2);
+    return MIN(t1, t2);
 }
 
+inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER_ARGS)
+{
+    double orbit_radius = sp->particle_speed / sp->angular_speed;
+    double2 vel = (cos(sp->phi), sin(sp->phi)) * sp->particle_speed;
+    double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
+
+    double lifetime = max_lifetime;
+
+    for (int i = 0; i < sp->impurity_count; i++) {
+        double2 imp_pos = impurities[i];
+
+        double2 d = pos - imp_pos;
+
+        if (CirclesCross(center, orbit_radius, imp_pos, sp->impurity_radius))
+        {
+            if (sp->impurity_radius_sq > dot(d, d))
+            {
+                lifetime = 0;
+            }
+
+            double t = GetFirstCrossTime(center, pos, imp_pos, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
+
+            if (t < lifetime)
+                lifetime = t;
+        }
+    }
+
+    return lifetime;
+}
 
 inline double lifetime0(double2 pos, BUFFER_ARGS)
 {
@@ -257,42 +291,16 @@ inline double lifetime0(double2 pos, BUFFER_ARGS)
     return lifetime;
 }
 
-inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER_ARGS)
-{
-    double orbit_radius = sp->particle_speed / sp->angular_speed;
-    double2 vel = (cos(sp->phi), sin(sp->phi)) * sp->particle_speed;
-    double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
-
-    double lifetime = max_lifetime;
-
-    for (int i = 0; i < sp->impurity_count; i++) {
-        double2 imp_pos = impurities[i];
-
-        double2 d = pos - imp_pos;
-
-        if (CirclesCross(center, orbit_radius, imp_pos, sp->impurity_radius))
-        {
-            if (sp->impurity_radius_sq > dot(d, d))
-            {
-                lifetime = 0;
-            }
-
-            double t = GetFirstCrossTime(center, pos, imp_pos, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
-
-            if (t < lifetime)
-                lifetime = t;
-        }
-    }
-
-    return lifetime;
-}
+////////////////////////////////////////////////////
+// Main functions, for single or integrated lifetime
+////////////////////////////////////////////////////
 
 inline double single_lifetime(double2 pos, BUFFER_ARGS) {
     if (sp->angular_speed != 0) {
         bool clockwise = (sp->clockwise == 1);
         double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
  
-        return lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, impurities);
+        return lifetimeB(MIN(sp->tau, bound_time), pos, clockwise, sp, impurities);
     }
     else {
         return lifetime0(pos, sp, impurities);
@@ -318,14 +326,7 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
         {
             sp->phi = start + i * step_size;
 
-            double result;
-            if (sp->angular_speed != 0) {
-                double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
-                result = lifetimeB(min(sp->tau, bound_time), pos, clockwise, sp, impurities);
-            }
-            else {
-                result = lifetime0(pos, sp, impurities);
-            }
+            double result = single_lifetime(pos, sp, impurities);
 
             if (sp->mode == MODE_SIGMA_XX || sp->mode == MODE_SIGMA_XY)
             {

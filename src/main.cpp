@@ -87,6 +87,10 @@ int main(int argc, char **argv)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+    LARGE_INTEGER beginClock, endClock, clockFrequency;
+    QueryPerformanceFrequency(&clockFrequency);
+
+    
     SimulationParameters sp;
     sp.integrand_steps    = 49;
     sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
@@ -110,7 +114,7 @@ int main(int argc, char **argv)
 
     auto es = new GPUElasticScattering();
     es->Init(false);
-    es->Compute(&sp);
+    es->Compute(sp);
 
     static v2      tau_bounds            = { 1e-13, 1e-10 };
     static cl_int2 count_bounds          = { 1, 50000 };
@@ -186,7 +190,7 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
             bool impurities_updated = ImGui::Button("New seed");
             if (impurities_updated)
-                sp.impurity_seed = es->GenerateImpurities();
+                sp.impurity_seed = es->GenerateImpurities(sp);
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
@@ -194,7 +198,18 @@ int main(int argc, char **argv)
             ImGui::Checkbox("Sync immediately", &sync_immediate);
 
             if (sync_immediate || update || impurities_updated) {
-                last_result = es->Compute(&sp);
+                QueryPerformanceCounter(&beginClock);
+
+                sp.particle_count = sp.dim * sp.dim;
+                sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
+                sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+
+                last_result = es->Compute(sp);
+                
+                //double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+                //std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
+                QueryPerformanceCounter(&endClock);
+
             }
             
             ImGui::Text("Mean free path: %.3e", last_result);
