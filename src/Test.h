@@ -222,7 +222,30 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	sp.clockwise = 0;
 	CHECK_CPU_GPU_ALMOST2("Clockwise off")
+
+	sp.mode = MODE_PHI_LIFETIME;
+	sp.impurity_count = 100;
+	sp.impurity_radius = 1.5e-8;
+	sp.clockwise = 1;
+	sp.magnetic_field = 0;
 	
+	CHECK_CPU_GPU_APPROX("PHI - Default parameters")
+
+	sp.impurity_count = 200;
+	CHECK_CPU_GPU_APPROX("PHI - More impurities");
+
+	sp.impurity_radius = 1.5e-7;
+	CHECK_CPU_GPU_APPROX("PHI - Larger impurities")
+
+	sp.impurity_seed = 2;
+	CHECK_CPU_GPU_ALMOST("PHI - Different impurity seed")
+
+	sp.magnetic_field = 30;
+	CHECK_CPU_GPU_APPROX("PHI - Magnetic field on")
+
+	sp.clockwise = 0;
+	CHECK_CPU_GPU_APPROX("PHI - Clockwise off")
+
 	// SIGMA //
 	sp.mode = MODE_SIGMA_XX;
 	sp.impurity_count = 100;
@@ -238,14 +261,38 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.impurity_radius = 1.5e-7;
 	CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
 
-	sp.impurity_seed = 1;
-	CHECK_CPU_GPU_ALMOST("Different impurity seed")
+	sp.impurity_seed = 3;
+	CHECK_CPU_GPU_ALMOST("SXX - Different impurity seed")
 
 	sp.magnetic_field = 30;
 	CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
 
 	sp.clockwise = 0;
 	CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
+
+		// SIGMA //
+	sp.mode = MODE_SIGMA_XY;
+	sp.impurity_count = 100;
+	sp.impurity_radius = 1.5e-8;
+	sp.clockwise = 1;
+	sp.magnetic_field = 0;
+
+	CHECK_CPU_GPU_APPROX("SXY - Default parameters")
+
+	sp.impurity_count = 200;
+	CHECK_CPU_GPU_APPROX("SXY - More impurities");
+
+	sp.impurity_radius = 1.5e-7;
+	CHECK_CPU_GPU_APPROX("SXY - Larger impurities")
+
+	sp.impurity_seed = 4;
+	CHECK_CPU_GPU_ALMOST("SXY - Different impurity seed")
+
+	sp.magnetic_field = 30;
+	CHECK_CPU_GPU_APPROX("SXY - Magnetic field on")
+
+	sp.clockwise = 0;
+	CHECK_CPU_GPU_APPROX("SXY - Clockwise off")
 }
 
 TEST_CASE("Cyclotron Orbit")

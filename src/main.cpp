@@ -126,6 +126,7 @@ int main(int argc, char **argv)
     static bool is_electron              = (sp.clockwise == 1);
 
     double last_result = 0;
+    static int imp_seed = sp.impurity_seed;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -186,8 +187,9 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Extends", ImGuiDataType_Double, &sp.region_extends, &extends_bounds.x, &extends_bounds.y, "%.2e");
             ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
             bool impurities_updated = ImGui::Button("New seed");
-            if (impurities_updated)
-                sp.impurity_seed = es->GenerateImpurities(sp, true);
+            if (impurities_updated) {
+                sp.impurity_seed += 1;
+            }
 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
 

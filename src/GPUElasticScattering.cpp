@@ -175,8 +175,7 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     if (nothing_changed) return false;
 
     if (first_run || ImpuritySettingsChanged(p_sp)) {
-        if (first_run || sp.impurity_seed == p_sp.impurity_seed)
-            GenerateImpurities(p_sp);
+        GenerateImpurities(p_sp);
 
         ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");

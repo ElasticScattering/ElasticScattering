@@ -23,10 +23,10 @@ protected:
 	double FinishSigmaXX(double res);
 	double ComputeResult(const std::vector<double>& results);
 	virtual bool PrepareCompute(const SimulationParameters& p_sp) = 0;
+	void GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 
 public:
 	virtual double Compute(const SimulationParameters &p_sp) = 0;
-	unsigned GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 };
 
 class CPUElasticScattering : public ElasticScattering {

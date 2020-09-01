@@ -4,7 +4,7 @@ bool ElasticScattering::ImpuritySettingsChanged(const SimulationParameters &p_sp
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };
 
-unsigned ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp, bool p_random) {
+void ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp, bool p_random) {
 	impurities.clear();
 	impurities.resize(p_sp.impurity_count);
 
@@ -12,13 +12,10 @@ unsigned ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp,
 
 	std::random_device random_device;
 	unsigned int seed = p_random ? random_device() : p_sp.impurity_seed;
-
 	std::default_random_engine re(seed);
 
 	for (int i = 0; i < p_sp.impurity_count; i++)
 		impurities[i] = { unif(re), unif(re) };
-
-	return seed;
 };
 
 double ElasticScattering::FinishSigmaXX(double res) {

@@ -74,7 +74,7 @@ inline double GetWeight(int i, int j, int dim) {
     double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
     if (!IsEdge(i, j, dim))
     {
-        w  = ((i % 2) == 0) ? 2.0 : 4.0;
+        w *= ((i % 2) == 0) ? 2.0 : 4.0;
         w *= ((j % 2) == 0) ? 2.0 : 4.0;
     }
 
