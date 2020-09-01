@@ -25,7 +25,7 @@ bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
         GenerateImpurities(p_sp);
 
     if (first_run || (sp.dim != p_sp.dim)) {
-        particle_count = sp.dim * sp.dim;
+        particle_count = p_sp.dim * p_sp.dim;
 
         main_buffer.clear();
         main_buffer.resize(particle_count, 0);

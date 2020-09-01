@@ -204,7 +204,6 @@ int main(int argc, char **argv)
                 //double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
                 //std::cout << "CPU calculation time: " << total_time * 1000 << " ms" << std::endl;
                 QueryPerformanceCounter(&endClock);
-
             }
             
             ImGui::Text("Mean free path: %.3e", last_result);

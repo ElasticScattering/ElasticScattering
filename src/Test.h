@@ -96,8 +96,8 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	for (int j = 0; j < buffer_size; j++) {
 		for (int i = 0; i < number_of_operations; i++) {
 			cpu_results[j] += A[j] * sqrt(abs(sin((double)i)));
-			CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
 		}
+		CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
 	}
 }
 
