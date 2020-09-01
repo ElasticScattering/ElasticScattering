@@ -15,6 +15,8 @@ protected:
 	std::vector<v2> impurities;
 
 	SimulationParameters sp;
+	int particle_count;
+	
 	bool first_run = true;
 
 	bool ImpuritySettingsChanged(const SimulationParameters& p_sp);

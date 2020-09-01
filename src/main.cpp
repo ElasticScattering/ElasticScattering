@@ -97,16 +97,13 @@ int main(int argc, char **argv)
     sp.region_size        = 1e-7; //lager
     sp.dim                = 128;
     sp.particle_speed     = 7e5;
-    sp.particle_mass      = 5 * M0;
     sp.impurity_count     = 100;     // hoog
     sp.impurity_radius    = 2e-9; //1.5e-8;
     sp.alpha              = PI / 4.0;
     sp.phi                = 0;// -sp.alpha - 1e-10;
     sp.magnetic_field     = 0;
     sp.tau                = 1e-12; // 3.7e-13;
-    sp.particle_count     = sp.dim * sp.dim;
-    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.angular_speed      = E * sp.magnetic_field / sp.particle_mass;
+    sp.angular_speed      = E * sp.magnetic_field / M;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
     
     sp.mode               = MODE_DIR_LIFETIME;
@@ -200,9 +197,7 @@ int main(int argc, char **argv)
             if (sync_immediate || update || impurities_updated) {
                 QueryPerformanceCounter(&beginClock);
 
-                sp.particle_count = sp.dim * sp.dim;
-                sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-                sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
+                sp.angular_speed = E * sp.magnetic_field / M;
 
                 last_result = es->Compute(sp);
                 

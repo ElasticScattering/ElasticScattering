@@ -25,32 +25,13 @@ bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
         GenerateImpurities(p_sp);
 
     if (first_run || (sp.dim != p_sp.dim)) {
+        particle_count = sp.dim * sp.dim;
+
         main_buffer.clear();
-        main_buffer.resize(p_sp.particle_count, 0);
+        main_buffer.resize(particle_count, 0);
     }
 
-    sp.region_size = p_sp.region_size;
-    sp.region_extends = p_sp.region_extends;
-    sp.dim = p_sp.dim;
-    sp.particle_speed = p_sp.particle_speed;
-    sp.particle_mass = p_sp.particle_mass;
-    sp.impurity_count = p_sp.impurity_count;
-    sp.impurity_radius = p_sp.impurity_radius;
-    sp.alpha = p_sp.alpha;
-    sp.phi = p_sp.phi;
-    sp.magnetic_field = p_sp.magnetic_field;
-    sp.tau = p_sp.tau;
-    sp.integrand_steps = p_sp.integrand_steps;
-    sp.clockwise = p_sp.clockwise;
-
-    sp.mode = p_sp.mode;
-    sp.impurity_seed = p_sp.impurity_seed;
-
-    sp.particle_count = sp.dim * sp.dim;
-    sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-    sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-    sp.region_extends = sp.particle_speed * sp.tau;
-
+    sp = p_sp;
     first_run = false;
 
     return true;

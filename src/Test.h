@@ -104,26 +104,23 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
 	SimulationParameters sp;
-	sp.region_size = 1e-6;
-	sp.dim = 64;
-	sp.particle_speed = 7e5;
-	sp.particle_mass = 5 * M0;
-	sp.impurity_count = 100;
+	sp.region_size     = 1e-6;
+	sp.dim             = 64;
+	sp.particle_speed  = 7e5;
+	sp.impurity_count  = 100;
 	sp.impurity_radius = 1.5e-8;
-	sp.alpha = PI / 4.0;
-	sp.phi = 0;
-	sp.magnetic_field = 0;
-	sp.tau = 1e-12;
+	sp.alpha           = PI / 4.0;
+	sp.phi             = 0;
+	sp.magnetic_field  = 0;
+	sp.tau             = 1e-12;
 	sp.integrand_steps = 9;
-	sp.clockwise = 1;
+	sp.clockwise       = 1;
 	
-	sp.particle_count = sp.dim * sp.dim;
-	sp.impurity_radius_sq = sp.impurity_radius * sp.impurity_radius;
-	sp.angular_speed = E * sp.magnetic_field / sp.particle_mass;
-	sp.region_extends = sp.particle_speed * sp.tau;
+	sp.angular_speed   = E * sp.magnetic_field / M;
+	sp.region_extends  = sp.particle_speed * sp.tau;
 
-	sp.mode = MODE_DIR_LIFETIME;
-	sp.impurity_seed = 0;
+	sp.mode            = MODE_DIR_LIFETIME;
+	sp.impurity_seed   = 0;
 
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();

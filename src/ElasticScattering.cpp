@@ -22,9 +22,9 @@ unsigned ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp,
 };
 
 double ElasticScattering::FinishSigmaXX(double res) {
-	double kf = sp.particle_mass * sp.particle_speed / HBAR;
-	double outside = E * E * kf * kf / (2.0 * PI2 * sp.particle_mass * sp.region_size * sp.region_size * C1);
-	double v = E * sp.magnetic_field * sp.tau / sp.particle_mass;
+	double kf = M * sp.particle_speed / HBAR;
+	double outside = E * E * kf * kf / (2.0 * PI2 * M * sp.region_size * sp.region_size * C1);
+	double v = E * sp.magnetic_field * sp.tau / M;
 	outside /= (1.0 + v * v);
 
 	return outside * res;

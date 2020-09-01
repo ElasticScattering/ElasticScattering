@@ -1,23 +1,14 @@
 #ifndef CL_COMMON_H
 #define CL_COMMON_H
 
-#ifndef DEVICE_PROGRAM
-    #include "math.h"
-    #include "escl/constants.h"
-#else
-    #include "src/escl/constants.h"
-#endif
-
-
-
-//Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
-#define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
-
 #ifdef DEVICE_PROGRAM
-    #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
+    #include "src/escl/constants.h"
 
+    #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
     #define MIN(p_a, p_b) min((p_a), p_b)
 #else
+    #include "math.h"
+    #include "escl/constants.h"
     #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
     
     #define MIN(p_a, p_b) ((p_a) < (p_b)) ? (p_a) : (p_b)
@@ -68,38 +59,45 @@
     inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
 
 #endif
-    //inline bool IsEdge(int i, int j, int dim) { return (i == 0) || (i == dim) || (j == 0) || (j == dim); }
+    //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
+#define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
 
-    inline bool IsEdge(int i, int j, int dim) { return (i == 0) || (i == (dim - 2)) || (j == 0) || (j == (dim - 2)); }
-    inline bool IsPadding(int i, int j, int dim) { return (i == (dim-1)) || (j == (dim-1)); }
-    inline double GetWeight(int i, int j, int dim) {
-        double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
-        if (!IsEdge(i, j, dim))
-        {
-            w  = ((i % 2) == 0) ? 2.0 : 4.0;
-            w *= ((j % 2) == 0) ? 2.0 : 4.0;
-        }
+inline bool IsEdge(int i, int j, int dim) {
+    return (i == 0) || (i == (dim - 2)) || (j == 0) || (j == (dim - 2)); 
+}
 
-        return w;
+inline bool IsPadding(int i, int j, int dim) {
+    return (i == (dim-1)) || (j == (dim-1)); 
+}
+
+inline double GetWeight(int i, int j, int dim) {
+    double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
+    if (!IsEdge(i, j, dim))
+    {
+        w  = ((i % 2) == 0) ? 2.0 : 4.0;
+        w *= ((j % 2) == 0) ? 2.0 : 4.0;
     }
-    inline bool IsSigma(int m) { return (m == MODE_SIGMA_XX || m == MODE_SIGMA_XY); }
+
+    return w;
+}
+
+inline bool IsSigma(int m) {
+    return (m == MODE_SIGMA_XX || m == MODE_SIGMA_XY);
+}
 
 typedef struct
 {
     int mode;
-    int dim; //-                           
-    int particle_count; //-
+    int dim; //-
     int impurity_count;
-    int integrand_steps; //~
+    int integrand_steps;
     int clockwise;
     unsigned int impurity_seed;
 
     double region_size;
     double region_extends;
     double particle_speed;      // v
-    double particle_mass;       // m,-
     double impurity_radius;     // r
-    double impurity_radius_sq;  // r^2,~
     double tau;
 
     double alpha;
@@ -221,6 +219,8 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
 
     double lifetime = max_lifetime;
 
+    double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+
     for (int i = 0; i < sp->impurity_count; i++) {
         double2 imp_pos = impurities[i];
 
@@ -228,7 +228,7 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
 
         if (CirclesCross(center, orbit_radius, imp_pos, sp->impurity_radius))
         {
-            if (sp->impurity_radius_sq > dot(d, d))
+            if (impurity_radius_sq > dot(d, d))
             {
                 lifetime = 0;
             }
