@@ -220,6 +220,7 @@
     <ClCompile Include="libs\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\CPUElasticScattering.cpp" />
+    <ClCompile Include="src\ElasticScattering.cpp" />
     <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>

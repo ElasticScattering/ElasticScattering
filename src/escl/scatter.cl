@@ -11,8 +11,8 @@ __kernel void lifetime(__global SimulationParameters *sp, __global double2 *impu
         DECLARE_POS
 
         double result;
-        if (mode == MODE_DIR_LIFETIME) result = single_lifetime(pos, sp, impurities);
-        else                           result = phi_lifetime   (pos, sp, impurities);
+        if (sp->mode == MODE_DIR_LIFETIME) result = single_lifetime(pos, sp, impurities);
+        else                               result = phi_lifetime   (pos, sp, impurities);
 
         lifetimes[y * row_size + x] = result;
 	}

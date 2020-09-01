@@ -53,8 +53,8 @@ int main(int argc, char **argv)
     if (!glfwInit())
         return -1;
 
-    int width = 1024;
-    int height = 1024;
+    int width = 700;
+    int height = 700;
     window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
     if (!window)
     {
