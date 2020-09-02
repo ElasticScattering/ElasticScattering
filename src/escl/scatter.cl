@@ -1,5 +1,4 @@
 #include "src/escl/common.h"
-#include "src/escl/util.h"
 
 __kernel void lifetime(__global SimulationParameters *sp, __global double2 *impurities, __global double *lifetimes) 
 {

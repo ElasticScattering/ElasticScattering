@@ -308,6 +308,10 @@ TEST_CASE("Compare to formula") {
 
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
+	auto e  = new CPUElasticScattering();
+	auto e2 = new GPUElasticScattering();
+	e2->Init(false);
+
 	SimulationParameters sp;
 	sp.region_size     = 1e-6;
 	sp.dim             = 64;
@@ -324,11 +328,6 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	sp.mode            = MODE_DIR_LIFETIME;
 	sp.impurity_seed   = 0;
-
-
-	auto e  = new CPUElasticScattering();
-	auto e2 = new GPUElasticScattering();
-	e2->Init(false);
 
 	double cpu_result, gpu_result, diff;
 

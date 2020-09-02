@@ -2,7 +2,7 @@
 #define CL_COMMON_H
 
 #ifdef DEVICE_PROGRAM
-    #include "src/escl/constants.h"
+    #include "src/escl/util.h"
 
     #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
     #define MIN(p_a, p_b) min((p_a), p_b)

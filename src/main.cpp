@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
     
     SimulationParameters sp;
-    sp.integrand_steps    = 49;
+    sp.integrand_steps    = 13;
     sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
     sp.region_size        = 1e-7; //lager
     sp.dim                = 128;
@@ -151,13 +151,16 @@ int main(int argc, char **argv)
 
             sp.mode = m;
 
-            if (IsSigma(sp.mode)) {
+            if (sp.mode != MODE_DIR_LIFETIME) {
                 ImGui::Text("Phi steps");
                 ImGui::RadioButton("7",  &sp.integrand_steps,  7); ImGui::SameLine();
                 ImGui::RadioButton("13", &sp.integrand_steps, 13); ImGui::SameLine();
                 ImGui::RadioButton("25", &sp.integrand_steps, 25); ImGui::SameLine();
                 ImGui::RadioButton("49", &sp.integrand_steps, 49); ImGui::SameLine();
                 ImGui::RadioButton("99", &sp.integrand_steps, 99);
+            }
+            else {
+                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%.2f", 1.0f);
             }
 
             ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%.2e");
@@ -175,9 +178,7 @@ int main(int argc, char **argv)
 
             ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%.2e");
             
-            if (!IsSigma(sp.mode)) {
-                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%.2f", 1.0f);
-            }
+
 
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
