@@ -176,49 +176,62 @@ TEST_CASE("Sum kernel")
 	CHECK_ALMOST(cpu_result, gpu_result, "Sums on cpu and gpu should be equal.");
 }
 
-
 TEST_CASE("Weights function") {
 	int dim = 8;
 
-	double w = GetWeight(dim-1, 0, dim);
-	CHECK(w == 0);
-
-	w = GetWeight(0, 0, dim);
+	double w = GetWeight1D(0, dim);
 	CHECK(w == 1);
 
-	w = GetWeight(1, 0, dim);
+	w = GetWeight1D(dim - 1, dim);
+	CHECK(w == 0);
+
+	w = GetWeight1D(1, dim);
 	CHECK(w == 4);
 
-	w = GetWeight(2, 0, dim);
+	w = GetWeight1D(dim-2, dim);
+	CHECK(w == 1);
+
+	w = GetWeight1D(dim - 3, dim);
+	CHECK(w == 4);
+
+	w = GetWeight2D(dim-1, 0, dim);
+	CHECK(w == 0);
+
+	w = GetWeight2D(0, 0, dim);
+	CHECK(w == 1);
+
+	w = GetWeight2D(1, 0, dim);
+	CHECK(w == 4);
+
+	w = GetWeight2D(2, 0, dim);
 	CHECK(w == 2);
 
-	w = GetWeight(3, 0, dim);
+	w = GetWeight2D(3, 0, dim);
 	CHECK(w == 4);
 
 
-	w = GetWeight(0, 1, dim);
+	w = GetWeight2D(0, 1, dim);
 	CHECK(w == 4);
 
-	w = GetWeight(1, 1, dim);
+	w = GetWeight2D(1, 1, dim);
 	CHECK(w == 16);
 
-	w = GetWeight(3, 3, dim);
+	w = GetWeight2D(3, 3, dim);
 	CHECK(w == 16);
 
-	w = GetWeight(1, 2, dim);
+	w = GetWeight2D(1, 2, dim);
 	CHECK(w == 8);
 
-	w = GetWeight(2, 1, dim);
+	w = GetWeight2D(2, 1, dim);
 	CHECK(w == 8);
 
 
-	w = GetWeight(0, dim - 1, dim);
+	w = GetWeight2D(0, dim - 1, dim);
 	CHECK(w == 0);
 }
 
 TEST_CASE("Add weights kernel")
 {
-
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
@@ -231,58 +244,67 @@ TEST_CASE("Add weights kernel")
 	cl_kernel main_kernel = clCreateKernel(program, "add_integral_weights_2d", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
-	SUBCASE("One dimensional") {
-		int dim = 8;
-		int buffer_size = dim * dim;
+	
+	int dim = 8;
+	int buffer_size = dim * dim;
 
-		size_t global_work_size[2] = { (size_t)dim, (size_t)dim };
-		size_t local_work_size[2] = { 8, 8 };
+	size_t global_work_size[2] = { (size_t)dim, (size_t)dim };
+	size_t local_work_size[2] = { 8, 8 };
 
-		std::vector<double> A;
-		A.clear();
-		A.resize(buffer_size);
+	std::vector<double> A;
+	A.clear();
+	A.resize(buffer_size);
 
-		for (int i = 0; i < buffer_size; i++)
-			A[i] = 1.0;
+	for (int i = 0; i < buffer_size; i++)
+		A[i] = 1.0;
 
-		cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
-		CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+	cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
+	CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
 
-		clStatus = clEnqueueWriteBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, A.data(), 0, nullptr, nullptr);
-		CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
+	clStatus = clEnqueueWriteBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, A.data(), 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
-		clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&buffer);
-		CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+	clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&buffer);
+	CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-		clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-		CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
+	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
 
-		clStatus = clFinish(queue);
+	clStatus = clFinish(queue);
 
-		std::vector<double> gpu_results;
-		gpu_results.resize(buffer_size);
-		clEnqueueReadBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, gpu_results.data(), 0, nullptr, nullptr);
-		CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
+	std::vector<double> gpu_results;
+	gpu_results.resize(buffer_size);
+	clEnqueueReadBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, gpu_results.data(), 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-		double gpu_result, cpu_result;
-		double total_cpu = 0.0, total_gpu = 0.0;
+	double gpu_result, cpu_result;
+	double total_cpu = 0.0, total_gpu = 0.0;
 
-		for (int j = 0; j < dim; j++) {
-			for (int i = 0; i < dim; i++) {
-				cpu_result = A[j*dim+i] * GetWeight(i, j, dim);
-				gpu_result = gpu_results[j * dim + i];
+	for (int j = 0; j < dim; j++) {
+		for (int i = 0; i < dim; i++) {
+			cpu_result = A[j*dim+i] * GetWeight2D(i, j, dim);
+			gpu_result = gpu_results[j * dim + i];
 
-				CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")
+			CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")
 
-				total_cpu += cpu_result;
-				total_gpu += gpu_result;
-			}
+			total_cpu += cpu_result;
+			total_gpu += gpu_result;
 		}
-
-		std::cout << "CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
-		CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 	}
+
+	std::cout << "CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
+	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
+
+/*
+TEST_CASE("Compare to formula") {
+	double kf = M * sp.particle_speed / HBAR;
+    double n  = kf * kf / (PI2 * C1);
+    double formula = n * E * E * sp.tau / M;
+
+    std::cout << "\nFormula:" << formula << std::endl;
+}
+*/
 
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
@@ -298,12 +320,11 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.tau             = 1e-12;
 	sp.integrand_steps = 9;
 	sp.clockwise       = 1;
-	
-	sp.angular_speed   = E * sp.magnetic_field / M;
 	sp.region_extends  = sp.particle_speed * sp.tau;
 
 	sp.mode            = MODE_DIR_LIFETIME;
 	sp.impurity_seed   = 0;
+
 
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
@@ -311,96 +332,92 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	double cpu_result, gpu_result, diff;
 
-	CHECK_CPU_GPU_ALMOST2("Default parameters")
+	SUBCASE("Directional lifetime") {
+		CHECK_CPU_GPU_ALMOST("Default parameters")
 
-	sp.phi = -sp.alpha - 1e-10;
-	CHECK_CPU_GPU_ALMOST2("Different phi")
+		sp.phi = -sp.alpha - 1e-10;
+		CHECK_CPU_GPU_ALMOST("Different phi")
 
-	sp.impurity_count = 200;
-	CHECK_CPU_GPU_ALMOST2("More impurities");
+		sp.impurity_count = 200;
+		CHECK_CPU_GPU_ALMOST("More impurities");
 
-	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU_ALMOST2("Larger impurities")
+		sp.impurity_radius = 1.5e-7;
+		CHECK_CPU_GPU_ALMOST("Larger impurities")
 
-	sp.impurity_seed = 1;
-	CHECK_CPU_GPU_ALMOST2("Different impurity seed")
+		sp.impurity_seed = 1;
+		CHECK_CPU_GPU_ALMOST("Different impurity seed")
 
-	sp.magnetic_field = 30;
-	CHECK_CPU_GPU_ALMOST2("Magnetic field on")
+		sp.magnetic_field = 30;
+		CHECK_CPU_GPU_ALMOST("Magnetic field on")
 
-	sp.clockwise = 0;
-	CHECK_CPU_GPU_ALMOST2("Clockwise off")
+		sp.clockwise = 0;
+		CHECK_CPU_GPU_ALMOST("Clockwise off")
+	}
 
-	sp.mode = MODE_PHI_LIFETIME;
-	sp.impurity_count = 100;
-	sp.impurity_radius = 1.5e-8;
-	sp.clockwise = 1;
-	sp.magnetic_field = 0;
+	SUBCASE("Phi integrated lifetime") {
+		sp.mode = MODE_PHI_LIFETIME;
+
+		CHECK_CPU_GPU_APPROX("PHI - Default parameters")
+
+		sp.impurity_count = 200;
+		CHECK_CPU_GPU_APPROX("PHI - More impurities");
+
+		sp.impurity_radius = 1.5e-7;
+		CHECK_CPU_GPU_APPROX("PHI - Larger impurities")
+
+		sp.impurity_seed = 2;
+		CHECK_CPU_GPU_ALMOST("PHI - Different impurity seed")
+
+		sp.magnetic_field = 30;
+		CHECK_CPU_GPU_APPROX("PHI - Magnetic field on")
+
+		sp.clockwise = 0;
+		CHECK_CPU_GPU_APPROX("PHI - Clockwise off")
+	}
 	
-	CHECK_CPU_GPU_APPROX("PHI - Default parameters")
 
-	sp.impurity_count = 200;
-	CHECK_CPU_GPU_APPROX("PHI - More impurities");
-
-	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU_APPROX("PHI - Larger impurities")
-
-	sp.impurity_seed = 2;
-	CHECK_CPU_GPU_ALMOST("PHI - Different impurity seed")
-
-	sp.magnetic_field = 30;
-	CHECK_CPU_GPU_APPROX("PHI - Magnetic field on")
-
-	sp.clockwise = 0;
-	CHECK_CPU_GPU_APPROX("PHI - Clockwise off")
-
-	// SIGMA //
-	sp.mode = MODE_SIGMA_XX;
-	sp.impurity_count = 100;
-	sp.impurity_radius = 1.5e-8;
-	sp.clockwise = 1;
-	sp.magnetic_field = 0;
-
-	CHECK_CPU_GPU_APPROX("SXX - Default parameters")
-
-	sp.impurity_count = 200;
-	CHECK_CPU_GPU_APPROX("SXX - More impurities");
-
-	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
-
-	sp.impurity_seed = 3;
-	CHECK_CPU_GPU_ALMOST("SXX - Different impurity seed")
-
-	sp.magnetic_field = 30;
-	CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
-
-	sp.clockwise = 0;
-	CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
-
+	SUBCASE("Sigma XX") {
 		// SIGMA //
-	sp.mode = MODE_SIGMA_XY;
-	sp.impurity_count = 100;
-	sp.impurity_radius = 1.5e-8;
-	sp.clockwise = 1;
-	sp.magnetic_field = 0;
+		sp.mode = MODE_SIGMA_XX;
 
-	CHECK_CPU_GPU_APPROX("SXY - Default parameters")
+		CHECK_CPU_GPU_APPROX("SXX - Default parameters")
 
-	sp.impurity_count = 200;
-	CHECK_CPU_GPU_APPROX("SXY - More impurities");
+		sp.impurity_count = 200;
+		CHECK_CPU_GPU_APPROX("SXX - More impurities");
 
-	sp.impurity_radius = 1.5e-7;
-	CHECK_CPU_GPU_APPROX("SXY - Larger impurities")
+		sp.impurity_radius = 1.5e-7;
+		CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
 
-	sp.impurity_seed = 4;
-	CHECK_CPU_GPU_ALMOST("SXY - Different impurity seed")
+		sp.impurity_seed = 3;
+		CHECK_CPU_GPU_ALMOST("SXX - Different impurity seed")
 
-	sp.magnetic_field = 30;
-	CHECK_CPU_GPU_APPROX("SXY - Magnetic field on")
+		sp.magnetic_field = 30;
+		CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
 
-	sp.clockwise = 0;
-	CHECK_CPU_GPU_APPROX("SXY - Clockwise off")
+		sp.clockwise = 0;
+		CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
+	}
+	
+	SUBCASE("Sigma XX") {
+		sp.mode = MODE_SIGMA_XY;
+
+		CHECK_CPU_GPU_APPROX("SXX - Default parameters")
+
+		sp.impurity_count = 200;
+		CHECK_CPU_GPU_APPROX("SXX - More impurities");
+
+		sp.impurity_radius = 1.5e-7;
+		CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
+
+		sp.impurity_seed = 3;
+		CHECK_CPU_GPU_ALMOST("SXX - Different impurity seed")
+
+		sp.magnetic_field = 30;
+		CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
+
+		sp.clockwise = 0;
+		CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
+	}
 }
 
 TEST_CASE("Cyclotron Orbit")

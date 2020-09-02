@@ -1,5 +1,10 @@
 #include "ElasticScattering.h"
 
+void ElasticScattering::CompleteSimulationParameters() {
+	sp.angular_speed = E * sp.magnetic_field / M;
+	particle_count = sp.dim * sp.dim;
+}
+
 bool ElasticScattering::ImpuritySettingsChanged(const SimulationParameters &p_sp) {
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };

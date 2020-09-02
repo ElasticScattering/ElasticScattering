@@ -66,12 +66,22 @@ inline bool IsEdge(int i, int dim) {
     return (i == 0) || (i == (dim - 2)); 
 }
 
-inline bool IsPadding(int i, int j, int dim) {
-    return (i == (dim-1)) || (j == (dim-1)); 
+inline bool IsPadding(int i, int dim) {
+    return (i == (dim-1)); 
 }
 
-inline double GetWeight(int i, int j, int dim) {
-    double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
+inline double GetWeight1D(int i, int dim) {
+    double w = IsPadding(i, dim) ? 0.0 : 1.0;
+    if (!IsEdge(i, dim))
+    {
+        w *= ((i % 2) == 0) ? 2.0 : 4.0;
+    }
+
+    return w;
+}
+
+inline double GetWeight2D(int i, int j, int dim) {
+    double w = (IsPadding(i, dim) || IsPadding(j, dim)) ? 0.0 : 1.0;
     if (!IsEdge(i, dim))
     {
         w *= ((i % 2) == 0) ? 2.0 : 4.0;
@@ -130,7 +140,8 @@ inline double GetBoundTime(double phi, double alpha, double w, bool is_electron,
 
 inline double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, double vf, bool is_electron)
 {
-    double2 shift = (double2)(velocity.y, -velocity.x) * radius / vf;
+    double2 shift = { velocity.y, -velocity.x };
+    shift = shift * radius / vf;
 
     double2 center;
     if (is_electron)
@@ -217,7 +228,8 @@ inline double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double 
 inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER_ARGS)
 {
     double orbit_radius = sp->particle_speed / sp->angular_speed;
-    double2 vel = (cos(sp->phi), sin(sp->phi)) * sp->particle_speed;
+    double2 vel = { cos(sp->phi), sin(sp->phi) };
+    vel = vel * sp->particle_speed;
     double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
 
     double lifetime = max_lifetime;
@@ -347,15 +359,7 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
                 result = r * v;
             }
 
-            bool edge_item = i == 0 || i == (sp->integrand_steps - 1);
-            is_even = (i % 2) == 0;
-            double w = 1.0;
-
-            if (!edge_item) {
-                w = is_even ? 2.0 : 4.0;
-            }
-
-            total += result * w;
+            total += result * GetWeight1D(i, sp->integrand_steps);
         }
 
         integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
@@ -372,7 +376,7 @@ __kernel void add_integral_weights_2d(__global double* A)
     int row_size = get_global_size(0);
 
     int i = y * row_size + x;
-    A[i] *= GetWeight(x, y, row_size);
+    A[i] *= GetWeight2D(x, y, row_size);
 }
 #endif
 

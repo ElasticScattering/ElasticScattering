@@ -174,8 +174,14 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
 
     if (nothing_changed) return false;
 
-    if (first_run || ImpuritySettingsChanged(p_sp)) {
-        GenerateImpurities(p_sp);
+    bool impurities_changed = ImpuritySettingsChanged(p_sp);
+    bool work_size_changed  = (sp.dim != p_sp.dim);
+    
+    sp = p_sp;
+    CompleteSimulationParameters();
+
+    if (first_run || impurities_changed) {
+        GenerateImpurities(sp);
 
         ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
@@ -192,15 +198,14 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
     
-    if (first_run || (sp.dim != p_sp.dim)) {
-        particle_count = p_sp.dim * p_sp.dim;
+    if (first_run || work_size_changed) {
         ocl.main_buffer = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
 
         ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count / 2, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
 
-        PrepareTexKernel(p_sp.dim);
+        PrepareTexKernel(sp.dim);
     }
 
     if (first_run) {
@@ -214,7 +219,6 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     }
 
-    sp = p_sp;
     first_run = false;
 
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(SimulationParameters), (void*)&sp, 0, nullptr, nullptr);
@@ -320,11 +324,6 @@ double GPUElasticScattering::Compute(const SimulationParameters &p_sp)
 
     double result = ComputeResult(results);
 
-    double kf = M * sp.particle_speed / HBAR;
-    double n  = kf * kf / (PI2 * C1);
-    double formula = n * E * E * sp.tau / M;
-
-    std::cout << "\nFormula:" << formula << std::endl;
     std::cout << "Result :" << result << std::endl;
     last_result = result;
     return result;

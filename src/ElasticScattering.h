@@ -25,6 +25,8 @@ protected:
 	virtual bool PrepareCompute(const SimulationParameters& p_sp) = 0;
 	void GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 
+	void CompleteSimulationParameters();
+
 public:
 	virtual double Compute(const SimulationParameters &p_sp) = 0;
 };
