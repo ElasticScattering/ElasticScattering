@@ -62,8 +62,8 @@
     //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
 #define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
 
-inline bool IsEdge(int i, int j, int dim) {
-    return (i == 0) || (i == (dim - 2)) || (j == 0) || (j == (dim - 2)); 
+inline bool IsEdge(int i, int dim) {
+    return (i == 0) || (i == (dim - 2)); 
 }
 
 inline bool IsPadding(int i, int j, int dim) {
@@ -72,9 +72,12 @@ inline bool IsPadding(int i, int j, int dim) {
 
 inline double GetWeight(int i, int j, int dim) {
     double w = IsPadding(i, j, dim) ? 0.0 : 1.0;
-    if (!IsEdge(i, j, dim))
+    if (!IsEdge(i, dim))
     {
         w *= ((i % 2) == 0) ? 2.0 : 4.0;
+    }
+    if (!IsEdge(j, dim))
+    {
         w *= ((j % 2) == 0) ? 2.0 : 4.0;
     }
 
@@ -368,7 +371,8 @@ __kernel void add_integral_weights_2d(__global double* A)
     int y = get_global_id(1);
     int row_size = get_global_size(0);
 
-    A[y * row_size + x] = GetWeight(x, y, row_size) * A[y * row_size + x];
+    int i = y * row_size + x;
+    A[i] *= GetWeight(x, y, row_size);
 }
 #endif
 

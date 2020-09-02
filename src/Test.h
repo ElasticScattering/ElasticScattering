@@ -38,7 +38,7 @@
 	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
 
 
-TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values") 
+TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values")
 {
 	int number_of_operations = 2000;
 	int buffer_size = 256;
@@ -77,7 +77,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 
 	clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&in_buffer);
 	CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-	
+
 	clStatus = clSetKernelArg(main_kernel, 1, sizeof(int), (void*)&number_of_operations);
 	CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
@@ -108,7 +108,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	}
 }
 
-TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values")
+TEST_CASE("Sum kernel")
 {
 	int buffer_size = 4096;
 
@@ -174,6 +174,114 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result - cpu_result) << std::endl;
 	CHECK_ALMOST(cpu_result, gpu_result, "Sums on cpu and gpu should be equal.");
+}
+
+
+TEST_CASE("Weights function") {
+	int dim = 8;
+
+	double w = GetWeight(dim-1, 0, dim);
+	CHECK(w == 0);
+
+	w = GetWeight(0, 0, dim);
+	CHECK(w == 1);
+
+	w = GetWeight(1, 0, dim);
+	CHECK(w == 4);
+
+	w = GetWeight(2, 0, dim);
+	CHECK(w == 2);
+
+	w = GetWeight(3, 0, dim);
+	CHECK(w == 4);
+
+
+	w = GetWeight(0, 1, dim);
+	CHECK(w == 4);
+
+	w = GetWeight(1, 1, dim);
+	CHECK(w == 16);
+
+	w = GetWeight(3, 3, dim);
+	CHECK(w == 16);
+
+	w = GetWeight(1, 2, dim);
+	CHECK(w == 8);
+
+	w = GetWeight(2, 1, dim);
+	CHECK(w == 8);
+
+
+	w = GetWeight(0, dim - 1, dim);
+	CHECK(w == 0);
+}
+
+TEST_CASE("Add weights kernel")
+{
+
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	InitializeOpenCL(&device, &context, &queue);
+
+	cl_program program;
+	CompileOpenCLProgram(device, context, "common.h", &program);
+
+	cl_int clStatus;
+	cl_kernel main_kernel = clCreateKernel(program, "add_integral_weights_2d", &clStatus);
+	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+
+	SUBCASE("One dimensional") {
+		int dim = 8;
+		int buffer_size = dim * dim;
+
+		size_t global_work_size[2] = { (size_t)dim, (size_t)dim };
+		size_t local_work_size[2] = { 8, 8 };
+
+		std::vector<double> A;
+		A.clear();
+		A.resize(buffer_size);
+
+		for (int i = 0; i < buffer_size; i++)
+			A[i] = 1.0;
+
+		cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
+		CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+
+		clStatus = clEnqueueWriteBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, A.data(), 0, nullptr, nullptr);
+		CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
+
+		clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&buffer);
+		CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+		clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+		CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
+
+		clStatus = clFinish(queue);
+
+		std::vector<double> gpu_results;
+		gpu_results.resize(buffer_size);
+		clEnqueueReadBuffer(queue, buffer, CL_TRUE, 0, sizeof(double) * buffer_size, gpu_results.data(), 0, nullptr, nullptr);
+		CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
+
+		double gpu_result, cpu_result;
+		double total_cpu = 0.0, total_gpu = 0.0;
+
+		for (int j = 0; j < dim; j++) {
+			for (int i = 0; i < dim; i++) {
+				cpu_result = A[j*dim+i] * GetWeight(i, j, dim);
+				gpu_result = gpu_results[j * dim + i];
+
+				CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")
+
+				total_cpu += cpu_result;
+				total_gpu += gpu_result;
+			}
+		}
+
+		std::cout << "CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
+		CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
+	}
 }
 
 TEST_CASE("Comparing kernel results on CPU and GPU")
