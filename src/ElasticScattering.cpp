@@ -25,9 +25,9 @@ void ElasticScattering::GenerateImpurities(const SimulationParameters &p_sp, boo
 
 double ElasticScattering::FinishSigmaXX(double res) {
 	double kf = M * sp.particle_speed / HBAR;
-	double outside = E * E * kf * kf / (2.0 * PI2 * M * sp.region_size * sp.region_size * C1);
+	double outside = (E*E * kf*kf) / (2.0 * PI*PI * M * sp.region_size*sp.region_size * C1);
 	double v = E * sp.magnetic_field * sp.tau / M;
-	outside /= (1.0 + v * v);
+	outside *= sp.tau / (1.0 + v*v);
 
 	return outside * res;
 };

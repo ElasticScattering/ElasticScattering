@@ -200,8 +200,6 @@ int main(int argc, char **argv)
             if (sync_immediate || update || impurities_updated) {
                 QueryPerformanceCounter(&beginClock);
 
-                sp.angular_speed = E * sp.magnetic_field / M;
-
                 last_result = es->Compute(sp);
                 
                 //double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;

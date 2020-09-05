@@ -296,15 +296,38 @@ TEST_CASE("Add weights kernel")
 	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
 
-/*
-TEST_CASE("Compare to formula") {
-	double kf = M * sp.particle_speed / HBAR;
-    double n  = kf * kf / (PI2 * C1);
-    double formula = n * E * E * sp.tau / M;
+TEST_CASE("Compare to formula (no impurities") {
+	SimulationParameters sp;
+	sp.dim = 64;
+	sp.particle_speed = 7e5;
+	sp.impurity_count = 0;
+	sp.impurity_radius = 1.5e-8;
+	sp.alpha = PI / 4.0;
+	sp.phi = 0;
+	sp.magnetic_field = 0;
+	sp.tau = 1e-12;
+	sp.integrand_steps = 9;
+	sp.clockwise = 0;
+	sp.region_size = 1e-6;
+	sp.region_extends = sp.particle_speed * sp.tau;
 
-    std::cout << "\nFormula:" << formula << std::endl;
+	sp.mode = MODE_SIGMA_XX;
+	sp.impurity_seed = 0;
+	
+	auto e = new CPUElasticScattering;
+
+	double kf = M * sp.particle_speed / HBAR;
+    double n  = (E*E * kf*kf) / (2.0 * PI*PI * C1);
+    double formula = n * sp.tau / M;
+
+	for (int i = 0; i < 50; i++) {
+		sp.magnetic_field = i;
+		double result = e->Compute(sp);
+		
+		std::cout << "CPU: " << result << ", FORM: " << formula << ", diff: " << abs(formula - result) << std::endl;
+		CHECK_ALMOST(result, formula, "Result shoudl be the same.")
+	}
 }
-*/
 
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
@@ -397,25 +420,25 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 		CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
 	}
 	
-	SUBCASE("Sigma XX") {
+	SUBCASE("Sigma XY") {
 		sp.mode = MODE_SIGMA_XY;
 
-		CHECK_CPU_GPU_APPROX("SXX - Default parameters")
+		CHECK_CPU_GPU_APPROX("SXY - Default parameters")
 
 		sp.impurity_count = 200;
-		CHECK_CPU_GPU_APPROX("SXX - More impurities");
+		CHECK_CPU_GPU_APPROX("SXY - More impurities");
 
 		sp.impurity_radius = 1.5e-7;
-		CHECK_CPU_GPU_APPROX("SXX - Larger impurities")
+		CHECK_CPU_GPU_APPROX("SXY - Larger impurities")
 
 		sp.impurity_seed = 3;
-		CHECK_CPU_GPU_ALMOST("SXX - Different impurity seed")
+		CHECK_CPU_GPU_ALMOST("SXY - Different impurity seed")
 
 		sp.magnetic_field = 30;
-		CHECK_CPU_GPU_APPROX("SXX - Magnetic field on")
+		CHECK_CPU_GPU_APPROX("SXY - Magnetic field on")
 
 		sp.clockwise = 0;
-		CHECK_CPU_GPU_APPROX("SXX - Clockwise off")
+		CHECK_CPU_GPU_APPROX("SXY - Clockwise off")
 	}
 }
 
