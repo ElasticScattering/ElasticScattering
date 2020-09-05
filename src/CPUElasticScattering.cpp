@@ -1,4 +1,5 @@
 #include "ElasticScattering.h"
+#include "OpenGLUtils.h"
 
 double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
 {
@@ -17,7 +18,10 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
         }
     }
 
-    return ComputeResult(main_buffer);
+    double result = ComputeResult(main_buffer);
+    MakeTexture();
+
+    return result;
 }
 
 bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
@@ -38,4 +42,52 @@ bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
     first_run = false;
 
     return true;
+}
+
+void CPUElasticScattering::MakeTexture() 
+{
+    pixels.clear();
+    pixels.resize(particle_count * 4L);
+
+    int j = 0;
+    for (int i = 0; i < particle_count; i++)
+    {
+        float k = GetColor(main_buffer[i], sp.tau, sp.mode);
+
+        if (sp.mode != MODE_SIGMA_XY) {
+            pixels[j]      = k;
+            pixels[j + 1L] = k;
+            pixels[j + 2L] = k;
+        }
+        else {
+            if (k < 0.0) {
+                pixels[j] = 0;
+                pixels[j + 1L] = 0;
+                pixels[j + 2L] = -k;
+            } else {
+                pixels[j] = k;
+                pixels[j + 1L] = 0;
+                pixels[j + 2L] = 0;
+            }
+        }
+        pixels[j + 3L] = 1.0;
+        j += 4;
+    }
+
+    glGenTextures(1, &ogl.tex);
+    glBindTexture(GL_TEXTURE_2D, ogl.tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp.dim, sp.dim, 0, GL_RGBA, GL_FLOAT, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glUseProgram(ogl.shader_program);
+    glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
+}
+
+CPUElasticScattering::CPUElasticScattering()
+{
+    OpenGLUtils o;
+    o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
 }

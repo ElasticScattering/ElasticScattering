@@ -333,7 +333,6 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 {
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
-	e2->Init(false);
 
 	SimulationParameters sp;
 	sp.region_size     = 1e-6;

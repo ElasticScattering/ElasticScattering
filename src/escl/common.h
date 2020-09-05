@@ -5,7 +5,7 @@
     #include "src/escl/util.h"
 
     #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
-    #define MIN(p_a, p_b) min((p_a), p_b)
+    #define MIN(p_a, p_b) min((p_a), (p_b))
 #else
     #include "math.h"
     #include "escl/constants.h"
@@ -59,9 +59,7 @@
     inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
 
 #endif
-    //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
-#define DECLARE_POS double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
-
+    
 inline bool IsEdge(int i, int dim) {
     return (i == 0) || (i == (dim - 2)); 
 }
@@ -143,18 +141,7 @@ inline double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, dou
     double2 shift = { velocity.y, -velocity.x };
     shift = shift * radius / vf;
 
-    double2 center;
-    if (is_electron)
-    {
-        center.x = p.x - shift.x;
-        center.y = p.y - shift.y;
-    }
-    else {
-        center.x = p.x + shift.x;
-        center.y = p.y + shift.y;
-    }
-
-    return center;
+    return is_electron ? (p - shift) :  (p + shift);
 }
 
 inline bool CirclesCross(double2 p1, double r1, double2 p2, double r2)
@@ -174,17 +161,17 @@ inline double4 GetCrossPoints(double2 p1, double r1, double2 p2, double r2)
 
     double dist_squared = dot(q, q);
     double dist = sqrt(dist_squared);
-    double xs = (dist_squared + r1 * r1 - r2 * r2) / (2.0 * dist);
-    double ys = sqrt(r1 * r1 - xs * xs);
+    double xs = (dist_squared + r1*r1 - r2*r2) / (2.0 * dist);
+    double ys = sqrt(r1*r1 - xs*xs);
 
-    double2 u = (p2 - p1) / dist;
+    double2 u = (p2 - p1) / dist * xs;
 
     double4 points = {
-        p1.x + u.x * xs + u.y * ys,
+        p1.x + u.x * xs +  u.y  * ys,
         p1.y + u.y * xs + -u.x * ys,
 
         p1.x + u.x * xs + -u.y * ys,
-        p1.y + u.y * xs + u.x * ys
+        p1.y + u.y * xs +  u.x  * ys
     };
 
     return points;
@@ -237,18 +224,18 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
     double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
 
     for (int i = 0; i < sp->impurity_count; i++) {
-        double2 imp_pos = impurities[i];
+        double2 impurity = impurities[i];
 
-        double2 d = pos - imp_pos;
-
-        if (CirclesCross(center, orbit_radius, imp_pos, sp->impurity_radius))
+        double2 d = pos - impurity;
+        if (impurity_radius_sq > dot(d, d))
         {
-            if (impurity_radius_sq > dot(d, d))
-            {
-                lifetime = 0;
-            }
+            lifetime = 0;
+            break;
+        }
 
-            double t = GetFirstCrossTime(center, pos, imp_pos, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
+        if (CirclesCross(center, orbit_radius, impurity, sp->impurity_radius))
+        {
+            double t = GetFirstCrossTime(center, pos, impurity, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
 
             if (t < lifetime)
                 lifetime = t;
@@ -281,7 +268,7 @@ inline double lifetime0(double2 pos, BUFFER_ARGS)
         double L = sqrt(diff);
 
         double2 time_taken;
-        if (vel.x != 0) {
+        if (fabs(vel.x) > (vel.y * 1e-9)) {
             time_taken.x = -((projected.x - L * unit.x) - pos.x) / vel.x;
             time_taken.y = -((projected.x + L * unit.x) - pos.x) / vel.x;
         }
@@ -336,7 +323,6 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
         double start = -sp->alpha + j * (PI * 0.5);
         double total = 0.0;
 
-        bool is_even = true;
         for (int i = 0; i < sp->integrand_steps; i++)
         {
             sp->phi = start + i * step_size;
@@ -359,13 +345,28 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
                 result = r * v;
             }
 
-            total += result * GetWeight1D(i, sp->integrand_steps);
+            double w = 1.0;
+            if (!(i ==0 || i == (sp->integrand_steps-1)))
+            {
+                w = ((i % 2) == 0) ? 2.0 : 4.0;
+            }
+
+            total += result * w;
         }
 
         integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
     }
 
     return integral;
+}
+
+inline float GetColor(float v, float scale, int mode) {
+    if      (mode == MODE_DIR_LIFETIME) v /= scale;
+    else if (mode == MODE_PHI_LIFETIME) v /= (scale * 6.0);
+    else if (mode == MODE_SIGMA_XX)     v /= (scale * 3.0);
+    else if (mode == MODE_SIGMA_XY)     v /= scale;
+
+    return v;
 }
 
 #ifdef DEVICE_PROGRAM
@@ -378,6 +379,26 @@ __kernel void add_integral_weights_2d(__global double* A)
     int i = y * row_size + x;
     A[i] *= GetWeight2D(x, y, row_size);
 }
+
+__kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+
+    float k = GetColor((float)(lifetimes[y * row_size + x]), scale, mode);
+    float4 c;
+    if (mode != MODE_SIGMA_XY) {
+        c = (float4)(k, k, k, 1.0f);
+    }
+    else {
+        if (k < 0.0) c = (float4)(0, 0, -k, 1.0f);
+        else 		 c = (float4)(k, 0, 0, 1.0f);
+    }
+
+    write_imagef(screen, (int2)(x, y), c);
+}
+
 #endif
 
 #endif // CL_COMMON_H

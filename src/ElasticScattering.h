@@ -3,12 +3,20 @@
 
 #include <vector>
 #include "escl/common.h"
-#include <random>
+
+#include <GL/glew.h>
 
 typedef struct
 {
 	bool run_tests;
 } InitParameters;
+
+typedef struct
+{
+	GLuint tex;
+	GLuint vbo, vao;
+	GLuint shader_program;
+} OpenGLResources;
 
 class ElasticScattering {
 protected:
@@ -16,6 +24,8 @@ protected:
 
 	SimulationParameters sp;
 	int particle_count;
+	
+	OpenGLResources ogl;
 	
 	bool first_run = true;
 
@@ -29,15 +39,20 @@ protected:
 
 public:
 	virtual double Compute(const SimulationParameters &p_sp) = 0;
+	void Draw();
 };
 
 class CPUElasticScattering : public ElasticScattering {
 	std::vector<double> main_buffer;
+	std::vector<float>  pixels;
 
 	virtual bool PrepareCompute(const SimulationParameters &p_sp);
+	void MakeTexture();
 
 public:
 	virtual double Compute(const SimulationParameters &p_sp);
+	
+	CPUElasticScattering();
 };
 
 class GPUElasticScattering : public ElasticScattering {
@@ -45,11 +60,9 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareTexKernel(int pixels);
 
 public:
-	void Init(bool show_info = false);
 	virtual double Compute(const SimulationParameters &p_sp);
 	
-	void Draw();
-
+	GPUElasticScattering(bool show_info = false);
 	~GPUElasticScattering();
 };
 

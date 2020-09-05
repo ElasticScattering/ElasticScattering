@@ -223,6 +223,7 @@
     <ClCompile Include="src\ElasticScattering.cpp" />
     <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\OpenGLUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libs\imgui\imconfig.h" />
@@ -237,6 +238,7 @@
     <ClInclude Include="src\escl\common.h" />
     <ClInclude Include="src\escl\constants.h" />
     <ClInclude Include="src\escl\util.h" />
+    <ClInclude Include="src\OpenGLUtils.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Test.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />

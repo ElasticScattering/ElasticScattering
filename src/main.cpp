@@ -53,8 +53,8 @@ int main(int argc, char **argv)
     if (!glfwInit())
         return -1;
 
-    int width = 700;
-    int height = 700;
+    int width = 1200;
+    int height = 600;
     window = glfwCreateWindow(width, height, "Elastic Scattering", nullptr, nullptr);
     if (!window)
     {
@@ -90,28 +90,23 @@ int main(int argc, char **argv)
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    
     SimulationParameters sp;
     sp.integrand_steps    = 13;
     sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
-    sp.region_size        = 1e-7; //lager
+    sp.region_size        = 1e-7;
     sp.dim                = 128;
-    sp.particle_speed     = 7e5;
-    sp.impurity_count     = 100;     // hoog
+    sp.particle_speed     = 1.68e5; //7e5;
+    sp.impurity_count     = 100;
     sp.impurity_radius    = 2e-9; //1.5e-8;
     sp.alpha              = PI / 4.0;
-    sp.phi                = 0;// -sp.alpha - 1e-10;
+    sp.phi                = 0;
     sp.magnetic_field     = 0;
-    sp.tau                = 1e-12; // 3.7e-13;
+    sp.tau                = 1.5e-12; // 3.7e-13;
     sp.angular_speed      = E * sp.magnetic_field / M;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
     
     sp.mode               = MODE_DIR_LIFETIME;
     sp.impurity_seed      = 0;
-
-    auto es = new GPUElasticScattering();
-    es->Init(false);
-    es->Compute(sp);
 
     static v2      tau_bounds            = { 1e-13, 1e-10 };
     static cl_int2 count_bounds          = { 1, 50000 };
@@ -127,6 +122,9 @@ int main(int argc, char **argv)
 
     double last_result = 0;
     static int imp_seed = sp.impurity_seed;
+
+    auto es = new GPUElasticScattering();
+    es->Compute(sp);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -177,8 +175,6 @@ int main(int argc, char **argv)
             ImGui::RadioButton("1024x1024", &sp.dim, 1024);
 
             ImGui::SliderScalar("Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%.2e");
-            
-
 
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
 

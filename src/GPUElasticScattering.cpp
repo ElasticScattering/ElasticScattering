@@ -1,16 +1,8 @@
 #include <windows.h>
 
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
-
-#include <GL/glew.h>
-#include <GL/wglew.h>
-#include <GL/glfw3.h>
+#include "OpenGLUtils.h"
 
 typedef struct
 {
@@ -44,118 +36,47 @@ typedef struct
     cl_mem image;
 } OCLResources;
 
-typedef struct
-{
-    GLuint tex, tex2;
-    GLuint vbo, vao;
-    GLuint shader_program;
-} OpenGLResources;
-
 OCLResources ocl;
-OpenGLResources ogl;
-
-LARGE_INTEGER beginClock, endClock, clockFrequency;
 
 double last_result;
 
-std::string ReadShaderFile(const char* shader_file)
+double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
 {
-    std::ifstream file(shader_file);
-    std::stringstream sstream;
-    sstream << file.rdbuf();
+    bool need_update = PrepareCompute(p_sp);
+    if (!need_update) return last_result;
 
-    std::string contents = sstream.str();
-    return contents;
-}
+    size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
+    size_t local_work_size[2] = { MIN(sp.dim, 256), 1 };
 
-void GPUElasticScattering::Init(bool show_info)
-{
-    InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
+    cl_int clStatus;
 
-    if (show_info)
-        PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
-    QueryPerformanceFrequency(&clockFrequency);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
 
-    const char* source_file = "scatter.cl";
-    QueryPerformanceCounter(&beginClock);
-    CompileOpenCLProgram(ocl.deviceID, ocl.context, source_file, &ocl.program);
-    QueryPerformanceCounter(&endClock);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
-    if (show_info) {
-        double total_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-        std::cout << "Time to build OpenCL Program: " << total_time * 1000 << " ms" << std::endl;
-    }
-    
-    // OpenGL context
-    GLint success;
+    const size_t half_size = particle_count / 2;
+    const size_t max_work_items = min(sp.dim, 256);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
-    std::string source = ReadShaderFile("src/shaders/shader.vs");
-    char* vsource = new char[source.length() + 1];
-    std::copy_n(source.c_str(), source.length() + 1, vsource);
+    clStatus = clFinish(ocl.queue);
 
-    source = ReadShaderFile("src/shaders/shader.fs");
-    char* fsource = new char[source.length() + 1];
-    std::copy_n(source.c_str(), source.length() + 1, fsource);
+    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
+    std::vector<double> results;
+    results.resize(half_size / max_work_items);
+    clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert_shader, 1, &vsource, nullptr);
-    glCompileShader(vert_shader);
+    double result = ComputeResult(results);
 
-    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[2048];
-        glGetShaderInfoLog(vert_shader, 2048, nullptr, infoLog);
-        std::cout << "Failed to compile vertex shader. Info:\n" << infoLog << std::endl;
-    }
-
-    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_shader, 1, &fsource, nullptr);
-    glCompileShader(frag_shader);
-
-    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[2048];
-        glGetShaderInfoLog(frag_shader, 2048, nullptr, infoLog);
-        std::cout << "Failed to compile fragment shader. Info:\n" << infoLog << std::endl;
-    }
-
-    ogl.shader_program = glCreateProgram();
-    glAttachShader(ogl.shader_program, vert_shader);
-    glAttachShader(ogl.shader_program, frag_shader);
-    glLinkProgram(ogl.shader_program);
-    glUseProgram(ogl.shader_program);
-    glDeleteShader(vert_shader);
-    glDeleteShader(frag_shader);
-
-    // Texture
-    float vertices[] =
-    {
-        // Position,        Tex coord
-        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
-    };
-
-    glGenVertexArrays(1, &ogl.vao);
-    glGenBuffers(1, &ogl.vbo);
-
-    glBindVertexArray(ogl.vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, ogl.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    auto stride = 5 * sizeof(float);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    std::cout << "Result :" << result << std::endl;
+    last_result = result;
+    return result;
 }
 
 bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
@@ -290,53 +211,16 @@ void GPUElasticScattering::PrepareTexKernel(int dim)
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
 
-double GPUElasticScattering::Compute(const SimulationParameters &p_sp)
+GPUElasticScattering::GPUElasticScattering(bool show_info)
 {
-    bool need_update = PrepareCompute(p_sp);
-    if (!need_update) return last_result;
+    InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
+    if (show_info) 
+        PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
-    size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
-    size_t local_work_size[2] = { MIN(sp.dim, 256), 1 };
+    CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
 
-    cl_int clStatus;
-
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
-
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
-
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
-
-    const size_t half_size = particle_count / 2;
-    const size_t max_work_items = min(sp.dim, 256);
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
-
-    clStatus = clFinish(ocl.queue);
-
-    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
-    std::vector<double> results;
-    results.resize(half_size / max_work_items);
-    clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
-
-    double result = ComputeResult(results);
-
-    std::cout << "Result :" << result << std::endl;
-    last_result = result;
-    return result;
-}
-
-void GPUElasticScattering::Draw()
-{
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, ogl.tex);
-
-    glUseProgram(ogl.shader_program);
-    glBindVertexArray(ogl.vao);
-    glDrawArrays(GL_QUADS, 0, 4);
+    OpenGLUtils o;
+    o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
 }
 
 GPUElasticScattering::~GPUElasticScattering()

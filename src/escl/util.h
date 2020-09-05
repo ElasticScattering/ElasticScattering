@@ -42,26 +42,3 @@ __kernel void sum2(__global double* data, __global double* output, __local doubl
 }
 */
 
-__kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
-{
-	int x = get_global_id(0);
-	int y = get_global_id(1);
-	int row_size = get_global_size(0);
-	float k = (float)(lifetimes[y * row_size + x]);
-
-	if		(mode == MODE_DIR_LIFETIME) k /= scale;
-	else if (mode == MODE_PHI_LIFETIME) k /= scale * 3.0;
-	else if (mode == MODE_SIGMA_XX)     k /= scale * 3.0;
-	else if (mode == MODE_SIGMA_XY)     k /= scale;
-	
-	float4 c;
-	if (mode != MODE_SIGMA_XY) {
-		c = (float4)(k, k, k, 1.0f);
-	}
-	else {
-		if (fabs(k - scale) < 0.00001 * scale) c = (float4)(0, 0, 1.0, 1.0f);
-		else 							       c = (float4)(k, 0, 0, 1.0f);
-	}
-	
-	write_imagef(screen, (int2)(x, y), c);
-}

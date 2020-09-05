@@ -1,4 +1,5 @@
 #include "ElasticScattering.h"
+#include <random>
 
 void ElasticScattering::CompleteSimulationParameters() {
 	sp.angular_speed = E * sp.magnetic_field / M;
@@ -47,3 +48,14 @@ double ElasticScattering::ComputeResult(const std::vector<double> &results) {
 
 	return result * sp.particle_speed;
 };
+
+
+void ElasticScattering::Draw()
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, ogl.tex);
+
+	glUseProgram(ogl.shader_program);
+	glBindVertexArray(ogl.vao);
+	glDrawArrays(GL_QUADS, 0, 4);
+}
