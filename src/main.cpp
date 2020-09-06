@@ -95,11 +95,11 @@ int main(int argc, char **argv)
     sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
     sp.region_size        = 1e-7;
     sp.dim                = 128;
-    sp.particle_speed     = 1.68e5; //7e5;
-    sp.impurity_count     = 100;
+    sp.particle_speed     = 1.68e5; //; //7e5;
+    sp.impurity_count     = 0;
     sp.impurity_radius    = 2e-9; //1.5e-8;
     sp.alpha              = PI / 4.0;
-    sp.phi                = 0;
+    sp.phi                = 1.0;
     sp.magnetic_field     = 0;
     sp.tau                = 1.5e-12; // 3.7e-13;
     sp.angular_speed      = E * sp.magnetic_field / M;
@@ -124,6 +124,20 @@ int main(int argc, char **argv)
     static int imp_seed = sp.impurity_seed;
 
     auto es = new GPUElasticScattering();
+
+    for (int i = 0; i < 50; i++) {
+        sp.magnetic_field = i;
+        sp.mode = MODE_SIGMA_XX;
+        double result = es->Compute(sp);
+
+        sp.mode = MODE_SIGMA_XY;
+
+        double result2 = es->Compute(sp);
+        
+        std::cout << "" << i << " " << result << " " << result2 << std::endl;
+    }
+    return 0;
+
     es->Compute(sp);
 
     while (!glfwWindowShouldClose(window))

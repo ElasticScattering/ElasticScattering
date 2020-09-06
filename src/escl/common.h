@@ -141,7 +141,19 @@ inline double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, dou
     double2 shift = { velocity.y, -velocity.x };
     shift = shift * radius / vf;
 
-    return is_electron ? (p - shift) :  (p + shift);
+    //return is_electron ? (p - shift) :  (p + shift);
+    double2 center;
+    if (is_electron)
+    {
+        center.x = p.x - shift.x;
+        center.y = p.y - shift.y;
+    }
+    else {
+        center.x = p.x + shift.x;
+        center.y = p.y + shift.y;
+    }
+
+    return center;
 }
 
 inline bool CirclesCross(double2 p1, double r1, double2 p2, double r2)
@@ -164,13 +176,13 @@ inline double4 GetCrossPoints(double2 p1, double r1, double2 p2, double r2)
     double xs = (dist_squared + r1*r1 - r2*r2) / (2.0 * dist);
     double ys = sqrt(r1*r1 - xs*xs);
 
-    double2 u = (p2 - p1) / dist * xs;
+    double2 u = (p2 - p1) / dist;
 
     double4 points = {
         p1.x + u.x * xs +  u.y  * ys,
-        p1.y + u.y * xs + -u.x * ys,
+        p1.y + u.y * xs + -u.x  * ys,
 
-        p1.x + u.x * xs + -u.y * ys,
+        p1.x + u.x * xs + -u.y  * ys,
         p1.y + u.y * xs +  u.x  * ys
     };
 
@@ -212,10 +224,10 @@ inline double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double 
     return MIN(t1, t2);
 }
 
-inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER_ARGS)
+inline double lifetimeB(double max_lifetime, double2 pos, double phi, bool clockwise, BUFFER_ARGS)
 {
     double orbit_radius = sp->particle_speed / sp->angular_speed;
-    double2 vel = { cos(sp->phi), sin(sp->phi) };
+    double2 vel = { cos(phi), sin(phi) };
     vel = vel * sp->particle_speed;
     double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
 
@@ -241,13 +253,18 @@ inline double lifetimeB(double max_lifetime, double2 pos, bool clockwise, BUFFER
                 lifetime = t;
         }
     }
+    
+    /*
+    if (lifetime < max_lifetime)
+        lifetime *= 1e6;
+    */
 
     return lifetime;
 }
 
-inline double lifetime0(double2 pos, BUFFER_ARGS)
+inline double lifetime0(double2 pos, double phi, BUFFER_ARGS)
 {
-    double2 unit = { cos(sp->phi), sin(sp->phi) };
+    double2 unit = { cos(phi), sin(phi) };
     double2 vel = unit * sp->particle_speed;
 
     double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
@@ -268,7 +285,7 @@ inline double lifetime0(double2 pos, BUFFER_ARGS)
         double L = sqrt(diff);
 
         double2 time_taken;
-        if (fabs(vel.x) > (vel.y * 1e-9)) {
+        if (fabs(vel.x) > (fabs(vel.y) * 1e-9)) {
             time_taken.x = -((projected.x - L * unit.x) - pos.x) / vel.x;
             time_taken.y = -((projected.x + L * unit.x) - pos.x) / vel.x;
         }
@@ -297,22 +314,22 @@ inline double lifetime0(double2 pos, BUFFER_ARGS)
 // Main functions, for single or integrated lifetime
 ////////////////////////////////////////////////////
 
-inline double single_lifetime(double2 pos, BUFFER_ARGS) {
+inline double single_lifetime(double2 pos, double phi, BUFFER_ARGS) {
     if (sp->angular_speed != 0) {
         bool clockwise = (sp->clockwise == 1);
-        double bound_time = GetBoundTime(sp->phi, sp->alpha, sp->angular_speed, clockwise, false);
+        double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, clockwise, false);
  
-        return lifetimeB(MIN(sp->tau, bound_time), pos, clockwise, sp, impurities);
+        return lifetimeB(MIN(sp->tau, bound_time), pos, phi, clockwise, sp, impurities);
     }
     else {
-        return lifetime0(pos, sp, impurities);
+        return lifetime0(pos, phi, sp, impurities);
     }
 }
 
 inline double phi_lifetime(double2 pos, BUFFER_ARGS)
 {
     bool clockwise = (sp->clockwise == 1);
-    if (clockwise) sp->angular_speed *= -1;
+    //if (clockwise) sp->angular_speed *= -1;
 
     double angle_area = sp->alpha * 2.0;
     double step_size = angle_area / (sp->integrand_steps - 1);
@@ -325,33 +342,33 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
 
         for (int i = 0; i < sp->integrand_steps; i++)
         {
-            sp->phi = start + i * step_size;
+            double phi = start + i * step_size;
 
-            double result = single_lifetime(pos, sp, impurities);
+            double result = single_lifetime(pos, phi, sp, impurities);
 
             if (sp->mode == MODE_SIGMA_XX || sp->mode == MODE_SIGMA_XY)
             {
                 double z = exp(-result / sp->tau);
 
-                double r = cos(sp->phi) - cos(sp->phi + sp->angular_speed * result) * z;
-                r += sp->angular_speed * sp->tau * sin(sp->phi + sp->angular_speed * result) * z;
-                r -= sp->angular_speed * sp->tau * sin(sp->phi);
+                double r = cos(phi) - cos(phi + sp->angular_speed * result) * z;
+                r += sp->angular_speed * sp->tau * sin(phi + sp->angular_speed * result) * z;
+                r -= sp->angular_speed * sp->tau * sin(phi);
                 r *= sp->tau;
 
                 double v;
-                if (sp->mode == MODE_SIGMA_XX) v = cos(sp->phi);
-                else                           v = sin(sp->phi);
+                if (sp->mode == MODE_SIGMA_XX) v = cos(phi);
+                else                           v = sin(phi);
 
                 result = r * v;
             }
-
+      
             double w = 1.0;
-            if (!(i ==0 || i == (sp->integrand_steps-1)))
+            if (!(i == 0 || i == (sp->integrand_steps-1)))
             {
                 w = ((i % 2) == 0) ? 2.0 : 4.0;
             }
 
-            total += result * w;
+            total += result; // *w;
         }
 
         integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);
@@ -360,13 +377,13 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
     return integral;
 }
 
-inline float GetColor(float v, float scale, int mode) {
+inline float GetColor(double v, double scale, int mode) {
     if      (mode == MODE_DIR_LIFETIME) v /= scale;
     else if (mode == MODE_PHI_LIFETIME) v /= (scale * 6.0);
     else if (mode == MODE_SIGMA_XX)     v /= (scale * 3.0);
     else if (mode == MODE_SIGMA_XY)     v /= scale;
 
-    return v;
+    return (float)v;
 }
 
 #ifdef DEVICE_PROGRAM

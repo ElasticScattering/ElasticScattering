@@ -3,7 +3,7 @@
 
 double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
 {
-    PrepareCompute(p_sp);
+    if (!PrepareCompute(p_sp)) return 0;
 
     int limit = sp.dim - 1;
 
@@ -13,7 +13,7 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
             v2 pos(i, j);
             pos = pos * (sp.region_size / (double)(sp.dim - 2));
 
-            double particle_result = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, &sp, impurities) : phi_lifetime(pos, &sp, impurities);
+            double particle_result = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp.phi, &sp, impurities) : phi_lifetime(pos, &sp, impurities);
             main_buffer[j * sp.dim + i] = particle_result * GetWeight2D(i, j, sp.dim);
         }
     }
@@ -25,6 +25,8 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
 }
 
 bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
+    if (!first_run && !AnythingChanged(p_sp)) return false;
+
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);
 

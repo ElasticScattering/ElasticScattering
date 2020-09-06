@@ -32,6 +32,8 @@ protected:
 	bool ImpuritySettingsChanged(const SimulationParameters& p_sp);
 	double FinishSigmaXX(double res);
 	double ComputeResult(const std::vector<double>& results);
+
+	bool AnythingChanged(const SimulationParameters& p_sp);
 	virtual bool PrepareCompute(const SimulationParameters& p_sp) = 0;
 	void GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 
