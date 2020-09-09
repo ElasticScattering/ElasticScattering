@@ -89,21 +89,9 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
 {
     cl_int clStatus;
 
-    bool nothing_changed = !first_run &&
-           (sp.mode == p_sp.mode && sp.impurity_seed == p_sp.impurity_seed &&
-            sp.region_size == p_sp.region_size && sp.dim == p_sp.dim &&
-            sp.particle_speed == p_sp.particle_speed &&
-            sp.impurity_count == p_sp.impurity_count && sp.impurity_radius == p_sp.impurity_radius &&
-            sp.alpha == p_sp.alpha && sp.phi == p_sp.phi &&
-            sp.magnetic_field == p_sp.magnetic_field && sp.tau == p_sp.tau &&
-            sp.integrand_steps == p_sp.integrand_steps && sp.clockwise == p_sp.clockwise &&
-            sp.region_extends == p_sp.region_extends);
-    
-    if (nothing_changed) return false;
+    if (!first_run && AnythingChanged(p_sp)) return false;
 
-    //if (!first_run && AnythingChanged(p_sp)) return false;
-
-    bool impurities_changed = false; // ImpuritySettingsChanged(p_sp);
+    bool impurities_changed = false;// ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);
     
     sp = p_sp;
@@ -118,7 +106,6 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
         clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
     }
-
 
     if (first_run) {
         ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(SimulationParameters), nullptr, &clStatus);

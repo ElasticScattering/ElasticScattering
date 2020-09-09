@@ -30,7 +30,7 @@ protected:
 	bool first_run = true;
 
 	bool ImpuritySettingsChanged(const SimulationParameters& p_sp);
-	double FinishSigmaXX(double res);
+	double FinishSigma(double res);
 	double ComputeResult(const std::vector<double>& results);
 
 	bool AnythingChanged(const SimulationParameters& p_sp);

@@ -253,11 +253,6 @@ inline double lifetimeB(double max_lifetime, double2 pos, double phi, bool clock
                 lifetime = t;
         }
     }
-    
-    /*
-    if (lifetime < max_lifetime)
-        lifetime *= 1e6;
-    */
 
     return lifetime;
 }
@@ -351,9 +346,10 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
                 double z = exp(-result / sp->tau);
 
                 double r = cos(phi) - cos(phi + sp->angular_speed * result) * z;
+                
+                //todo abs(angular_speed)
                 r += sp->angular_speed * sp->tau * sin(phi + sp->angular_speed * result) * z;
                 r -= sp->angular_speed * sp->tau * sin(phi);
-                r *= sp->tau;
 
                 double v;
                 if (sp->mode == MODE_SIGMA_XX) v = cos(phi);
@@ -368,7 +364,7 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
                 w = ((i % 2) == 0) ? 2.0 : 4.0;
             }
 
-            total += result; // *w;
+            total += result * w;
         }
 
         integral += total * angle_area / ((sp->integrand_steps - 1) * 3.0);

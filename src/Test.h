@@ -36,7 +36,7 @@
 	gpu_result = e2->Compute(sp);                                           \
 	std::cout << "CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result-cpu_result) << std::endl;  \
 	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
-
+/*
 TEST_CASE("Cyclotron Orbit")
 {
 	v2 pos = { 1e-6, 1e-6 };
@@ -234,7 +234,6 @@ TEST_CASE("Cross Time")
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / r)) / w);
 }
 
-/*
 TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values")
 {
 	int number_of_operations = 2000;
@@ -550,38 +549,38 @@ TEST_CASE("Add weights kernel")
 	std::cout << "[Weights] CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
 	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
+*/
 
-TEST_CASE("Compare to formula (no impurities") {
+TEST_CASE("Compare to formula (no impurities)") {
 	SimulationParameters sp;
-	sp.dim = 64;
-	sp.particle_speed = 7e5;
-	sp.impurity_count = 0;
-	sp.impurity_radius = 1.5e-8;
-	sp.alpha = PI / 4.0;
-	sp.phi = 0;
-	sp.magnetic_field = 0;
-	sp.tau = 1e-12;
+	sp.dim             = 128;
+	sp.particle_speed  = 1.68e5;
+	sp.impurity_count  = 0;
+	sp.impurity_radius = 2e-9;
+	sp.alpha           = PI / 4.0;
+	sp.phi             = 0;
+	sp.magnetic_field  = 0;
+	sp.tau             = 1.5e-12;
 	sp.integrand_steps = 9;
-	sp.clockwise = 0;
-	sp.region_size = 1e-6;
-	sp.region_extends = sp.particle_speed * sp.tau;
+	sp.clockwise       = 0;
+	sp.region_size     = 1e-6;
+	sp.region_extends  = sp.particle_speed * sp.tau;
 
-	sp.mode = MODE_SIGMA_XX;
-	sp.impurity_seed = 0;
-	
+	sp.mode            = MODE_SIGMA_XX;
+	sp.impurity_seed   = 0;
+
 	auto e = new CPUElasticScattering;
 
-	double kf = M * sp.particle_speed / HBAR;
-    double n  = (E*E * kf*kf) / (2.0 * PI*PI * C1);
-    double formula = n * sp.tau / M;
+	double kf      = M * sp.particle_speed / HBAR;
+    double n       = (kf*kf) / (PI2 * C1);
+    double formula = E*E * n * sp.tau / M;
 
-	for (int i = 0; i < 50; i++) {
-		sp.magnetic_field = i;
-		double result = e->Compute(sp);
-		
-		std::cout << "CPU: " << result << ", FORM: " << formula << ", diff: " << abs(formula - result) << std::endl;
-		CHECK_ALMOST(result, formula, "Result shoudl be the same.")
-	}
+	double result = e->Compute(sp);
+	
+	std::cout << "Kf: " << kf << ", n: " << n << std::endl;
+
+	std::cout << "CPU: " << result << ", FORM: " << formula << ", diff: " << abs(formula - result) << std::endl;
+	CHECK_ALMOST(result, formula, "Result should be the same.")
 }
 
 TEST_CASE("Comparing kernel results on CPU and GPU")
@@ -695,5 +694,5 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 		CHECK_CPU_GPU_APPROX("SXY - Clockwise off")
 	}
 }
-*/
+
 #endif // TEST_H

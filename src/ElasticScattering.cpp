@@ -6,18 +6,20 @@ double ElasticScattering::ComputeResult(const std::vector<double>& results) {
 	for (int i = 0; i < results.size(); i++)
 		total += results[i];
 
-	double z = sp.region_size / (sp.dim - 2);
+	double z = sp.region_size / (double)(sp.dim - 2);
 	double result = total * z * z / 9.0;
 
-	if (IsSigma(sp.mode))
-		result = FinishSigmaXX(result);
-	else
-		result /= pow(sp.region_size, 2.0);
-
-	return result * sp.particle_speed;
+	if (IsSigma(sp.mode)) result = FinishSigma(result);
+	else {
+		result /= (sp.region_size * sp.region_size);
+		result *= sp.particle_speed;
+		result /= PI2;
+	}
+	
+	return result;
 };
 
-double ElasticScattering::FinishSigmaXX(double res) {
+double ElasticScattering::FinishSigma(double res) {
 	double kf = M * sp.particle_speed / HBAR;
 	double outside = (E*E * kf*kf) / (2.0 * PI*PI * M * sp.region_size*sp.region_size * C1);
 	double v = E * sp.magnetic_field * sp.tau / M;
@@ -50,7 +52,7 @@ bool ElasticScattering::ImpuritySettingsChanged(const SimulationParameters& p_sp
 
 void ElasticScattering::GenerateImpurities(const SimulationParameters& p_sp, bool p_random) {
 	impurities.clear();
-	impurities.resize(100);
+	impurities.resize(p_sp.impurity_count);
 
 	std::uniform_real_distribution<double> unif(-p_sp.region_extends, p_sp.region_size + p_sp.region_extends);
 
