@@ -12,6 +12,7 @@
 #include <sstream>
 #include <fstream>
 #include <unordered_map>
+#include "math.h"
 
 #include <GL/glew.h>
 #include <GL/wglew.h>
@@ -95,8 +96,8 @@ int main(int argc, char **argv)
     sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
     sp.region_size        = 1e-7;
     sp.dim                = 128;
-    sp.particle_speed     = 1.68e5; //7e5;
-    sp.impurity_count     = 0;
+    sp.particle_speed     = 1.67834e5; //7e5;
+    sp.impurity_count     = 100;
     sp.impurity_radius    = 2e-9; //1.5e-8;
     sp.alpha              = PI / 4.0;
     sp.phi                = 1.0;
@@ -105,13 +106,12 @@ int main(int argc, char **argv)
     sp.angular_speed      = E * sp.magnetic_field / M;
     sp.region_extends     = sp.particle_speed* sp.tau; // 3e-6;
     
-    sp.mode               = MODE_PHI_LIFETIME;
+    sp.mode = MODE_SIGMA_XX;
     sp.impurity_seed      = 0;
 
-    auto es = new CPUElasticScattering();
+    auto es = new GPUElasticScattering();
 
-    double result = es->Compute(sp);
-
+    //double result = es->Compute(sp);
     /*
     for (int i = 0; i < 50; i++) {
         sp.magnetic_field = i;
@@ -122,11 +122,11 @@ int main(int argc, char **argv)
 
         double result2 = es->Compute(sp);
         
-        std::cout << "" << i << " " << result << " " << result2 << std::endl;
+        std::cout << "" << i << " " << 1.0 / result << " " << result2 << " " << result / (result*result + result2*result2) << std::endl;
     }
-    */
     
     return 0;
+    */
 
     static v2      tau_bounds            = { 1e-13, 1e-10 };
     static cl_int2 count_bounds          = { 1, 50000 };
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     double last_result = 0;
     static int imp_seed = sp.impurity_seed;
 
-    es->Compute(sp);
+    double ress = es->Compute(sp);
 
     while (!glfwWindowShouldClose(window))
     {

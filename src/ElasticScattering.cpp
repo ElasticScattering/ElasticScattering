@@ -9,7 +9,9 @@ double ElasticScattering::ComputeResult(const std::vector<double>& results) {
 	double z = sp.region_size / (double)(sp.dim - 2);
 	double result = total * z * z / 9.0;
 
-	if (IsSigma(sp.mode)) result = FinishSigma(result);
+	if (IsSigma(sp.mode)) {
+		result = FinishSigma(result);
+	}
 	else {
 		result /= (sp.region_size * sp.region_size);
 		result *= sp.particle_speed;

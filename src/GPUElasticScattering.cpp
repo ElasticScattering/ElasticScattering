@@ -46,7 +46,7 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     if (!need_update) return last_result;
 
     size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
-    size_t local_work_size[2] = { MIN(sp.dim, 256), 1 };
+    size_t local_work_size[2] = { min(sp.dim, 256), 1 };
 
     cl_int clStatus;
 
@@ -89,9 +89,9 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
 {
     cl_int clStatus;
 
-    if (!first_run && AnythingChanged(p_sp)) return false;
+    if (!first_run && !AnythingChanged(p_sp)) return false;
 
-    bool impurities_changed = false;// ImpuritySettingsChanged(p_sp);
+    bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);
     
     sp = p_sp;

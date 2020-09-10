@@ -4,15 +4,16 @@
 #ifdef DEVICE_PROGRAM
     #include "src/escl/util.h"
 
-    #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
-    #define MIN(p_a, p_b) min((p_a), (p_b))
+    #define BUFFER_ARGS __constant SimulationParameters* sp, __global double2* impurities
+    //#define MIN(p_a, p_b) min((p_a), (p_b))
 #else
+    //#define NOMINMAX
     #include "math.h"
+    #include "windows.h"
+    //#include <algorithm>
     #include "escl/constants.h"
     #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
     
-    #define MIN(p_a, p_b) ((p_a) < (p_b)) ? (p_a) : (p_b)
-
     struct v4 {
         double x, y, z, w;
     };
@@ -118,65 +119,52 @@ typedef struct
 } SimulationParameters;
 
 
-inline double smod(double a, double b)
+inline double smod(const double a, const double b)
 {
     return a - b * floor(a / b);
 }
 
-inline double GetBoundTime(double phi, double alpha, double w, bool is_electron, bool is_future)
+inline double GetBoundTime(const double phi, const double alpha, const double w, const bool is_electron, const bool is_future)
 {
-    double remaining = smod(phi + alpha, PI * 0.5);
+    const double remaining = smod(phi + alpha, PI * 0.5);
+    
+    const double remaining2 = 2.0 * alpha - remaining;
 
-    double dphi;
-    if (!is_electron && is_future) dphi = remaining;
-    else if (!is_electron)         dphi = 2.0 * alpha - remaining;
-    else if (is_future)            dphi = 2.0 * alpha - remaining;
-    else                           dphi = remaining;
+    double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : remaining2;
+    dphi /= w;
 
-    return dphi / w;
+    return dphi;
 }
 
-inline double2 GetCyclotronOrbit(double2 p, double2 velocity, double radius, double vf, bool is_electron)
+inline double2 GetCyclotronOrbit(const double2 p, const double2 velocity, const double radius, const double vf, const bool is_electron)
 {
     double2 shift = { velocity.y, -velocity.x };
     shift = shift * radius / vf;
 
-    //return is_electron ? (p - shift) :  (p + shift);
-    double2 center;
-    if (is_electron)
-    {
-        center.x = p.x - shift.x;
-        center.y = p.y - shift.y;
-    }
-    else {
-        center.x = p.x + shift.x;
-        center.y = p.y + shift.y;
-    }
-
-    return center;
+    return is_electron ? (p - shift) :  (p + shift);
 }
 
-inline bool CirclesCross(double2 p1, double r1, double2 p2, double r2)
+inline bool CirclesCross(const double2 p1, const double r1, const double2 p2, const double r2)
 {
-    double2 q = p1 - p2;
+    const double2 q = p1 - p2;
+    const double dist_squared = q.x * q.x + q.y * q.y;
+    
+    const double r_add = r1 + r2;
+    const double r_min = r1 - r2;
 
-    double dist_squared = q.x * q.x + q.y * q.y;
-    if (dist_squared >= (r1 + r2) * (r1 + r2)) return false;
-    if (dist_squared <= (r1 - r2) * (r1 - r2)) return false;
-
-    return true;
+    return (dist_squared >= r_add * r_add || dist_squared <= r_min * r_min) ? false : true;
 }
 
-inline double4 GetCrossPoints(double2 p1, double r1, double2 p2, double r2)
+inline double4 GetCrossPoints(const double2 p1, const double r1, const double2 p2, const double r2)
 {
-    double2 q = p1 - p2;
+    const double2 q = p1 - p2;
 
-    double dist_squared = dot(q, q);
-    double dist = sqrt(dist_squared);
-    double xs = (dist_squared + r1*r1 - r2*r2) / (2.0 * dist);
-    double ys = sqrt(r1*r1 - xs*xs);
+    const double dist_squared = dot(q, q);
+    const double dist = sqrt(dist_squared);
+    const double xs = (dist_squared + r1*r1 - r2*r2) / (2.0 * dist);
+    const double ys = sqrt(r1*r1 - xs*xs);
 
-    double2 u = (p2 - p1) / dist;
+    const double2 u = (p2 - p1) / dist;
 
     double4 points = {
         p1.x + u.x * xs +  u.y  * ys,
@@ -189,54 +177,56 @@ inline double4 GetCrossPoints(double2 p1, double r1, double2 p2, double r2)
     return points;
 }
 
-inline double GetPhi(double2 pos, double2 center, double radius)
+inline double GetPhi(const double2 pos, const double2 center, const double radius)
 {
     double p = (pos.x - center.x) / radius;
-    if (p > 1.0) p = 1.0;
-    if (p < -1.0) p = -1.0;
-    double phi = acos(p);
 
-    if (pos.y < center.y)
-        phi = PI2 - phi;
+    p = (p >  1.0) ?  1.0 : p;
+    p = (p < -1.0) ? -1.0 : p;
+    
+    double phi = acos(p);
+    phi = (pos.y < center.y) ? PI2 - phi : phi;
 
     return phi;
 }
 
-inline double GetCrossAngle(double p, double q, bool clockwise)
+inline double GetCrossAngle(const double p, const double q, const bool clockwise)
 {
-    double g = clockwise ? (p - q) : (q - p);
+    const double g = clockwise ? (p - q) : (q - p);
     return smod(g, PI2);
 }
 
-inline double GetFirstCrossTime(double2 center, double2 pos, double2 ip, double r, double ir, double w, double clockwise)
+inline double GetFirstCrossTime(const double2 center, const double2 pos, const double2 ip, const double r, const double ir, const double w, const double clockwise)
 {
-    double4 cross_points = GetCrossPoints(center, r, ip, ir);
+    const double4 cross_points = GetCrossPoints(center, r, ip, ir);
 
-    double2 p1 = { cross_points.x, cross_points.y };
-    double2 p2 = { cross_points.z, cross_points.w };
+    const double2 p1 = { cross_points.x, cross_points.y };
+    const double2 p2 = { cross_points.z, cross_points.w };
 
-    double phi0 = GetPhi(pos, center, r);
-    double phi1 = GetPhi(p1, center, r);
-    double phi2 = GetPhi(p2, center, r);
+    const double phi0 = GetPhi(pos, center, r);
+    const double phi1 = GetPhi(p1, center, r);
+    const double phi2 = GetPhi(p2, center, r);
 
-    double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
-    double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
-    return MIN(t1, t2);
+    const double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
+    const double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
+
+    double a = min(2, 2);
+
+    return min(t1, t2);
 }
 
-inline double lifetimeB(double max_lifetime, double2 pos, double phi, bool clockwise, BUFFER_ARGS)
+inline double lifetimeB(const double max_lifetime, const double2 pos, const double phi, const bool clockwise, BUFFER_ARGS)
 {
-    double orbit_radius = sp->particle_speed / sp->angular_speed;
+    const double orbit_radius = sp->particle_speed / sp->angular_speed;
     double2 vel = { cos(phi), sin(phi) };
     vel = vel * sp->particle_speed;
-    double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
+    const double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
+    const double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
 
     double lifetime = max_lifetime;
 
-    double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
-
     for (int i = 0; i < sp->impurity_count; i++) {
-        double2 impurity = impurities[i];
+        const double2 impurity = impurities[i];
 
         double2 d = pos - impurity;
         if (impurity_radius_sq > dot(d, d))
@@ -249,30 +239,29 @@ inline double lifetimeB(double max_lifetime, double2 pos, double phi, bool clock
         {
             double t = GetFirstCrossTime(center, pos, impurity, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
 
-            if (t < lifetime)
-                lifetime = t;
+            lifetime = (t < lifetime) ? t : lifetime;
         }
     }
 
     return lifetime;
 }
 
-inline double lifetime0(double2 pos, double phi, BUFFER_ARGS)
+inline double lifetime0(const double2 pos, const double phi, BUFFER_ARGS)
 {
-    double2 unit = { cos(phi), sin(phi) };
-    double2 vel = unit * sp->particle_speed;
+    const double2 unit = { cos(phi), sin(phi) };
+    const double2 vel = unit * sp->particle_speed;
 
-    double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+    const double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
 
     double lifetime = sp->tau;
 
     for (int i = 0; i < sp->impurity_count; i++) {
-        double2 imp_pos = impurities[i];
-        double inner = (imp_pos.x - pos.x) * unit.x + (imp_pos.y - pos.y) * unit.y;
-        double2 projected = pos + unit * inner;
+        const double2 imp_pos = impurities[i];
+        const double inner = (imp_pos.x - pos.x) * unit.x + (imp_pos.y - pos.y) * unit.y;
+        const double2 projected = pos + unit * inner;
 
-        double2 d = projected - imp_pos;
-        double diff = impurity_radius_sq - dot(d, d);
+        const double2 d = projected - imp_pos;
+        const double diff = impurity_radius_sq - dot(d, d);
         if (diff < 0.0) {
             continue;
         }
@@ -280,6 +269,7 @@ inline double lifetime0(double2 pos, double phi, BUFFER_ARGS)
         double L = sqrt(diff);
 
         double2 time_taken;
+        
         if (fabs(vel.x) > (fabs(vel.y) * 1e-9)) {
             time_taken.x = -((projected.x - L * unit.x) - pos.x) / vel.x;
             time_taken.y = -((projected.x + L * unit.x) - pos.x) / vel.x;
@@ -309,35 +299,35 @@ inline double lifetime0(double2 pos, double phi, BUFFER_ARGS)
 // Main functions, for single or integrated lifetime
 ////////////////////////////////////////////////////
 
-inline double single_lifetime(double2 pos, double phi, BUFFER_ARGS) {
+inline double single_lifetime(const double2 pos, const double phi, BUFFER_ARGS) {
     if (sp->angular_speed != 0) {
-        bool clockwise = (sp->clockwise == 1);
-        double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, clockwise, false);
+        const bool clockwise = (sp->clockwise == 1);
+        const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, clockwise, false);
  
-        return lifetimeB(MIN(sp->tau, bound_time), pos, phi, clockwise, sp, impurities);
+        return lifetimeB(min(sp->tau, bound_time), pos, phi, clockwise, sp, impurities);
     }
     else {
         return lifetime0(pos, phi, sp, impurities);
     }
 }
 
-inline double phi_lifetime(double2 pos, BUFFER_ARGS)
+inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 {
-    bool clockwise = (sp->clockwise == 1);
+    const bool clockwise = (sp->clockwise == 1);
     //if (clockwise) sp->angular_speed *= -1;
 
-    double angle_area = sp->alpha * 2.0;
-    double step_size = angle_area / (sp->integrand_steps - 1);
+    const double angle_area = sp->alpha * 2.0;
+    const double step_size = angle_area / (sp->integrand_steps - 1);
     
     double integral = 0;
     for (int j = 0; j < 4; j++)
     {
-        double start = -sp->alpha + j * (PI * 0.5);
+        const double start = -sp->alpha + j * (PI * 0.5);
         double total = 0.0;
 
         for (int i = 0; i < sp->integrand_steps; i++)
         {
-            double phi = start + i * step_size;
+            const double phi = start + i * step_size;
 
             double result = single_lifetime(pos, phi, sp, impurities);
 
@@ -359,7 +349,9 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
             }
       
             double w = 1.0;
-            if (!(i == 0 || i == (sp->integrand_steps-1)))
+            bool is_edge_value = !(i == 0 || i == (sp->integrand_steps - 1));
+
+            if (is_edge_value)
             {
                 w = ((i % 2) == 0) ? 2.0 : 4.0;
             }
@@ -376,8 +368,8 @@ inline double phi_lifetime(double2 pos, BUFFER_ARGS)
 inline float GetColor(double v, double scale, int mode) {
     if      (mode == MODE_DIR_LIFETIME) v /= scale;
     else if (mode == MODE_PHI_LIFETIME) v /= (scale * 6.0);
-    else if (mode == MODE_SIGMA_XX)     v /= (scale * 3.0);
-    else if (mode == MODE_SIGMA_XY)     v /= scale;
+    else if (mode == MODE_SIGMA_XX)     v /= 2.0;
+    else if (mode == MODE_SIGMA_XY)     v /= 0.5;
 
     return (float)v;
 }
@@ -400,11 +392,9 @@ __kernel void to_texture(__global double* lifetimes, int mode, double scale, __w
     int row_size = get_global_size(0);
 
     float k = GetColor((float)(lifetimes[y * row_size + x]), scale, mode);
-    float4 c;
-    if (mode != MODE_SIGMA_XY) {
-        c = (float4)(k, k, k, 1.0f);
-    }
-    else {
+    float4 c = (float4)(k, k, k, 1.0f);
+
+    if (mode == MODE_SIGMA_XY) {
         if (k < 0.0) c = (float4)(0, 0, -k, 1.0f);
         else 		 c = (float4)(k, 0, 0, 1.0f);
     }
