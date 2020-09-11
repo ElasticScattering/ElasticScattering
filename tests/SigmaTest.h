@@ -5,10 +5,15 @@
 #include "src/ElasticScattering.h"
 #include "src/ParametersFactory.h"
 
+
+/* TODO: Get full results not 1.231e07
 TEST_CASE("Compare Sigma XX/XY results to verified results") {
     SimulationParameters sp = ParametersFactory::GenerateNoImpurities();
 
     auto es = new GPUElasticScattering();
+
+
+
 
     for (int i = 0; i < 50; i++) {
         sp.magnetic_field = i;
@@ -24,6 +29,7 @@ TEST_CASE("Compare Sigma XX/XY results to verified results") {
         CHECK(result2 == result2);
     }
 }
+*/
 
 TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 	SimulationParameters sp = ParametersFactory::GenerateNoImpurities();

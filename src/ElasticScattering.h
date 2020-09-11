@@ -36,7 +36,7 @@ protected:
 	void CompleteSimulationParameters();
 
 public:
-	virtual double Compute(const SimulationParameters &p_sp) = 0;
+	virtual bool Compute(const SimulationParameters &p_sp, double &result) = 0;
 	void Draw();
 };
 
@@ -48,7 +48,7 @@ class CPUElasticScattering : public ElasticScattering {
 	void MakeTexture();
 
 public:
-	virtual double Compute(const SimulationParameters &p_sp);
+	virtual bool Compute(const SimulationParameters &p_sp, double& result);
 	
 	CPUElasticScattering();
 };
@@ -58,7 +58,7 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareTexKernel(int pixels);
 
 public:
-	virtual double Compute(const SimulationParameters &p_sp);
+	virtual bool Compute(const SimulationParameters &p_sp, double& result);
 	
 	GPUElasticScattering(bool show_info = false);
 	~GPUElasticScattering();

@@ -5,9 +5,9 @@
 #endif //TESTS_ENABLED
 
 
-double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
+bool CPUElasticScattering::Compute(const SimulationParameters& p_sp, double& result)
 {
-    if (!PrepareCompute(p_sp)) return 0;
+    if (!PrepareCompute(p_sp)) return false;
 
     // GPU kernel works only with even work size.
     int limit = sp.dim - 1;
@@ -23,13 +23,13 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
         }
     }
 
-    double result = ComputeResult(main_buffer);
+    result = ComputeResult(main_buffer);
 
 #ifndef TESTS_ENABLED
     MakeTexture();
 #endif //TESTS_ENABLED
 
-    return result;
+    return true;
 }
 
 bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {

@@ -36,10 +36,10 @@ OCLResources ocl;
 
 double last_result;
 
-double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
+bool GPUElasticScattering::Compute(const SimulationParameters& p_sp, double &result)
 {
     bool need_update = PrepareCompute(p_sp);
-    if (!need_update) return last_result;
+    if (!need_update) return false;
 
     size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
     size_t local_work_size[2] = { min(sp.dim, 256), 1 };
@@ -70,10 +70,10 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-    double result = ComputeResult(results);
+    result = ComputeResult(results);
 
     last_result = result;
-    return result;
+    return true;
 }
 
 bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)

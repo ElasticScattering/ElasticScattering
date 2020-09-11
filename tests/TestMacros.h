@@ -10,11 +10,11 @@
 #define CHECK_RELATIVE(a, b) { CHECK(abs(((a)-(b)) / (b)) < EPSILON); }
 
 #define CHECK_CPU_GPU_ALMOST(p_msg)                      \
-	cpu_result = e->Compute(sp);                         \
-	gpu_result = e2->Compute(sp);                        \
+	e->Compute(sp, cpu_result);							 \
+	e2->Compute(sp, gpu_result);						 \
 	CHECK_ALMOST(cpu_result, gpu_result, p_msg);  
 
-#define CHECK_CPU_GPU_APPROX(p_msg)                      \
-	cpu_result = e->Compute(sp);                         \
-	gpu_result = e2->Compute(sp);                        \
+#define CHECK_CPU_GPU_APPROX(p_msg)                     \
+	e->Compute(sp, cpu_result);                         \
+	e2->Compute(sp, gpu_result);                        \
 	CHECK_APPROX_MSG(cpu_result, gpu_result, p_msg);  
