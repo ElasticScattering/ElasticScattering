@@ -22,16 +22,19 @@ double ElasticScattering::ComputeResult(const std::vector<double>& results) {
 };
 
 double ElasticScattering::FinishSigma(double res) {
-	double kf = M * sp.particle_speed / HBAR;
+	double kf      = M * sp.particle_speed / HBAR;
 	double outside = (E*E * kf*kf) / (2.0 * PI*PI * M * sp.region_size*sp.region_size * C1);
-	double v = E * sp.magnetic_field * sp.tau / M;
-	outside *= sp.tau / (1.0 + v*v);
+	double wct     = sp.angular_speed * sp.tau;
+	outside *= sp.tau / (1.0 + wct*wct);
 
 	return outside * res;
 };
 
 void ElasticScattering::CompleteSimulationParameters() {
 	sp.angular_speed = E * sp.magnetic_field / M;
+	if (sp.clockwise == 1)
+		sp.angular_speed *= -1.0;
+
 	particle_count = sp.dim * sp.dim;
 }
 

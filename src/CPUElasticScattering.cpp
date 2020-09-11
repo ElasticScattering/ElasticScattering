@@ -5,6 +5,7 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
 {
     if (!PrepareCompute(p_sp)) return 0;
 
+    // GPU kernel works only with even work size.
     int limit = sp.dim - 1;
 
     for (int j = 0; j < limit; j++) {
@@ -14,7 +15,7 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
             pos = pos * (sp.region_size / (double)(sp.dim - 2));
 
             double particle_result = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp.phi, &sp, impurities) : phi_lifetime(pos, &sp, impurities);
-            main_buffer[j * sp.dim + i] = particle_result * GetWeight2D(i, j, sp.dim);
+            main_buffer[j * sp.dim + i] = particle_result * GetWeight2D(i, j, limit);
         }
     }
 

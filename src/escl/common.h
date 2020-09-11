@@ -5,12 +5,9 @@
     #include "src/escl/util.h"
 
     #define BUFFER_ARGS __constant SimulationParameters* sp, __global double2* impurities
-    //#define MIN(p_a, p_b) min((p_a), (p_b))
 #else
-    //#define NOMINMAX
     #include "math.h"
     #include "windows.h"
-    //#include <algorithm>
     #include "escl/constants.h"
     #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
     
@@ -58,19 +55,14 @@
     #define double4 v4
 
     inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
-
 #endif
     
 inline bool IsEdge(int i, int dim) {
-    return (i == 0) || (i == (dim - 2)); 
-}
-
-inline bool IsPadding(int i, int dim) {
-    return (i == (dim-1)); 
+    return (i == 0) || (i == (dim - 1)); 
 }
 
 inline double GetWeight1D(int i, int dim) {
-    double w = IsPadding(i, dim) ? 0.0 : 1.0;
+    double w = 1.0;
     if (!IsEdge(i, dim))
     {
         w *= ((i % 2) == 0) ? 2.0 : 4.0;
@@ -80,7 +72,7 @@ inline double GetWeight1D(int i, int dim) {
 }
 
 inline double GetWeight2D(int i, int j, int dim) {
-    double w = (IsPadding(i, dim) || IsPadding(j, dim)) ? 0.0 : 1.0;
+    double w = 1.0;
     if (!IsEdge(i, dim))
     {
         w *= ((i % 2) == 0) ? 2.0 : 4.0;
@@ -131,7 +123,7 @@ inline double GetBoundTime(const double phi, const double alpha, const double w,
     const double remaining2 = 2.0 * alpha - remaining;
 
     double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : remaining2;
-    dphi /= w;
+    dphi /= fabs(w);
 
     return dphi;
 }
@@ -207,8 +199,8 @@ inline double GetFirstCrossTime(const double2 center, const double2 pos, const d
     const double phi1 = GetPhi(p1, center, r);
     const double phi2 = GetPhi(p2, center, r);
 
-    const double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
-    const double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
+    const double t1 = GetCrossAngle(phi0, phi1, clockwise) / fabs(w);
+    const double t2 = GetCrossAngle(phi0, phi2, clockwise) / fabs(w);
 
     double a = min(2, 2);
 
@@ -217,7 +209,7 @@ inline double GetFirstCrossTime(const double2 center, const double2 pos, const d
 
 inline double lifetimeB(const double max_lifetime, const double2 pos, const double phi, const bool clockwise, BUFFER_ARGS)
 {
-    const double orbit_radius = sp->particle_speed / sp->angular_speed;
+    const double orbit_radius = sp->particle_speed / fabs(sp->angular_speed);
     double2 vel = { cos(phi), sin(phi) };
     vel = vel * sp->particle_speed;
     const double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
@@ -253,7 +245,7 @@ inline double lifetime0(const double2 pos, const double phi, BUFFER_ARGS)
 
     const double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
 
-    double lifetime = sp->tau;
+    double lifetime = 15.0 * sp->tau;
 
     for (int i = 0; i < sp->impurity_count; i++) {
         const double2 imp_pos = impurities[i];
@@ -304,7 +296,7 @@ inline double single_lifetime(const double2 pos, const double phi, BUFFER_ARGS) 
         const bool clockwise = (sp->clockwise == 1);
         const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, clockwise, false);
  
-        return lifetimeB(min(sp->tau, bound_time), pos, phi, clockwise, sp, impurities);
+        return lifetimeB(min(15.0 * sp->tau, bound_time), pos, phi, clockwise, sp, impurities);
     }
     else {
         return lifetime0(pos, phi, sp, impurities);
@@ -314,7 +306,6 @@ inline double single_lifetime(const double2 pos, const double phi, BUFFER_ARGS) 
 inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 {
     const bool clockwise = (sp->clockwise == 1);
-    //if (clockwise) sp->angular_speed *= -1;
 
     const double angle_area = sp->alpha * 2.0;
     const double step_size = angle_area / (sp->integrand_steps - 1);
@@ -331,8 +322,7 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 
             double result = single_lifetime(pos, phi, sp, impurities);
 
-            if (sp->mode == MODE_SIGMA_XX || sp->mode == MODE_SIGMA_XY)
-            {
+            if (IsSigma(sp->mode)) {
                 double z = exp(-result / sp->tau);
 
                 double r = cos(phi) - cos(phi + sp->angular_speed * result) * z;
@@ -367,8 +357,8 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 
 inline float GetColor(double v, double scale, int mode) {
     if      (mode == MODE_DIR_LIFETIME) v /= scale;
-    else if (mode == MODE_PHI_LIFETIME) v /= (scale * 6.0);
-    else if (mode == MODE_SIGMA_XX)     v /= 2.0;
+    else if (mode == MODE_PHI_LIFETIME) v /= (scale * 15.0);
+    else if (mode == MODE_SIGMA_XX)     v /= 3.0;
     else if (mode == MODE_SIGMA_XY)     v /= 0.5;
 
     return (float)v;
@@ -382,7 +372,7 @@ __kernel void add_integral_weights_2d(__global double* A)
     int row_size = get_global_size(0);
 
     int i = y * row_size + x;
-    A[i] *= GetWeight2D(x, y, row_size);
+    A[i] *= GetWeight2D(x, y, row_size-1);
 }
 
 __kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)

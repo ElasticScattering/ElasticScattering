@@ -73,7 +73,6 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 #else
-    // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
     std::vector<double> results;
     results.resize(particle_count);
     clEnqueueReadBuffer(ocl.queue, ocl.main_buffer, CL_TRUE, 0, sizeof(double) * particle_count, results.data(), 0, nullptr, nullptr);
