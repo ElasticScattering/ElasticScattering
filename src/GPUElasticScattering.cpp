@@ -11,12 +11,8 @@ typedef struct
     cl_program program;
     cl_command_queue queue;
 
-    //
-    // Kernels
-    //
-
     // Computes a value (sigma, raw lifetime) for a list of particles.
-    cl_kernel main_kernel;
+    cl_kernel scatter_kernel;
 
     // Computes the average lifetime of all particles.
     cl_kernel add_integral_weights_kernel;
@@ -50,7 +46,7 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
 
     cl_int clStatus;
 
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.scatter_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
 #ifndef TESTS_ENABLED
@@ -74,12 +70,6 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
 
-#if 0
-    std::vector<double> results;
-    results.resize(particle_count);
-    clEnqueueReadBuffer(ocl.queue, ocl.main_buffer, CL_TRUE, 0, sizeof(double) * particle_count, results.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
-#endif
     double result = ComputeResult(results);
 
     last_result = result;
@@ -130,7 +120,7 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     }
 
     if (first_run) {
-        ocl.main_kernel = clCreateKernel(ocl.program, "lifetime", &clStatus);
+        ocl.scatter_kernel = clCreateKernel(ocl.program, "lifetime", &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     
         ocl.add_integral_weights_kernel = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
@@ -146,13 +136,13 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(SimulationParameters), (void*)&sp, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.main_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.main_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.main_kernel, 2, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
@@ -237,7 +227,7 @@ GPUElasticScattering::~GPUElasticScattering()
     clReleaseMemObject(ocl.main_buffer);
     clReleaseMemObject(ocl.image);
     clReleaseMemObject(ocl.sum_output);
-    clReleaseKernel(ocl.main_kernel);
+    clReleaseKernel(ocl.scatter_kernel);
     clReleaseKernel(ocl.tex_kernel);
     clReleaseProgram(ocl.program);
     clReleaseCommandQueue(ocl.queue);

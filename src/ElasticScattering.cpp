@@ -33,9 +33,6 @@ double ElasticScattering::FinishSigma(double res) {
 void ElasticScattering::CompleteSimulationParameters() {
 	sp.angular_speed = E * sp.magnetic_field / M;
 	
-	//if (sp.is_clockwise == 1)
-		//sp.angular_speed *= -1.0;
-
 	particle_count = sp.dim * sp.dim;
 }
 
