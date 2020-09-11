@@ -7,9 +7,10 @@
     #define BUFFER_ARGS __constant SimulationParameters* sp, __global double2* impurities
 #else
     #include "math.h"
-    #include "windows.h"
+    #include <windows.h>
     #include "escl/constants.h"
     #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
+    #define min(a, b) ((a) < (b)) ? (a) : (b)
     
     struct v4 {
         double x, y, z, w;

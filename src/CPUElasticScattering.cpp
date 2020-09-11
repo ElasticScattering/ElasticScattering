@@ -1,5 +1,9 @@
 #include "ElasticScattering.h"
+
+#ifndef TESTS_ENABLED
 #include "OpenGLUtils.h"
+#endif //TESTS_ENABLED
+
 
 double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
 {
@@ -20,7 +24,10 @@ double CPUElasticScattering::Compute(const SimulationParameters &p_sp)
     }
 
     double result = ComputeResult(main_buffer);
+
+#ifndef TESTS_ENABLED
     MakeTexture();
+#endif //TESTS_ENABLED
 
     return result;
 }
@@ -47,6 +54,7 @@ bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
     return true;
 }
 
+#ifndef TESTS_ENABLED
 void CPUElasticScattering::MakeTexture() 
 {
     pixels.clear();
@@ -88,9 +96,12 @@ void CPUElasticScattering::MakeTexture()
     glUseProgram(ogl.shader_program);
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
+#endif //TESTS_ENABLED
 
 CPUElasticScattering::CPUElasticScattering()
 {
+#ifndef TESTS_ENABLED
     OpenGLUtils o;
     o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
+#endif //TESTS_ENABLED
 }

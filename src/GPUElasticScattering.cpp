@@ -53,10 +53,11 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.main_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
+#ifndef TESTS_ENABLED
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
+#endif //TESTS_ENABLED
 
-#if 1
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
 
@@ -65,14 +66,15 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
-    //clStatus = clFinish(ocl.queue);
+    clStatus = clFinish(ocl.queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
     std::vector<double> results;
     results.resize(half_size / max_work_items);
     clEnqueueReadBuffer(ocl.queue, ocl.sum_output, CL_TRUE, 0, sizeof(double) * half_size / max_work_items, results.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
-#else
+
+#if 0
     std::vector<double> results;
     results.resize(particle_count);
     clEnqueueReadBuffer(ocl.queue, ocl.main_buffer, CL_TRUE, 0, sizeof(double) * particle_count, results.data(), 0, nullptr, nullptr);
@@ -109,9 +111,10 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     if (first_run) {
         ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(SimulationParameters), nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
-
+#ifndef TESTS_ENABLED
         ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+#endif //TESTS_ENABLED
     }
     
     if (first_run || work_size_changed) {
@@ -121,7 +124,9 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
         ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count / 2, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
 
+#ifndef TESTS_ENABLED
         PrepareTexKernel(sp.dim);
+#endif //TESTS_ENABLED
     }
 
     if (first_run) {
@@ -162,6 +167,7 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * min(sp.dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
+#ifndef TESTS_ENABLED
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
@@ -174,10 +180,12 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 3, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+#endif //TESTS_ENABLED
 
     return true;
 }
 
+#ifndef TESTS_ENABLED
 void GPUElasticScattering::PrepareTexKernel(int dim)
 {
     {
@@ -206,6 +214,7 @@ void GPUElasticScattering::PrepareTexKernel(int dim)
     glUseProgram(ogl.shader_program);
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
+#endif // TESTS_ENABLED
 
 GPUElasticScattering::GPUElasticScattering(bool show_info)
 {
@@ -214,9 +223,11 @@ GPUElasticScattering::GPUElasticScattering(bool show_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
-
+    
+#ifndef TESTS_ENABLED
     OpenGLUtils o;
     o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
+#endif //TESTS_ENABLED
 }
 
 GPUElasticScattering::~GPUElasticScattering()

@@ -6,10 +6,6 @@
 
 #include <GL/glew.h>
 
-typedef struct
-{
-	bool run_tests;
-} InitParameters;
 
 typedef struct
 {

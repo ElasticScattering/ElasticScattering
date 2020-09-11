@@ -86,10 +86,11 @@ TEST_CASE("Weights function") {
 	CHECK(w == 4);
 
 	w = GetWeight1D(dim - 2, dim);
-	CHECK(w == 1);
+	CHECK(w == 4);
 
 	w = GetWeight1D(dim - 3, dim);
-	CHECK(w == 4);
+	CHECK(w == 2);
+
 
 	w = GetWeight2D(dim - 1, 0, dim);
 	CHECK(w == 1);
@@ -106,7 +107,6 @@ TEST_CASE("Weights function") {
 	w = GetWeight2D(3, 0, dim);
 	CHECK(w == 4);
 
-
 	w = GetWeight2D(0, 1, dim);
 	CHECK(w == 4);
 
@@ -121,7 +121,6 @@ TEST_CASE("Weights function") {
 
 	w = GetWeight2D(2, 1, dim);
 	CHECK(w == 8);
-
 
 	w = GetWeight2D(0, dim - 1, dim);
 	CHECK(w == 1);
@@ -176,15 +175,16 @@ TEST_CASE("Add weights kernel")
 
 	double gpu_result, cpu_result;
 	double total_cpu = 0.0, total_gpu = 0.0;
+	int limit = dim - 1;
 
-	for (int j = 0; j < dim; j++) {
-		for (int i = 0; i < dim; i++) {
-			cpu_result = A[j * dim + i] * GetWeight2D(i, j, dim);
+	for (int j = 0; j < limit; j++) {
+		for (int i = 0; i < limit; i++) {
+			cpu_result = A[j * dim + i] * GetWeight2D(i, j, limit);
 			gpu_result = gpu_results[j * dim + i];
 
 			CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")
 
-				total_cpu += cpu_result;
+			total_cpu += cpu_result;
 			total_gpu += gpu_result;
 		}
 	}
@@ -207,6 +207,8 @@ TEST_CASE("Compare to formula (no impurities)") {
 	sp.is_clockwise = 0;
 	sp.region_size = 1e-6;
 	sp.region_extends = sp.particle_speed * sp.tau;
+	sp.is_diag_regions = false;
+	sp.is_incoherent = true;
 
 	sp.mode = MODE_SIGMA_XX;
 	sp.impurity_seed = 0;
@@ -222,5 +224,5 @@ TEST_CASE("Compare to formula (no impurities)") {
 	std::cout << "Kf: " << kf << ", n: " << n << std::endl;
 
 	std::cout << "CPU: " << result << ", FORM: " << formula << ", diff: " << abs(formula - result) << std::endl;
-	CHECK_ALMOST(result, formula, "Result should be the same.")
+	CHECK_RELATIVE(result, formula);
 }

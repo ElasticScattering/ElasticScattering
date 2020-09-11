@@ -17,8 +17,8 @@ TEST_CASE("Different scatter modes")
 	auto e2 = new GPUElasticScattering();
 
 	SimulationParameters sp;
-	sp.region_size     = 1e-6;
 	sp.dim             = 64;
+	sp.integrand_steps = 9;
 	sp.particle_speed  = 7e5;
 	sp.impurity_count  = 100;
 	sp.impurity_radius = 1.5e-8;
@@ -26,8 +26,8 @@ TEST_CASE("Different scatter modes")
 	sp.phi             = 0;
 	sp.magnetic_field  = 0;
 	sp.tau             = 1e-12;
-	sp.integrand_steps = 9;
 	sp.is_clockwise    = 1;
+	sp.region_size	   = 1e-6;
 	sp.region_extends  = sp.particle_speed * sp.tau;
 	sp.is_diag_regions = false;
 	sp.is_incoherent   = true;
@@ -43,10 +43,10 @@ TEST_CASE("Different scatter modes")
 	CHECK_CPU_GPU_ALMOST("Phi Lifetime")
 
 	sp.mode = MODE_SIGMA_XX;
-	CHECK_CPU_GPU_ALMOST("Sigma XX Lifetime")
+	CHECK_CPU_GPU_APPROX("Sigma XX Lifetime")
 
 	sp.mode = MODE_SIGMA_XY;
-	CHECK_CPU_GPU_ALMOST("Sigma XY Lifetime")
+	CHECK_CPU_GPU_APPROX("Sigma XY Lifetime")
 }
 
 /*
