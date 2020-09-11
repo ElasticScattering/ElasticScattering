@@ -3,8 +3,9 @@
 #include <windows.h>
 
 #include "ElasticScattering.h"
+#include "utils/OpenCLUtils.h"
 
-#include "Test.h"
+#include "tests/test_main.h"
 #include "utils/ErrorMacros.h"
 
 #include <string>
@@ -75,11 +76,7 @@ int main(int argc, char **argv)
 
     if (init.run_tests)
     {
-        doctest::Context context;
-        context.applyCommandLine(argc, argv);
-        context.setOption("no-breaks", true);
-        int res = context.run();
-
+        test_main();
         return 0;
     }
 
@@ -92,26 +89,30 @@ int main(int argc, char **argv)
     QueryPerformanceFrequency(&clockFrequency);
 
     SimulationParameters sp;
-    sp.integrand_steps    = 99;
-    sp.clockwise          = 0; // 1 == true, 0 == false. Can't have boolean kernel arguments :(
-    sp.region_size        = 1e-7;
-    sp.dim                = 256;
-    sp.particle_speed     = 1.67834e5;
-    sp.impurity_count     = 100;
-    sp.impurity_radius    = 2e-9;
-    sp.alpha              = PI / 4.0;
-    sp.phi                = 1.0;
-    sp.magnetic_field     = 0;
-    sp.tau                = 1.5e-12;
-    sp.angular_speed      = E * sp.magnetic_field / M;
-    sp.region_extends     = sp.particle_speed * sp.tau * 15.0;
+    sp.integrand_steps = 25;
+    sp.region_size     = 1e-5;
+    sp.dim             = 128;
+    sp.particle_speed  = 1.67834e5;
+    sp.impurity_count  = 100;
+    sp.impurity_radius = 2e-9;
+    sp.alpha           = PI / 4.0;
+    sp.phi             = 1.0;
+    sp.magnetic_field  = 0;
+    sp.tau             = 1.5e-12;
+    sp.angular_speed   = E * sp.magnetic_field / M;
+    sp.region_extends  = sp.particle_speed * sp.tau * 15.0;
     
-    sp.mode = MODE_SIGMA_XX;
-    sp.impurity_seed      = 0;
+    // 1 == true, 0 == false. Can't have boolean kernel arguments :(
+    sp.is_diag_regions = 0;
+    sp.is_clockwise    = 0; 
+    sp.is_incoherent   = 1;
+
+    sp.mode            = MODE_SIGMA_XX;
+    sp.impurity_seed   = 0;
 
     auto es = new GPUElasticScattering();
 
-#if 1
+#if 0
     sp.impurity_count = 1;
     sp.impurity_radius = 1e-16;
 
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
 
     static v2      tau_bounds            = { 1e-13, 1e-10 };
     static cl_int2 count_bounds          = { 1, 50000 };
-    static v2      radius_bounds         = { 1e-10, 1e-7 };
+    static v2      radius_bounds         = { 1e-9, 1e-6 };
     static v2      region_bounds         = { 1e-8,  1e-4 };
     static v2      extends_bounds        = { 1e-7,  1e-4 };
 
@@ -140,7 +141,9 @@ int main(int argc, char **argv)
     static v2      phi_bounds            = { 0, PI2 };
     static v2      magnetic_field_bounds = { 0, 80 };
     static bool sync_immediate           = true;
-    static bool is_electron              = (sp.clockwise == 1);
+    static bool is_electron              = (sp.is_clockwise == 1);
+    static bool is_diag_regions = (sp.is_diag_regions == 1);
+    static bool is_incoherent = (sp.is_incoherent == 1);
 
     double last_result = 0;
     static int imp_seed = sp.impurity_seed;
@@ -185,9 +188,17 @@ int main(int argc, char **argv)
             ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%.2e");
             ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%.2f");
             ImGui::Checkbox("Clockwise", &is_electron);
-            sp.clockwise = is_electron ? 1 : 0;
+            sp.is_clockwise = is_electron ? 1 : 0;
 
-            ImGui::Dummy(ImVec2(0.0f, 10.0f));
+            if (sp.mode != MODE_DIR_LIFETIME) {
+                ImGui::Checkbox("Diag. regions", &is_diag_regions); ImGui::SameLine();
+                ImGui::Checkbox("Incoherent", &is_incoherent);
+
+                sp.is_diag_regions = is_diag_regions ? 1 : 0;
+                sp.is_incoherent = is_incoherent ? 1 : 0;
+            }
+
+            ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
             ImGui::Text("Particle count");
             ImGui::RadioButton("64x64",     &sp.dim,   64); ImGui::SameLine();

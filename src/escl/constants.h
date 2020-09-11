@@ -7,7 +7,8 @@
 #define M    (5.0 * M0)
 #define E    1.602e-19
 #define HBAR 1.055e-34
-#define C1   1e-9 //1.15e-9
+#define C1   1e-9
+#define KB   1.38e-23
 
 #define MODE_DIR_LIFETIME 0
 #define MODE_PHI_LIFETIME 1

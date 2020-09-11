@@ -65,7 +65,7 @@ double GPUElasticScattering::Compute(const SimulationParameters& p_sp)
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.sum_kernel, 1, nullptr, &half_size, &max_work_items, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start sum_lifetimes kernel execution.");
 
-    clStatus = clFinish(ocl.queue);
+    //clStatus = clFinish(ocl.queue);
 
     // @Speedup, geen copy doen met een map https://downloads.ti.com/mctools/esd/docs/opencl/memory/access-model.html
     std::vector<double> results;

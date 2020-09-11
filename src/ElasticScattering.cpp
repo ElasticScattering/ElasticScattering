@@ -32,8 +32,9 @@ double ElasticScattering::FinishSigma(double res) {
 
 void ElasticScattering::CompleteSimulationParameters() {
 	sp.angular_speed = E * sp.magnetic_field / M;
-	if (sp.clockwise == 1)
-		sp.angular_speed *= -1.0;
+	
+	//if (sp.is_clockwise == 1)
+		//sp.angular_speed *= -1.0;
 
 	particle_count = sp.dim * sp.dim;
 }
@@ -45,8 +46,9 @@ bool ElasticScattering::AnythingChanged(const SimulationParameters& p_sp) {
 		sp.impurity_count == p_sp.impurity_count && sp.impurity_radius == p_sp.impurity_radius &&
 		sp.alpha == p_sp.alpha && sp.phi == p_sp.phi &&
 		sp.magnetic_field == p_sp.magnetic_field && sp.tau == p_sp.tau &&
-		sp.integrand_steps == p_sp.integrand_steps && sp.clockwise == p_sp.clockwise &&
-		sp.region_extends == p_sp.region_extends);
+		sp.integrand_steps == p_sp.integrand_steps && sp.is_clockwise == p_sp.is_clockwise &&
+		sp.region_extends == p_sp.region_extends && sp.is_clockwise == p_sp.is_clockwise
+		&& sp.is_diag_regions == p_sp.is_diag_regions && sp.is_incoherent == p_sp.is_incoherent);
 
 	return !nothing_changed;
 }

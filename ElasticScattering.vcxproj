@@ -240,9 +240,14 @@
     <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\OpenGLUtils.h" />
     <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\Test.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
+    <ClInclude Include="tests\CPUComparisonTest.h" />
+    <ClInclude Include="tests\Test.h" />
+    <ClInclude Include="tests\TestDetails.h" />
+    <ClInclude Include="tests\TestMacros.h" />
+    <ClInclude Include="tests\test_main.h" />
+    <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\escl\scatter.cl" />
