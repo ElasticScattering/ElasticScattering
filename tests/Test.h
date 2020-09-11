@@ -3,6 +3,7 @@
 
 #include "src/ElasticScattering.h"
 #include "src/utils/OpenCLUtils.h"
+#include "src/ParametersFactory.h"
 
 #include <assert.h>
 #include <random>
@@ -13,26 +14,10 @@
 
 TEST_CASE("Different scatter modes")
 {
-	auto e = new CPUElasticScattering();
+	SimulationParameters sp = ParametersFactory::GenerateDefault();
+	
+	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
-
-	SimulationParameters sp;
-	sp.dim             = 64;
-	sp.integrand_steps = 9;
-	sp.particle_speed  = 7e5;
-	sp.impurity_count  = 100;
-	sp.impurity_radius = 1.5e-8;
-	sp.alpha           = PI / 4.0;
-	sp.phi             = 0;
-	sp.magnetic_field  = 0;
-	sp.tau             = 1e-12;
-	sp.is_clockwise    = 1;
-	sp.region_size	   = 1e-6;
-	sp.region_extends  = sp.particle_speed * sp.tau;
-	sp.is_diag_regions = false;
-	sp.is_incoherent   = true;
-
-	sp.impurity_seed   = 0;
 
 	double cpu_result, gpu_result, diff;
 	

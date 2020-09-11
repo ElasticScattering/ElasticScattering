@@ -193,36 +193,3 @@ TEST_CASE("Add weights kernel")
 	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
 
-TEST_CASE("Compare to formula (no impurities)") {
-	SimulationParameters sp;
-	sp.dim = 128;
-	sp.particle_speed = 1.68e5;
-	sp.impurity_count = 0;
-	sp.impurity_radius = 2e-9;
-	sp.alpha = PI / 4.0;
-	sp.phi = 0;
-	sp.magnetic_field = 0;
-	sp.tau = 1.5e-12;
-	sp.integrand_steps = 9;
-	sp.is_clockwise = 0;
-	sp.region_size = 1e-6;
-	sp.region_extends = sp.particle_speed * sp.tau;
-	sp.is_diag_regions = false;
-	sp.is_incoherent = true;
-
-	sp.mode = MODE_SIGMA_XX;
-	sp.impurity_seed = 0;
-
-	auto e = new CPUElasticScattering;
-
-	double kf = M * sp.particle_speed / HBAR;
-	double n = (kf * kf) / (PI2 * C1);
-	double formula = E * E * n * sp.tau / M;
-
-	double result = e->Compute(sp);
-
-	std::cout << "Kf: " << kf << ", n: " << n << std::endl;
-
-	std::cout << "CPU: " << result << ", FORM: " << formula << ", diff: " << abs(formula - result) << std::endl;
-	CHECK_RELATIVE(result, formula);
-}

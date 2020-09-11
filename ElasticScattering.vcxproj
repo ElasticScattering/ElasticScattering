@@ -225,6 +225,7 @@
     <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\OpenGLUtils.cpp" />
+    <ClCompile Include="src\ParametersFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libs\imgui\imconfig.h" />
@@ -241,10 +242,12 @@
     <ClInclude Include="src\escl\constants.h" />
     <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\OpenGLUtils.h" />
+    <ClInclude Include="src\ParametersFactory.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="tests\CPUComparisonTest.h" />
+    <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
     <ClInclude Include="tests\TestDetails.h" />
     <ClInclude Include="tests\TestMacros.h" />

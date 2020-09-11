@@ -6,8 +6,8 @@
 #include "app_main.h"
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
-
 #include "utils/ErrorMacros.h"
+#include "src/ParametersFactory.h"
 
 #include <string>
 #include <iostream>
@@ -68,48 +68,8 @@ int app_main(int argc, char** argv)
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    SimulationParameters sp;
-    sp.integrand_steps = 25;
-    sp.region_size = 1e-5;
-    sp.dim = 128;
-    sp.particle_speed = 1.67834e5;
-    sp.impurity_count = 100;
-    sp.impurity_radius = 2e-9;
-    sp.alpha = PI / 4.0;
-    sp.phi = 1.0;
-    sp.magnetic_field = 0;
-    sp.tau = 1.5e-12;
-    sp.angular_speed = E * sp.magnetic_field / M;
-    sp.region_extends = sp.particle_speed * sp.tau * 15.0;
-
-    // 1 == true, 0 == false. Can't have boolean kernel arguments :(
-    sp.is_diag_regions = 0;
-    sp.is_clockwise = 0;
-    sp.is_incoherent = 1;
-
-    sp.mode = MODE_SIGMA_XX;
-    sp.impurity_seed = 0;
-
+    auto sp = ParametersFactory::GenerateDefault();
     auto es = new GPUElasticScattering();
-
-#if 0
-    sp.impurity_count = 1;
-    sp.impurity_radius = 1e-16;
-
-    for (int i = 0; i < 50; i++) {
-        sp.magnetic_field = i;
-        sp.mode = MODE_SIGMA_XX;
-        double result = es->Compute(sp);
-
-        sp.mode = MODE_SIGMA_XY;
-
-        double result2 = es->Compute(sp);
-        std::cout << "" << sp.magnetic_field << " " << result << " " << result2 << std::endl;
-        //std::cout << "" << i << " " << 1.0 / result << " " << result2 << " " << result / (result*result + result2*result2) << std::endl;
-    }
-
-    return 0;
-#endif
 
     static v2      tau_bounds = { 1e-13, 1e-10 };
     static cl_int2 count_bounds = { 1, 50000 };
