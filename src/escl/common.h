@@ -105,9 +105,11 @@ typedef struct
 
     double region_size;
     double region_extends;
+    double impurity_density;
     double particle_speed;      // v
     double impurity_radius;     // r
     double tau;
+    double temperature;
 
     double alpha;
     double phi;

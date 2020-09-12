@@ -66,10 +66,10 @@ void OpenGLUtils::Init(GLuint& vbo, GLuint& vao, GLuint& shader_program) {
     float vertices[] =
     {
         // Position,        Tex coord
-        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
          0.0f, -1.0f, 0.0f, 1.0f, 0.0f, //0.0 is middle of screen
          0.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
+         1.0f,  1.0f, 0.0f, 0.0f, 1.0f
     };
 
     glGenVertexArrays(1, &vao);

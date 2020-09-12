@@ -34,7 +34,7 @@ typedef struct
 
 OCLResources ocl;
 
-double last_result;
+double last_result2;
 
 bool GPUElasticScattering::Compute(const SimulationParameters& p_sp, double &result)
 {
@@ -72,7 +72,7 @@ bool GPUElasticScattering::Compute(const SimulationParameters& p_sp, double &res
 
     result = ComputeResult(results);
 
-    last_result = result;
+    last_result2 = result;
     return true;
 }
 
