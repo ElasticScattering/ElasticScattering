@@ -19,15 +19,20 @@ bool CPUElasticScattering::Compute(const SimulationParameters& p_sp, double& res
             pos = pos * (sp.region_size / (double)(sp.dim - 2));
 
             double particle_result = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp.phi, &sp, impurities) : phi_lifetime(pos, &sp, impurities);
-            main_buffer[j * sp.dim + i] = particle_result * GetWeight2D(i, j, limit);
+            main_buffer[j * sp.dim + i] = particle_result;
         }
     }
 
-    result = ComputeResult(main_buffer);
-
 #ifndef TESTS_ENABLED
     MakeTexture();
-#endif //TESTS_ENABLED
+#endif
+
+    // Apply weights for integration.
+    for (int j = 0; j < limit; j++)
+        for (int i = 0; i < limit; i++)
+            main_buffer[j * sp.dim + i] *= GetWeight2D(i, j, limit);
+    
+    result = ComputeResult(main_buffer);
 
     return true;
 }

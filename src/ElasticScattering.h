@@ -38,6 +38,7 @@ protected:
 public:
 	virtual bool Compute(const SimulationParameters &p_sp, double &result) = 0;
 	void Draw();
+	uint32_t GetTextureID() const;
 };
 
 class CPUElasticScattering : public ElasticScattering {
@@ -49,7 +50,7 @@ class CPUElasticScattering : public ElasticScattering {
 
 public:
 	virtual bool Compute(const SimulationParameters &p_sp, double& result);
-	
+
 	CPUElasticScattering();
 };
 
@@ -59,7 +60,7 @@ class GPUElasticScattering : public ElasticScattering {
 
 public:
 	virtual bool Compute(const SimulationParameters &p_sp, double& result);
-	
+
 	GPUElasticScattering(bool show_info = false);
 	~GPUElasticScattering();
 };

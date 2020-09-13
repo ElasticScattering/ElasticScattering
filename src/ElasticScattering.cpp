@@ -77,3 +77,7 @@ void ElasticScattering::Draw()
 	glBindVertexArray(ogl.vao);
 	glDrawArrays(GL_QUADS, 0, 4);
 }
+
+uint32_t ElasticScattering::GetTextureID() const {
+	return ogl.tex;
+}
