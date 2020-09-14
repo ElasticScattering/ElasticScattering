@@ -219,6 +219,9 @@
     <ClCompile Include="libs\imgui\imgui_impl_glfw.cpp" />
     <ClCompile Include="libs\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="libs\implot\implot.cpp" />
+    <ClCompile Include="libs\implot\implot_demo.cpp" />
+    <ClCompile Include="libs\implot\implot_items.cpp" />
     <ClCompile Include="src\app_main.cpp" />
     <ClCompile Include="src\CPUElasticScattering.cpp" />
     <ClCompile Include="src\ElasticScattering.cpp" />
@@ -236,6 +239,8 @@
     <ClInclude Include="libs\imgui\imstb_rectpack.h" />
     <ClInclude Include="libs\imgui\imstb_textedit.h" />
     <ClInclude Include="libs\imgui\imstb_truetype.h" />
+    <ClInclude Include="libs\implot\implot.h" />
+    <ClInclude Include="libs\implot\implot_internal.h" />
     <ClInclude Include="src\app_main.h" />
     <ClInclude Include="src\ElasticScattering.h" />
     <ClInclude Include="src\escl\common.h" />
