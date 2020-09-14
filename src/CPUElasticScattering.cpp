@@ -5,7 +5,7 @@
 #endif //TESTS_ENABLED
 
 
-bool CPUElasticScattering::Compute(const SimulationParameters& p_sp, double& result)
+bool CPUElasticScattering::Compute(SimulationParameters& p_sp, double& result)
 {
     if (!PrepareCompute(p_sp)) return false;
 
@@ -37,14 +37,15 @@ bool CPUElasticScattering::Compute(const SimulationParameters& p_sp, double& res
     return true;
 }
 
-bool CPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp) {
+bool CPUElasticScattering::PrepareCompute(SimulationParameters &p_sp) {
+    CompleteSimulationParameters(p_sp);
+
     if (!first_run && !AnythingChanged(p_sp)) return false;
 
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);
 
     sp = p_sp;
-    CompleteSimulationParameters();
         
     if (first_run || impurities_changed)
         GenerateImpurities(sp);

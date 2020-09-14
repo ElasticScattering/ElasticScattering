@@ -36,7 +36,7 @@ OCLResources ocl;
 
 double last_result2;
 
-bool GPUElasticScattering::Compute(const SimulationParameters& p_sp, double &result)
+bool GPUElasticScattering::Compute(SimulationParameters& p_sp, double &result)
 {
     bool need_update = PrepareCompute(p_sp);
     if (!need_update) return false;
@@ -76,9 +76,11 @@ bool GPUElasticScattering::Compute(const SimulationParameters& p_sp, double &res
     return true;
 }
 
-bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
+bool GPUElasticScattering::PrepareCompute(SimulationParameters &p_sp)
 {
     cl_int clStatus;
+
+    CompleteSimulationParameters(p_sp);
 
     if (!first_run && !AnythingChanged(p_sp)) return false;
 
@@ -86,7 +88,6 @@ bool GPUElasticScattering::PrepareCompute(const SimulationParameters &p_sp)
     bool work_size_changed  = (sp.dim != p_sp.dim);
     
     sp = p_sp;
-    CompleteSimulationParameters();
 
     if (first_run || impurities_changed) {
         GenerateImpurities(sp);

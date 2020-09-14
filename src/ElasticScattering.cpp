@@ -30,10 +30,14 @@ double ElasticScattering::FinishSigma(double res) {
 	return outside * res;
 };
 
-void ElasticScattering::CompleteSimulationParameters() {
-	sp.angular_speed = E * sp.magnetic_field / M;
+void ElasticScattering::CompleteSimulationParameters(SimulationParameters& p_sp) {
+	p_sp.angular_speed = E * p_sp.magnetic_field / M;
+
+	if (p_sp.is_incoherent == 1) {
+		p_sp.tau = HBAR / (KB * p_sp.temperature);
+	}
 	
-	particle_count = sp.dim * sp.dim;
+	particle_count = p_sp.dim * p_sp.dim;
 }
 
 bool ElasticScattering::AnythingChanged(const SimulationParameters& p_sp) {
@@ -41,7 +45,7 @@ bool ElasticScattering::AnythingChanged(const SimulationParameters& p_sp) {
 		sp.region_size == p_sp.region_size && sp.dim == p_sp.dim &&
 		sp.particle_speed == p_sp.particle_speed &&
 		sp.impurity_count == p_sp.impurity_count && sp.impurity_radius == p_sp.impurity_radius &&
-		sp.alpha == p_sp.alpha && sp.phi == p_sp.phi &&
+		sp.alpha == p_sp.alpha && sp.phi == p_sp.phi && sp.temperature == p_sp.temperature &&
 		sp.magnetic_field == p_sp.magnetic_field && sp.tau == p_sp.tau &&
 		sp.integrand_steps == p_sp.integrand_steps && sp.is_clockwise == p_sp.is_clockwise &&
 		sp.region_extends == p_sp.region_extends && sp.is_clockwise == p_sp.is_clockwise

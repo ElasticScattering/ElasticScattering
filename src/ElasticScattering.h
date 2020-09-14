@@ -30,13 +30,13 @@ protected:
 	double ComputeResult(const std::vector<double>& results);
 
 	bool AnythingChanged(const SimulationParameters& p_sp);
-	virtual bool PrepareCompute(const SimulationParameters& p_sp) = 0;
+	virtual bool PrepareCompute(SimulationParameters& p_sp) = 0;
 	void GenerateImpurities(const SimulationParameters& p_sp, bool p_random = false);
 
-	void CompleteSimulationParameters();
+	void CompleteSimulationParameters(SimulationParameters& p_sp);
 
 public:
-	virtual bool Compute(const SimulationParameters &p_sp, double &result) = 0;
+	virtual bool Compute(SimulationParameters &p_sp, double &result) = 0;
 	void Draw();
 	uint32_t GetTextureID() const;
 };
@@ -45,21 +45,21 @@ class CPUElasticScattering : public ElasticScattering {
 	std::vector<double> main_buffer;
 	std::vector<float>  pixels;
 
-	virtual bool PrepareCompute(const SimulationParameters &p_sp);
+	virtual bool PrepareCompute(SimulationParameters &p_sp) override;
 	void MakeTexture();
 
 public:
-	virtual bool Compute(const SimulationParameters &p_sp, double& result);
+	virtual bool Compute(SimulationParameters &p_sp, double& result) override;
 
 	CPUElasticScattering();
 };
 
 class GPUElasticScattering : public ElasticScattering {
-	virtual bool PrepareCompute(const SimulationParameters &p_sp);
+	virtual bool PrepareCompute(SimulationParameters &p_sp) override;
 	void PrepareTexKernel(int pixels);
 
 public:
-	virtual bool Compute(const SimulationParameters &p_sp, double& result);
+	virtual bool Compute(SimulationParameters &p_sp, double& result) override;
 
 	GPUElasticScattering(bool show_info = false);
 	~GPUElasticScattering();

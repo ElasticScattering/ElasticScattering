@@ -6,6 +6,7 @@ SimulationParameters ParametersFactory::GenerateDefault() {
     sp.integrand_steps = 13;
     sp.dim = 128;
 
+    sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
     sp.phi = 1.0;
@@ -32,7 +33,8 @@ SimulationParameters ParametersFactory::GenerateNoImpurities() {
 
     sp.integrand_steps = 13;
     sp.dim = 128;
-
+    
+    sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
     sp.phi = 1.0;
@@ -60,6 +62,7 @@ SimulationParameters ParametersFactory::GenerateMinimal() {
     sp.integrand_steps = 7;
     sp.dim = 64;
 
+    sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
     sp.phi = 1.0;
