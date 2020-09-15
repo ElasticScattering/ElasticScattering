@@ -82,7 +82,10 @@ bool GPUElasticScattering::PrepareCompute(SimulationParameters &p_sp)
 
     CompleteSimulationParameters(p_sp);
 
+
     if (!first_run && !AnythingChanged(p_sp)) return false;
+
+    std::cout << "Impurity count: " << p_sp.impurity_count << std::endl;
 
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);

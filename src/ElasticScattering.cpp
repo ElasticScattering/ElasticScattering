@@ -37,6 +37,9 @@ void ElasticScattering::CompleteSimulationParameters(SimulationParameters& p_sp)
 		p_sp.tau = HBAR / (KB * p_sp.temperature);
 	}
 	
+	double area_dim = (p_sp.region_size + p_sp.region_extends * 2);
+	p_sp.impurity_count = max(1, ceil(area_dim * area_dim * p_sp.impurity_density));
+
 	particle_count = p_sp.dim * p_sp.dim;
 }
 
