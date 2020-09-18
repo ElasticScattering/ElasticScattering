@@ -1,4 +1,5 @@
 #include "ParametersFactory.h"
+#include "src/escl/constants.h"
 
 SimulationParameters ParametersFactory::GenerateDefault() {
 	SimulationParameters sp;

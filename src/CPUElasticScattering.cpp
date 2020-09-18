@@ -1,9 +1,9 @@
 #include "ElasticScattering.h"
+#include "src/escl/common.h"
 
 #ifndef TESTS_ENABLED
 #include "OpenGLUtils.h"
 #endif //TESTS_ENABLED
-
 
 bool CPUElasticScattering::Compute(SimulationParameters& p_sp, double& result)
 {

@@ -2,10 +2,9 @@
 #define ELASTIC_SCATTERING_H
 
 #include <vector>
-#include "escl/common.h"
+#include "src/SimulationParameters.h"
 
 #include <GL/glew.h>
-
 
 typedef struct
 {

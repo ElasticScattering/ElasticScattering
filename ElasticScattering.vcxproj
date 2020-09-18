@@ -226,6 +226,7 @@
     <ClCompile Include="src\CPUElasticScattering.cpp" />
     <ClCompile Include="src\ElasticScattering.cpp" />
     <ClCompile Include="src\GPUElasticScattering.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\OpenGLUtils.cpp" />
     <ClCompile Include="src\ParametersFactory.cpp" />
@@ -246,9 +247,11 @@
     <ClInclude Include="src\escl\common.h" />
     <ClInclude Include="src\escl\constants.h" />
     <ClInclude Include="src\escl\util.h" />
+    <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\OpenGLUtils.h" />
     <ClInclude Include="src\ParametersFactory.h" />
     <ClInclude Include="src\Shader.h" />
+    <ClInclude Include="src\SimulationParameters.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="tests\CPUComparisonTest.h" />

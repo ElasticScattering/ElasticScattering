@@ -1,4 +1,5 @@
 #include "ElasticScattering.h"
+#include "src/escl/common.h"
 #include <random>
 
 double ElasticScattering::ComputeResult(const std::vector<double>& results) {

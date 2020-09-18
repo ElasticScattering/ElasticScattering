@@ -8,6 +8,7 @@
 #include "utils/OpenCLUtils.h"
 #include "utils/ErrorMacros.h"
 #include "src/ParametersFactory.h"
+#include "src/escl/constants.h"
 
 #include <string>
 #include <iostream>
@@ -15,6 +16,9 @@
 #include <fstream>
 #include <unordered_map>
 #include "math.h"
+#include <thread>
+#include <chrono>
+
 
 #include <GL/glew.h>
 #include <GL/wglew.h>
@@ -63,7 +67,6 @@ void ProcessInput(GLFWwindow* window)
 }
 
 void ImGuiRender(ElasticScattering &es) {
-
     static v2      tau_bounds = { 1e-13, 1e-10 };
     static v2      temperature_bounds = { 0.001, 0.99 };
     
@@ -260,7 +263,8 @@ void ImGuiRender(ElasticScattering &es) {
                 ImGui::Checkbox("Sync immediately", &sync_immediate);
             }
             else {
-                run_iteration = ImGui::Button("Generate graphs");
+                run_iteration = ImGui::Button("Generate graphs (magnetic field)");
+                //run_iteration = ImGui::Button("Generate graphs (temperature)");
             }
         }
         ImGui::End();
@@ -505,6 +509,11 @@ int app_main(int argc, char** argv)
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        long time_remaining = last_result_time * 1000 - 16;
+        if (time_remaining < 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(abs(time_remaining)));
+        }
     }
 
     ImPlot::DestroyContext();

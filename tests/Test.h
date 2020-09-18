@@ -2,6 +2,7 @@
 #define TEST_H
 
 #include "src/ElasticScattering.h"
+#include "src/escl/common.h"
 #include "src/utils/OpenCLUtils.h"
 #include "src/ParametersFactory.h"
 
