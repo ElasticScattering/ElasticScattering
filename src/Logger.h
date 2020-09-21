@@ -1,11 +1,12 @@
 #pragma once
 
 #include "src/SimulationParameters.h"
+#include "src/SimulationResult.h"
 #include <vector>
 
 class Logger {
 public:
-	void LogArrays(const SimulationParameters& sp, const std::vector<double>& xs, const std::vector<double>& yss) const;
+	void LogResult(const SimulationParameters& sp, const SimulationResult& sr) const;
 
 	//Logger();
 };

@@ -72,12 +72,12 @@ SimulationParameters ParametersFactory::GenerateMinimal() {
     sp.alpha = PI / 4.0;
     sp.particle_speed = 1.67834e5;
 
-    sp.impurity_count = 100;
+    sp.impurity_count = 1;
     sp.impurity_radius = 2e-9;
     sp.impurity_seed = 0;
     sp.region_size = 1e-5;
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
-    sp.impurity_density = 1e12;
+    sp.impurity_density = 1e1;
 
     sp.is_diag_regions = 0;
     sp.is_clockwise = 0;

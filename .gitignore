@@ -1,6 +1,7 @@
 Debug/
 Release/
 x64/
+ES Logs/
 
 .vs/
 *.filters
