@@ -42,7 +42,7 @@ bool GPUElasticScattering::Compute(SimulationParameters& p_sp, double &result)
     if (!need_update) return false;
 
     size_t global_work_size[2] = { (size_t)sp.dim, (size_t)sp.dim };
-    size_t local_work_size[2] = { min(sp.dim, 256), 1 };
+    size_t local_work_size[2] = { min(sp.dim, 256), 256 / min(sp.dim, 256) };
 
     cl_int clStatus;
 

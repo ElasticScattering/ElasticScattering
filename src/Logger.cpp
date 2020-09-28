@@ -1,3 +1,5 @@
+#pragma warning(disable : 4996)
+
 #include "src/Logger.h"
 #include "src/escl/constants.h"
 
@@ -35,7 +37,7 @@ void Logger::LogResult(const SimulationParameters& sp, const SimulationResult& s
 
     file << std::scientific << std::setprecision(10);
     file << "# Elastic Scattering Results" << std::endl;
-    file << "# Completed on: " << std::ctime(&date_time) << "." << std::endl;
+    file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
     file << "# Elapsed time: " << sr.time_elapsed << " seconds." << std::endl;
     file << "# Each row is the average of "<< sr.iterations_per_run << " iterations with different impurity seeds): " << std::endl;
     file << "# Simulation parameters:" << std::endl;
@@ -43,12 +45,10 @@ void Logger::LogResult(const SimulationParameters& sp, const SimulationResult& s
     file << "#\t" << "Dimension:        " << sp.dim << std::endl;
     file << "#\t" << "Diag. regions:    " << ((sp.is_diag_regions == 1) ? "True" : "False") << std::endl;
     file << "#\t" << "Clockwise:        " << ((sp.is_clockwise == 1)    ? "True" : "False") << std::endl;
-    file << "#\t" << "Incoherent:       " << ((sp.is_incoherent == 1)   ? "True" : "False") << std::endl; 
     file << "#" << std::endl;
     file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
     file << "#\t" << "Tau:              " << sp.tau << std::endl;
     file << "#\t" << "Magnetic field:   " << sp.magnetic_field << std::endl;
-    file << "#\t" << "Phi:              " << sp.phi << std::endl;
     file << "#\t" << "Alpha:            " << sp.alpha << std::endl;
     file << "#\t" << "Particle speed:   " << sp.particle_speed << std::endl;
     file << "#\t" << "Angular speed:    " << sp.angular_speed << std::endl;
@@ -60,11 +60,11 @@ void Logger::LogResult(const SimulationParameters& sp, const SimulationResult& s
     file << "#\t" << "Radius:           " << sp.impurity_radius << std::endl;
 
     file << "#\n#Constants:" << std::endl;
-    file << "#\t" << "Mass0: " << M0 << std::endl;
-    file << "#\t" << "E:     " << E << std::endl;
-    file << "#\t" << "HBAR:  " << HBAR << std::endl;
-    file << "#\t" << "C:     " << C1 << std::endl;
-    file << "#\t" << "KB:    " << KB << std::endl;
+    file << "#\t" << "Particle mass: " << M << std::endl;
+    file << "#\t" << "E:             " << E << std::endl;
+    file << "#\t" << "HBAR:          " << HBAR << std::endl;
+    file << "#\t" << "C:             " << C1 << std::endl;
+    file << "#\t" << "KB:            " << KB << std::endl;
 
     file << "#\n#Results:\n" << std::endl;
 

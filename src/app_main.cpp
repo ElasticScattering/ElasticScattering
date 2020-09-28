@@ -44,12 +44,12 @@ bool sync_immediate = true;
 Logger logger;
 
 v2 tau_bounds            = { 1e-13, 1e-10 };
-v2 temperature_bounds    = { 1, 100 };
+v2 temperature_bounds    = { 0, 70 };
 
 v2 radius_bounds         = { 5e-8, 2e-6 };
 v2 region_bounds         = { 1e-6,  5e-4 };
 v2 extends_bounds        = { 1e-5,  5e-4 };
-v2 density_bounds        = { 1e9,  1e12 };
+v2 density_bounds        = { 1e9,  1e13 };
 
 v2 particle_speed_bounds = { 1e6, 1e9 };
 v2 phi_bounds            = { 0, PI2 };
@@ -168,11 +168,12 @@ Action ShowWindowParameters() {
         ImGui::Checkbox("Clockwise", &is_electron);
         sp.is_clockwise = is_electron ? 1 : 0;
 
-        if (!action.interactive || sp.mode != MODE_DIR_LIFETIME) {
-            ImGui::Checkbox("Diagonal regions", &is_diag_regions);
+        ImGui::Checkbox("Diagonal regions", &is_diag_regions);
+        sp.is_diag_regions = is_diag_regions ? 1 : 0;
+
+        if (action.interactive && sp.mode == MODE_DIR_LIFETIME) {
             ImGui::Checkbox("Incoherent", &is_incoherent);
 
-            sp.is_diag_regions = is_diag_regions ? 1 : 0;
             sp.is_incoherent = is_incoherent ? 1 : 0;
         }
 
@@ -222,11 +223,17 @@ Action ShowWindowParameters() {
     return action;
 }
 
-SimulationResult& ComputeSimulation(ElasticScattering& es)
+void ComputeSimulation(ElasticScattering& es, SimulationResult& sr)
 {
     first_iteration = false;
 
-    SimulationResult sr;
+
+    /*std::vector<double> zs{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                                    1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                    10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+    sr.n_runs = zs.size();
+                                    */
+    sr.n_runs = 50;
     sr.xs.resize(sr.n_runs);
     sr.xs_temperature.resize(sr.n_runs);
 
@@ -236,13 +243,15 @@ SimulationResult& ComputeSimulation(ElasticScattering& es)
     sr.results_xy.resize(sr.n_runs);
     sr.results_xyi.resize(sr.n_runs);
 
-    sr.n_runs = 50;
     sr.iterations_per_run = 3;
     sr.x_is_temperature = false;
 
-    v2 range = { 0.01, 120 };
-
+    v2 range = { 0.01, 50 };
     double step_size = (range.y - range.x) / sr.n_runs;
+
+    double coherent_tau = sp.tau;
+    bool run_incoherent = sp.alpha > 0.000001;
+    bool run_coherent = abs(sp.alpha - (PI / 4)) > 0.000001;
 
     for (int i = 0; i < sr.n_runs; i++) {
         sp.magnetic_field = range.x + step_size * i;
@@ -261,12 +270,22 @@ SimulationResult& ComputeSimulation(ElasticScattering& es)
                 sp.impurity_seed = 1123 + j * 831;
                 double result, resulti;
 
-                sp.is_incoherent = true;
-                es.Compute(sp, resulti);
+                if (run_incoherent) {
+                    sp.is_incoherent = 1;
+                    es.Compute(sp, resulti);
+                }
+                else {
+                    resulti = 0;
+                }
 
-                sp.is_incoherent = false;
-                sp.tau = 1e-11;
-                es.Compute(sp, result);
+                if (run_coherent) {
+                    sp.is_incoherent = 0;
+                    sp.tau = coherent_tau;
+                    es.Compute(sp, result);
+                }
+                else {
+                    result = 0;
+                }
 
                 double sxx = result / 1e8;
                 double sxx_i = resulti / 1e8;
@@ -284,7 +303,7 @@ SimulationResult& ComputeSimulation(ElasticScattering& es)
                 double sxx_sq_exp = total_sigma_xx_sq / (double)(sr.iterations_per_run) + 1e-15;
                 double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(sr.iterations_per_run);
 
-                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) * sr.iterations_per_run / (sr.iterations_per_run - 1));
+                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(sr.iterations_per_run-1));
                 sr.delta_xxi[i] = sxx_std / sxx_exp;
             }
         }
@@ -301,12 +320,22 @@ SimulationResult& ComputeSimulation(ElasticScattering& es)
                 sp.impurity_seed = 1123 + j * 831;
                 double result, resulti;
 
-                sp.is_incoherent = true;
-                es.Compute(sp, resulti);
+                if (run_incoherent) {
+                    sp.is_incoherent = 1;
+                    es.Compute(sp, resulti);
+                }
+                else {
+                    resulti = 0;
+                }
 
-                sp.is_incoherent = false;
-                sp.tau = 1e-11;
-                es.Compute(sp, result);
+                if (run_coherent) {
+                    sp.is_incoherent = 0;
+                    sp.tau = coherent_tau;
+                    es.Compute(sp, result);
+                }
+                else {
+                    result = 0;
+                }
 
                 double sxy = result / 1e8;
                 double sxy_i = resulti / 1e8;
@@ -323,51 +352,7 @@ SimulationResult& ComputeSimulation(ElasticScattering& es)
 
         printf("Progress %d/%d\n", i, sr.n_runs);
     }
-
-    return sr;
 }
-
-/*
-void ComputeArrays(ElasticScattering& es, int iterations, const std::vector<double>& arr_coh, const std::vector<double>& arr_inc)
-{
-    sp.mode = MODE_SIGMA_XX;
-
-    double total_sigma_xx = 0;
-    double total_sigma_xxi = 0;
-    double total_sigma_xx_sq = 0;
-
-    for (int j = 0; j < iterations; j++) {
-        sp.impurity_seed = 1123 + j * 831;
-        double result, resulti;
-
-        sp.is_incoherent = true;
-        es.Compute(sp, resulti);
-
-        sp.is_incoherent = false;
-        sp.tau = 1e-11;
-        es.Compute(sp, result);
-
-        double sxx = result / 1e8;
-        double sxx_i = resulti / 1e8;
-
-        total_sigma_xx += sxx;
-        total_sigma_xxi += sxx_i;
-        total_sigma_xx_sq += (sxx_i + sxx) * (sxx_i + sxx);
-    }
-
-    {
-        arr_inc[i] = (total_sigma_xxi) / (double)(sr.iterations_per_run);
-        arr_coh[i] = (total_sigma_xx) / (double)(sr.iterations_per_run);
-
-
-        double sxx_sq_exp = total_sigma_xx_sq / (double)(sr.iterations_per_run) + 1e-15;
-        double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(sr.iterations_per_run);
-
-        double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) * sr.iterations_per_run / (sr.iterations_per_run - 1));
-        sr.delta_xxi[i] = sxx_std / sxx_exp;
-    }
-}
-*/
 
 void ImGuiRender(ElasticScattering &es) {
     //Setup dockspace
@@ -402,8 +387,21 @@ void ImGuiRender(ElasticScattering &es) {
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
         }
 
+        // Menu bar.
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        if (ImGui::BeginMenuBar())
+        {
+            ImGui::SameLine(ImGui::GetWindowWidth() - 300.0f);
+            ImGui::Text("Mean free path: %.3e m | (%.3f ms)", last_result, (last_result_time * 1000.0));
+            //printf("Mean free path: %.3e m | (%.3f ms)\n", last_result, (last_result_time * 1000.0));
+
+            ImGui::EndMenuBar();
+        }
+        ImGui::PopStyleVar();
+
         ImGui::PopStyleVar(2);
     }
+
 
     Action action = ShowWindowParameters();
 
@@ -413,38 +411,49 @@ void ImGuiRender(ElasticScattering &es) {
         if (es.Compute(sp, last_result)) {
             QueryPerformanceCounter(&endClock);
             last_result_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+            std::cout << last_result_time << " " << sp.impurity_count << std::endl;
         }
     }
     else if (action.compute_requested) { // Graph / Not interactive
         SimulationParameters old_sp = sp;
 
-        sp.impurity_density = 5.42e10;
-        sp.impurity_radius  = 1.11e-6;
-        sp.region_extends   = 1e-4;
-        sp.region_size      = 1e-4;
-        sp.alpha            = 0.3;
+#if 1
+        sp.impurity_density = 5.34e14;
+        sp.impurity_radius = 1.11e-8;
+        sp.region_extends = 1e-6;
+        sp.region_size = 1e-6;
+        sp.alpha = 0;
+        sp.dim = 64;
+        sp.tau = 1e-11;
+#else
+        sp.impurity_density = 5.34e12;
+        sp.impurity_radius = 1.11e-7;
+        sp.region_extends = 1e-5;
+        sp.region_size = 4e-5;
+        sp.alpha = PI/4;
+        sp.dim = 128;
+#endif
 
-        for (int i = 0; i < 3; i++)
-        {
-            if      (i == 0) sp.temperature = 1;
-            else if (i == 1) sp.temperature = 4;
-            else if (i == 2) sp.temperature = 100;
-            
-            sp.magnetic_field = 5 * sp.temperature;
+        //const std::vector<double> zs{0.2, 0.5, 1, 2, 4, 8, 15, 30, 60 };
+
+        const std::vector<double> zs{ 1 };
+
+        for (int i = 0; i < zs.size(); i++) {
+            sp.temperature = zs[i];
 
             QueryPerformanceCounter(&beginClock);
 
-            auto result = ComputeSimulation(es);
+            SimulationResult result;
+            ComputeSimulation(es, result);
             QueryPerformanceCounter(&endClock);
             result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
 
             logger.LogResult(sp, result);
-            printf("Simulation completed %d/%d\n", i, 3);
+            printf("Simulation completed %d/%d\n", i+1, zs.size());
         }
-
+     
         sp = old_sp;
     }
-
 
 #if 0
     //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_xx;
@@ -513,18 +522,6 @@ void ImGuiRender(ElasticScattering &es) {
 
     ImGui::PopStyleVar();
     ImGui::End();
-
-    // Menu bar.
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-
-    if (ImGui::BeginMenuBar())
-    {
-        ImGui::SameLine(ImGui::GetWindowWidth() - 300.0f);
-        ImGui::Text("Mean free path: %.3e m | (%.3f ms)", last_result, (last_result_time * 1000.0));
-        ImGui::EndMenuBar();
-    }
-    ImGui::PopStyleVar();
-
 
     ImGui::End(); // Dockspace
 }
