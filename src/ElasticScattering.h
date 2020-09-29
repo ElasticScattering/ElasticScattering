@@ -8,6 +8,13 @@
 
 typedef struct
 {
+	bool use_gpu;
+	bool run_tests;
+	bool dont_show_info;
+} InitParameters;
+
+typedef struct
+{
 	GLuint tex;
 	GLuint vbo, vao;
 	GLuint shader_program;
@@ -60,7 +67,8 @@ class GPUElasticScattering : public ElasticScattering {
 public:
 	virtual bool Compute(SimulationParameters &p_sp, double& result) override;
 
-	GPUElasticScattering(bool show_info = false);
+	GPUElasticScattering();
+	GPUElasticScattering(const InitParameters &init);
 	~GPUElasticScattering();
 };
 

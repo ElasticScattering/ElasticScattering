@@ -3,8 +3,8 @@
 
 #include <windows.h>
 
-#include "app_main.h"
 #include "ElasticScattering.h"
+#include "app_main.h"
 #include "utils/OpenCLUtils.h"
 #include "utils/ErrorMacros.h"
 #include "src/ParametersFactory.h"
@@ -44,7 +44,7 @@ bool sync_immediate = true;
 Logger logger;
 
 v2 tau_bounds            = { 1e-13, 1e-10 };
-v2 temperature_bounds    = { 0, 70 };
+v2 temperature_bounds    = { 0, 10 };
 
 v2 radius_bounds         = { 5e-8, 2e-6 };
 v2 region_bounds         = { 1e-6,  5e-4 };
@@ -228,12 +228,14 @@ void ComputeSimulation(ElasticScattering& es, SimulationResult& sr)
     first_iteration = false;
 
 
-    /*std::vector<double> zs{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+    /*
+    std::vector<double> zs{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
                                     1, 2, 3, 4, 5, 6, 7, 8, 9,
                                     10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
     sr.n_runs = zs.size();
-                                    */
-    sr.n_runs = 50;
+    */
+
+    sr.n_runs = 20;
     sr.xs.resize(sr.n_runs);
     sr.xs_temperature.resize(sr.n_runs);
 
@@ -246,7 +248,7 @@ void ComputeSimulation(ElasticScattering& es, SimulationResult& sr)
     sr.iterations_per_run = 3;
     sr.x_is_temperature = false;
 
-    v2 range = { 0.01, 50 };
+    v2 range = { 0.01, 40 };
     double step_size = (range.y - range.x) / sr.n_runs;
 
     double coherent_tau = sp.tau;
@@ -411,7 +413,7 @@ void ImGuiRender(ElasticScattering &es) {
         if (es.Compute(sp, last_result)) {
             QueryPerformanceCounter(&endClock);
             last_result_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-            std::cout << last_result_time << " " << sp.impurity_count << std::endl;
+            //std::cout << last_result_time << " " << sp.impurity_count << std::endl;
         }
     }
     else if (action.compute_requested) { // Graph / Not interactive
@@ -421,9 +423,9 @@ void ImGuiRender(ElasticScattering &es) {
         sp.impurity_density = 5.34e14;
         sp.impurity_radius = 1.11e-8;
         sp.region_extends = 1e-6;
-        sp.region_size = 1e-6;
-        sp.alpha = 0;
-        sp.dim = 64;
+        sp.region_size = 4e-6;
+        sp.alpha = 0.3;
+        sp.dim = 128;
         sp.tau = 1e-11;
 #else
         sp.impurity_density = 5.34e12;
@@ -434,9 +436,9 @@ void ImGuiRender(ElasticScattering &es) {
         sp.dim = 128;
 #endif
 
-        //const std::vector<double> zs{0.2, 0.5, 1, 2, 4, 8, 15, 30, 60 };
+        const std::vector<double> zs{15, 60 };
 
-        const std::vector<double> zs{ 1 };
+        //const std::vector<double> zs{ 1 };
 
         for (int i = 0; i < zs.size(); i++) {
             sp.temperature = zs[i];
@@ -526,7 +528,7 @@ void ImGuiRender(ElasticScattering &es) {
     ImGui::End(); // Dockspace
 }
 
-int app_main(int argc, char** argv)
+int app_main(const InitParameters& init)
 {
     GLFWwindow* window;
 
@@ -573,7 +575,7 @@ int app_main(int argc, char** argv)
     QueryPerformanceFrequency(&clockFrequency);
 
     sp = ParametersFactory::GenerateMinimal();
-    GPUElasticScattering es;
+    GPUElasticScattering es(init);
 
     es.Compute(sp, last_result);
 

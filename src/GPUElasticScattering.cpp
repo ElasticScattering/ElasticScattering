@@ -207,10 +207,29 @@ void GPUElasticScattering::PrepareTexKernel(int dim)
 }
 #endif // TESTS_ENABLED
 
-GPUElasticScattering::GPUElasticScattering(bool show_info)
+GPUElasticScattering::GPUElasticScattering()
 {
-    InitializeOpenCL(&ocl.deviceID, &ocl.context, &ocl.queue);
-    if (show_info) 
+    InitParameters init;
+    init.dont_show_info = false;
+    init.use_gpu = true;
+    init.run_tests = false;
+
+    InitializeOpenCL(init.use_gpu, &ocl.deviceID, &ocl.context, &ocl.queue);
+    if (!init.dont_show_info)
+        PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
+
+    CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
+
+#ifndef TESTS_ENABLED
+    OpenGLUtils o;
+    o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
+#endif //TESTS_ENABLED
+}
+
+GPUElasticScattering::GPUElasticScattering(const InitParameters& init)
+{
+    InitializeOpenCL(init.use_gpu, &ocl.deviceID, &ocl.context, &ocl.queue);
+    if (!init.dont_show_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);

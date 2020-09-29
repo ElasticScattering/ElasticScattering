@@ -71,7 +71,7 @@ static std::string CLErrorString(int err) {
     }
 }
 
-static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue) 
+static void InitializeOpenCL(bool prefer_gpu, cl_device_id *p_deviceID, cl_context *p_ctx, cl_command_queue *p_queue)
 {
     *p_deviceID = nullptr;
     *p_ctx      = nullptr;
@@ -101,7 +101,10 @@ static void InitializeOpenCL(cl_device_id *p_deviceID, cl_context *p_ctx, cl_com
         CL_FAIL_CONDITION(cl_status, "Could not get platform info.");
 
         bool is_intel = strncmp("Intel", platform_vendor, strlen("Intel")) == 0;
-        score *= is_intel ? 1 : 0.1f;
+        if (prefer_gpu) 
+            score *= is_intel ? 0.1f : 1;
+        else 
+            score *= is_intel ? 1 : 0.1f;
 
         cl_device_id device_id = nullptr;
         cl_device_type device_type = CL_DEVICE_TYPE_GPU;
@@ -250,7 +253,8 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
         extensions.push_back(ext);
     }
 
-    bool glinterop = std::find(extensions.begin(), extensions.end(), "cl_khr_gl_sharing") != extensions.end();
+    bool glinterop  = std::find(extensions.begin(), extensions.end(), "cl_khr_gl_sharing") != extensions.end();
+    bool double_sup = std::find(extensions.begin(), extensions.end(), "cl_khr_fp64") != extensions.end();
 
     /* Doesn't work
     cl_uint	uMaxImage2DWidth;
@@ -274,7 +278,8 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
     std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
     std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
-    std::cout << "GL Interop Available:           " << (glinterop ? "True" : "False") << std::endl;
+    std::cout << "GL Interop:                     " << (glinterop ? "True" : "False") << std::endl;
+    std::cout << "Double Precision:               " << (double_sup ? "True" : "False") << std::endl;
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
 }
 

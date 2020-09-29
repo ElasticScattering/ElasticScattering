@@ -12,7 +12,7 @@ TEST_CASE("Sum kernel")
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
-	InitializeOpenCL(&device, &context, &queue);
+	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
 	CompileOpenCLProgram(device, context, "util.h", &program);
@@ -131,7 +131,7 @@ TEST_CASE("Add weights kernel")
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
-	InitializeOpenCL(&device, &context, &queue);
+	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
 	CompileOpenCLProgram(device, context, "common.h", &program);

@@ -15,7 +15,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
-	InitializeOpenCL(&device, &context, &queue);
+	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
 	CompileOpenCLProgram(device, context, "test.cl", &program);
@@ -84,7 +84,7 @@ TEST_CASE("Test double2")
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
-	InitializeOpenCL(&device, &context, &queue);
+	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
 	CompileOpenCLProgram(device, context, "test.cl", &program);

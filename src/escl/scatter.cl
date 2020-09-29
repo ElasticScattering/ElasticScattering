@@ -2,10 +2,10 @@
 
 __kernel void lifetime(__constant SimulationParameters *sp, __global double2 *impurities, __global double *lifetimes) 
 {
-    unsigned int x = get_global_id(0);
-    unsigned int y = get_global_id(1);
-    unsigned int row_size = get_global_size(0);
-    unsigned int limit = row_size-1;
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+    int limit = row_size-1;
     
     double result = 0;
     if ((x < limit) && (y < limit)) {
