@@ -7,7 +7,7 @@
 #include <string>
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
-    p_init->run_tests = false;
+    p_init->mode = ProgramMode::Interactive;
     p_init->use_gpu = false;
     p_init->dont_show_info = false;
 
@@ -16,12 +16,18 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         std::string w;
         w.assign(argv[1], strlen(argv[1]));
 
-        p_init->run_tests = (w == "test");
-        p_init->use_gpu   = (w == "gpu");
+        if (w == "test") {
+            p_init->mode = ProgramMode::Test;
+        } else if (w == "sim") {
+            p_init->mode = ProgramMode::Simulation;
+        } else {
+            p_init->mode = ProgramMode::Interactive;
+        }
 
         if (argc >= 3) {
             w.assign(argv[2], strlen(argv[2]));
             p_init->dont_show_info = (w == "silent");
+            p_init->use_gpu = (w == "gpu"); // todo...
         }
     }
 }
@@ -31,7 +37,8 @@ int main(int argc, char **argv)
     InitParameters init;
     ParseArgs(argc, argv, &init);
 
-    if (init.run_tests) test_main();
+    if (init.mode == ProgramMode::Test) test_main();
+    if (init.mode == ProgramMode::Simulation) sim_main();
     else                app_main(init);
     
     return 0;

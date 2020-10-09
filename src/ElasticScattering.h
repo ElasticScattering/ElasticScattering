@@ -4,12 +4,17 @@
 #include <vector>
 #include "src/SimulationParameters.h"
 
-#include <GL/glew.h>
+
+enum ProgramMode {
+	Test,
+	Simulation,
+	Interactive
+};
 
 typedef struct
 {
+	ProgramMode mode;
 	bool use_gpu;
-	bool run_tests;
 	bool dont_show_info;
 } InitParameters;
 
@@ -70,6 +75,17 @@ public:
 	GPUElasticScattering();
 	GPUElasticScattering(const InitParameters &init);
 	~GPUElasticScattering();
+};
+
+class SimulationElasticScattering : public ElasticScattering {
+	virtual bool PrepareCompute(SimulationParameters& p_sp) override;
+
+public:
+	virtual bool Compute(SimulationParameters& p_sp, double& result) override;
+
+	SimulationElasticScattering();
+	SimulationElasticScattering(const InitParameters& init);
+	~SimulationElasticScattering();
 };
 
 #endif // ELASTIC_SCATTERING_H

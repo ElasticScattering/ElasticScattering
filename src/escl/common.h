@@ -43,8 +43,8 @@ inline double GetWeight2D(int i, int j, int dim) {
     return w;
 }
 
-inline bool IsSigma(int m) {
-    return (m == MODE_SIGMA_XX || m == MODE_SIGMA_XY);
+inline bool ShouldComputeSigma(int m) {
+    return (m == MODE_SIMULATION || m == MODE_SIGMA_XX || m == MODE_SIGMA_XY);
 }
 
 inline double smod(const double a, const double b)
@@ -242,6 +242,18 @@ inline double single_lifetime(const double2 pos, const double phi, BUFFER_ARGS) 
     }
 }
 
+inline double sigma_multiplier(double lt, double phi, double tau, double w)
+{
+    double z = exp(-lt / tau);
+
+    double r = cos(phi) - cos(phi + w * lt) * z;
+
+    r += w * tau * sin(phi + w * lt) * z;
+    r -= w * tau * sin(phi);
+
+    return r;
+}
+
 inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 {
     const bool clockwise = (sp->is_clockwise == 1);
@@ -272,19 +284,16 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
 
             double result = single_lifetime(pos, phi, sp, impurities);
 
-            if (IsSigma(sp->mode)) {
-                double z = exp(-result / sp->tau);
+            if (ShouldComputeSigma(sp->mode)) {
+                double multiplier = sigma_multiplier(result, phi, sp->tau, w);
 
-                double r = cos(phi) - cos(phi + w * result) * z;
-                
-                r += w * sp->tau * sin(phi + w * result) * z;
-                r -= w * sp->tau * sin(phi);
+                if (sp->mode != MODE_SIMULATION) {
+                    double v;
+                    if (sp->mode == MODE_SIGMA_XX) v = cos(phi);
+                    else                           v = sin(phi);
 
-                double v;
-                if (sp->mode == MODE_SIGMA_XX) v = cos(phi);
-                else                           v = sin(phi);
-
-                result = r * v;
+                    result = multiplier * v;
+                }
             }
       
             double w = 1.0;

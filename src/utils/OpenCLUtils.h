@@ -189,6 +189,7 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     cl_uint     min_base_addr_align_size_bits = 0;
     cl_uint     min_base_addr_align_size_bytes = 0;
     cl_ulong    local_mem_size;
+    cl_ulong    global_mem_size;
     cl_long	    max_mem_alloc_size;
 
     size_t      num_bytes = 0;
@@ -236,6 +237,9 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_mem_size, &num_bytes);
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &global_mem_size, &num_bytes);
+    CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
+
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_long), &max_mem_alloc_size, &num_bytes);
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
@@ -277,6 +281,7 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     std::cout << "Device min datatype align size: " << min_base_addr_align_size_bytes << " (bytes)" << std::endl;
     std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
     std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
+    std::cout << "Device global mem. size:        " << (float)global_mem_size << std::endl;
     std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
     std::cout << "GL Interop:                     " << (glinterop ? "True" : "False") << std::endl;
     std::cout << "Double Precision:               " << (double_sup ? "True" : "False") << std::endl;

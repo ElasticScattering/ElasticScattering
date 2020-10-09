@@ -14,5 +14,6 @@
 #define MODE_PHI_LIFETIME 1
 #define MODE_SIGMA_XX 2
 #define MODE_SIGMA_XY 3
+#define MODE_SIMULATION 4
 
 #endif // CL_CONSTANTS
