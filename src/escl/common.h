@@ -6,12 +6,12 @@
 #ifdef DEVICE_PROGRAM
     #include "src/escl/util.h"
 
-    #define BUFFER_ARGS __constant SimulationParameters* sp, __global double2* impurities
+    #define BUFFER_ARGS __constant ScatteringParameters* sp, __global double2* impurities
 #else
     #include "math.h"
     #include <windows.h>
     #include "src/escl/constants.h"
-    #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
+    #define BUFFER_ARGS ScatteringParameters *sp, std::vector<v2> &impurities
     #define min(a, b) ((a) < (b)) ? (a) : (b)
 #endif
     
@@ -29,7 +29,7 @@ inline double GetWeight1D(int i, int dim) {
     return w;
 }
 
-inline double GetWeight2D(int i, int j, int dim) {
+inline double GetWeight2D(unsigned int i, int j, int dim) {
     double w = 1.0;
     if (!IsEdge(i, dim))
     {
@@ -285,14 +285,10 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
             double result = single_lifetime(pos, phi, sp, impurities);
 
             if (ShouldComputeSigma(sp->mode)) {
-                double multiplier = sigma_multiplier(result, phi, sp->tau, w);
+                result = sigma_multiplier(result, phi, sp->tau, w);
 
                 if (sp->mode != MODE_SIMULATION) {
-                    double v;
-                    if (sp->mode == MODE_SIGMA_XX) v = cos(phi);
-                    else                           v = sin(phi);
-
-                    result = multiplier * v;
+                    result *= (sp->mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi);
                 }
             }
       
@@ -313,6 +309,7 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
     return integral;
 }
 
+#ifndef NO_WINDOW
 inline float GetColor(double v, double scale, int mode) {
     if      (mode == MODE_DIR_LIFETIME) v /= scale;
     else if (mode == MODE_PHI_LIFETIME) v /= (scale * 15.0);
@@ -321,8 +318,67 @@ inline float GetColor(double v, double scale, int mode) {
 
     return (float)v;
 }
+#endif
 
 #ifdef DEVICE_PROGRAM
+double2 SIM_phi_lifetime(const double2 pos, BUFFER_ARGS)
+{
+    const bool clockwise = (sp->is_clockwise == 1);
+    const double w = (clockwise ? -sp->angular_speed : sp->angular_speed);
+
+    bool diag_regions = (sp->is_diag_regions == 1);
+    bool incoherent = (sp->is_incoherent == 1);
+
+    const double incoherent_area = sp->alpha * 2.0;
+    const double angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+
+    const double step_size = angle_area / (sp->integrand_steps - 1);
+
+    double base = (incoherent ? -sp->alpha : sp->alpha);
+    if (diag_regions) {
+        base += (incoherent ? (PI / 4.0) : -(PI / 4.0));
+    }
+
+    double2 integral = (double2)(0, 0);
+    for (int j = 0; j < 4; j++)
+    {
+        const double start = base + j * (PI * 0.5);
+        double2 total = (double2)(0, 0);;
+
+        for (int i = 0; i < sp->integrand_steps; i++)
+        {
+            const double phi = start + i * step_size;
+
+            double lt = single_lifetime(pos, phi, sp, impurities);
+            double result = sigma_multiplier(lt, phi, sp->tau, w);
+
+            bool is_edge_value = !(i == 0 || i == (sp->integrand_steps - 1));
+            double w = is_edge_value ? (((i % 2) == 0) ? 2.0 : 4.0) : 1.0;
+
+            total += (double2)(cos(phi), sin(phi)) * (result * w);
+        }
+
+        integral += total * (angle_area / ((sp->integrand_steps - 1) * 3.0));
+    }
+
+    return integral;
+}
+
+
+/*
+__kernel void SIM_add_integral_weights_2d(__global write_only double* xx, __global write_only double* xy)
+{
+    unsigned int x = get_global_id(0);
+    unsigned int y = get_global_id(1);
+    unsigned int row_size = get_global_size(0);
+
+    unsigned int idx = y * row_size + x;
+    double w = GetWeight2D(x, y, row_size - 1);
+    xx[idx] *= w;
+    xy[idx] *= w;
+}
+*/
+
 __kernel void add_integral_weights_2d(__global double* A)
 {
     int x = get_global_id(0);
@@ -333,6 +389,7 @@ __kernel void add_integral_weights_2d(__global double* A)
     A[i] *= GetWeight2D(x, y, row_size-1);
 }
 
+#ifndef NO_WINDOW
 __kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
 {
     int x = get_global_id(0);
@@ -349,7 +406,8 @@ __kernel void to_texture(__global double* lifetimes, int mode, double scale, __w
 
     write_imagef(screen, (int2)(x, y), c);
 }
+#endif // NO_WINDOW
 
-#endif
+#endif // DEVICE_PROGRAM
 
 #endif // CL_COMMON_H

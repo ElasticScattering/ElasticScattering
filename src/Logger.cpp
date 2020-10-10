@@ -13,7 +13,7 @@
 
 namespace fs = std::filesystem;
 
-void Logger::LogResult(const SimulationParameters& sp, const SimulationResult& sr) const
+void Logger::LogResult(const SimulationParameters& sim_params, const SimulationResult& sr)
 {
     auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -35,12 +35,14 @@ void Logger::LogResult(const SimulationParameters& sp, const SimulationResult& s
         ifile.close();
     }
 
+    ScatteringParameters sp = sim_params.scattering_params;
+
     file << std::scientific << std::setprecision(10);
     file << "# Elastic Scattering Results" << std::endl;
     file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
     file << "# Elapsed time: " << sr.time_elapsed << " seconds." << std::endl;
-    file << "# Each row is the average of "<< sr.iterations_per_run << " iterations with different impurity seeds): " << std::endl;
-    file << "# Simulation parameters:" << std::endl;
+    file << "# Each row is the average of "<< sim_params.samples_per_run << " iterations with different impurity seeds): " << std::endl;
+    file << "# Scattering parameters:" << std::endl;
     file << "#\t" << "Integrand steps:  " << sp.integrand_steps << std::endl;
     file << "#\t" << "Dimension:        " << sp.dim << std::endl;
     file << "#\t" << "Diag. regions:    " << ((sp.is_diag_regions == 1) ? "True" : "False") << std::endl;

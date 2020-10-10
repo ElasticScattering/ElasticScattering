@@ -5,7 +5,7 @@
 #include "OpenGLUtils.h"
 #endif //NO_WINDOW
 
-bool CPUElasticScattering::Compute(SimulationParameters& p_sp, double& result)
+bool CPUElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
 {
     if (!PrepareCompute(p_sp)) return false;
 
@@ -37,7 +37,7 @@ bool CPUElasticScattering::Compute(SimulationParameters& p_sp, double& result)
     return true;
 }
 
-bool CPUElasticScattering::PrepareCompute(SimulationParameters &p_sp) {
+bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
 
     if (!first_run && !AnythingChanged(p_sp)) return false;

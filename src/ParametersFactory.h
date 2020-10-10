@@ -1,10 +1,12 @@
 #pragma once
 
+#include "SimulationParameters.h"
 #include "ElasticScattering.h"
 
 class ParametersFactory {
 public:
-	static SimulationParameters GenerateMinimal();
-	static SimulationParameters GenerateDefault();
-	static SimulationParameters GenerateNoImpurities();
+	static ScatteringParameters& GenerateSimulation();
+	static ScatteringParameters& GenerateMinimal();
+	static ScatteringParameters& GenerateDefault();
+	static ScatteringParameters& GenerateNoImpurities();
 };

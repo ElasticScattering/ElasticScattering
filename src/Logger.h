@@ -6,7 +6,5 @@
 
 class Logger {
 public:
-	void LogResult(const SimulationParameters& sp, const SimulationResult& sr) const;
-
-	//Logger();
+	static void LogResult(const SimulationParameters& sp, const SimulationResult& sr);
 };

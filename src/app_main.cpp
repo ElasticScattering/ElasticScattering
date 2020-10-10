@@ -1,6 +1,5 @@
 #pragma once
-#define DOCTEST_CONFIG_IMPLEMENT
-
+#ifndef NO_WINDOW
 #include <windows.h>
 
 #include "ElasticScattering.h"
@@ -8,7 +7,6 @@
 #include "utils/OpenCLUtils.h"
 #include "utils/ErrorMacros.h"
 #include "src/ParametersFactory.h"
-#include "src/Logger.h"
 #include "src/escl/constants.h"
 #include "src/SimulationResult.h"
 
@@ -33,15 +31,13 @@
 
 LARGE_INTEGER beginClock, endClock, clockFrequency;
 
-SimulationParameters sp;
+ScatteringParameters sp;
 
 double last_result = 0;
 double last_result_time = 0;
 
 bool first_iteration = true;
 bool sync_immediate = true;
-
-Logger logger;
 
 v2 tau_bounds            = { 1e-13, 1e-10 };
 v2 temperature_bounds    = { 0, 10 };
@@ -57,7 +53,6 @@ v2 magnetic_field_bounds = { 0, 80 };
 v2 alpha_bounds          = { 0, PI / 4.0 };
 
 typedef struct {
-    bool interactive;
     bool compute_requested;
 } Action;
 
@@ -73,35 +68,12 @@ Action ShowWindowParameters() {
     bool is_incoherent = (sp.is_incoherent == 1);
 
     Action action;
-    action.interactive = false;
     action.compute_requested = false;
 
     if (ImGui::Begin("Elastic scattering")) {
         static int m = sp.mode;
 
         {
-            const char* items[] = { "Interactive", "Graph" };
-            static int item_current_idx = 0;                    // Here our selection data is an index.
-            const char* combo_label = items[item_current_idx];  // Label to preview before opening the combo (technically could be anything)(
-            if (ImGui::BeginCombo("Program", combo_label))
-            {
-                for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-                {
-                    const bool is_selected = (item_current_idx == n);
-                    if (ImGui::Selectable(items[n], is_selected))
-                        item_current_idx = n;
-
-                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-
-            action.interactive = (item_current_idx == 0);
-        }
-
-        if (action.interactive) {
             const char* items[] = { "One Path", "Phi Integrated", "Sigma XX", "Sigma XY" };
             static int item_current_idx = 0;                    // Here our selection data is an index.
             const char* combo_label = items[item_current_idx];  // Label to preview before opening the combo (technically could be anything)(
@@ -144,7 +116,7 @@ Action ShowWindowParameters() {
             sp.dim = values[item_current_idx];
         }
 
-        if (!action.interactive || sp.mode != MODE_DIR_LIFETIME) {
+        if (sp.mode != MODE_DIR_LIFETIME) {
             const char* items[] = { "7", "13", "25", "49", "99" };
             const int values[] = { 7,   13,   25,   49,   99 };
 
@@ -171,7 +143,7 @@ Action ShowWindowParameters() {
         ImGui::Checkbox("Diagonal regions", &is_diag_regions);
         sp.is_diag_regions = is_diag_regions ? 1 : 0;
 
-        if (action.interactive && sp.mode == MODE_DIR_LIFETIME) {
+        if (sp.mode == MODE_DIR_LIFETIME) {
             ImGui::Checkbox("Incoherent", &is_incoherent);
 
             sp.is_incoherent = is_incoherent ? 1 : 0;
@@ -184,12 +156,10 @@ Action ShowWindowParameters() {
         if (is_incoherent) ImGui::SliderScalar("Temperature (K)", ImGuiDataType_Double, &sp.temperature, &temperature_bounds.x, &temperature_bounds.y, "%.3f");
         else               ImGui::SliderScalar("Tau", ImGuiDataType_Double, &sp.tau, &tau_bounds.x, &tau_bounds.y, "%.2e");
 
-        if (action.interactive) {
-            ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%.2f");
+        ImGui::SliderScalar("B", ImGuiDataType_Double, &sp.magnetic_field, &magnetic_field_bounds.x, &magnetic_field_bounds.y, "%.2f");
             
-            if (sp.mode == MODE_DIR_LIFETIME)
-                ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%.2f", 1.0f);
-        }
+        if (sp.mode == MODE_DIR_LIFETIME)
+            ImGui::SliderScalar("Phi", ImGuiDataType_Double, &sp.phi, &phi_bounds.x, &phi_bounds.y, "%.2f", 1.0f);
 
         ImGui::SliderScalar("Particle Speed", ImGuiDataType_Double, &sp.particle_speed, &particle_speed_bounds.x, &particle_speed_bounds.y, "%.2e");
 
@@ -201,159 +171,19 @@ Action ShowWindowParameters() {
         ImGui::SliderScalar("Density", ImGuiDataType_Double, &sp.impurity_density, &density_bounds.x, &density_bounds.y, "%.2e");
         ImGui::SliderScalar("Radius", ImGuiDataType_Double, &sp.impurity_radius, &radius_bounds.x, &radius_bounds.y, "%.2e");
 
-        if (action.interactive) {
-            if (ImGui::Button("New seed")) {
-                sp.impurity_seed += 1;
-                action.compute_requested = true;
-            }
+        if (ImGui::Button("New seed")) {
+            sp.impurity_seed += 1;
+            action.compute_requested = true;
         }
         
         ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
-        if (action.interactive) {
-            action.compute_requested |= ImGui::Button("Compute"); ImGui::SameLine();
-            ImGui::Checkbox("Sync immediately", &sync_immediate);
-        }
-        else {
-            action.compute_requested |= ImGui::Button("Generate graphs (magnetic field)");
-        }
+        action.compute_requested |= ImGui::Button("Compute"); ImGui::SameLine();
+        ImGui::Checkbox("Sync immediately", &sync_immediate);
     }
     ImGui::End();
 
     return action;
-}
-
-void ComputeSimulation(ElasticScattering& es, SimulationResult& sr)
-{
-    first_iteration = false;
-
-
-    /*
-    std::vector<double> zs{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-                                    1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                    10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
-    sr.n_runs = zs.size();
-    */
-
-    sr.n_runs = 20;
-    sr.xs.resize(sr.n_runs);
-    sr.xs_temperature.resize(sr.n_runs);
-
-    sr.results_xx.resize(sr.n_runs);
-    sr.results_xxi.resize(sr.n_runs);
-    sr.delta_xxi.resize(sr.n_runs);
-    sr.results_xy.resize(sr.n_runs);
-    sr.results_xyi.resize(sr.n_runs);
-
-    sr.iterations_per_run = 3;
-    sr.x_is_temperature = false;
-
-    v2 range = { 0.01, 40 };
-    double step_size = (range.y - range.x) / sr.n_runs;
-
-    double coherent_tau = sp.tau;
-    bool run_incoherent = sp.alpha > 0.000001;
-    bool run_coherent = abs(sp.alpha - (PI / 4)) > 0.000001;
-
-    for (int i = 0; i < sr.n_runs; i++) {
-        sp.magnetic_field = range.x + step_size * i;
-        sr.xs[i] = sp.magnetic_field;
-        sr.xs_temperature[i] = sp.temperature;
-
-        // SIGMA XX
-        {
-            sp.mode = MODE_SIGMA_XX;
-
-            double total_sigma_xx = 0;
-            double total_sigma_xxi = 0;
-            double total_sigma_xx_sq = 0;
-
-            for (int j = 0; j < sr.iterations_per_run; j++) {
-                sp.impurity_seed = 1123 + j * 831;
-                double result, resulti;
-
-                if (run_incoherent) {
-                    sp.is_incoherent = 1;
-                    es.Compute(sp, resulti);
-                }
-                else {
-                    resulti = 0;
-                }
-
-                if (run_coherent) {
-                    sp.is_incoherent = 0;
-                    sp.tau = coherent_tau;
-                    es.Compute(sp, result);
-                }
-                else {
-                    result = 0;
-                }
-
-                double sxx = result / 1e8;
-                double sxx_i = resulti / 1e8;
-
-                total_sigma_xx += sxx;
-                total_sigma_xxi += sxx_i;
-                total_sigma_xx_sq += (sxx_i + sxx) * (sxx_i + sxx);
-            }
-
-            {
-                sr.results_xxi[i] = (total_sigma_xxi) / (double)(sr.iterations_per_run);
-                sr.results_xx[i] = (total_sigma_xx) / (double)(sr.iterations_per_run);
-
-
-                double sxx_sq_exp = total_sigma_xx_sq / (double)(sr.iterations_per_run) + 1e-15;
-                double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(sr.iterations_per_run);
-
-                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(sr.iterations_per_run-1));
-                sr.delta_xxi[i] = sxx_std / sxx_exp;
-            }
-        }
-
-        // SIGMA XY
-        {
-            sp.mode = MODE_SIGMA_XY;
-
-            double total_sigma_xy = 0;
-            double total_sigma_xyi = 0;
-            double total_sigma_xy_sq = 0;
-
-            for (int j = 0; j < sr.iterations_per_run; j++) {
-                sp.impurity_seed = 1123 + j * 831;
-                double result, resulti;
-
-                if (run_incoherent) {
-                    sp.is_incoherent = 1;
-                    es.Compute(sp, resulti);
-                }
-                else {
-                    resulti = 0;
-                }
-
-                if (run_coherent) {
-                    sp.is_incoherent = 0;
-                    sp.tau = coherent_tau;
-                    es.Compute(sp, result);
-                }
-                else {
-                    result = 0;
-                }
-
-                double sxy = result / 1e8;
-                double sxy_i = resulti / 1e8;
-
-                total_sigma_xy += sxy;
-                total_sigma_xyi += sxy_i;
-            }
-
-            {
-                sr.results_xy[i] = total_sigma_xy / (double)sr.iterations_per_run;
-                sr.results_xyi[i] = total_sigma_xyi / (double)sr.iterations_per_run;
-            }
-        }
-
-        printf("Progress %d/%d\n", i, sr.n_runs);
-    }
 }
 
 void ImGuiRender(ElasticScattering &es) {
@@ -407,7 +237,7 @@ void ImGuiRender(ElasticScattering &es) {
 
     Action action = ShowWindowParameters();
 
-    if (action.interactive && (sync_immediate || action.compute_requested)) {
+    if (sync_immediate || action.compute_requested) {
         QueryPerformanceCounter(&beginClock);
 
         if (es.Compute(sp, last_result)) {
@@ -416,101 +246,6 @@ void ImGuiRender(ElasticScattering &es) {
             //std::cout << last_result_time << " " << sp.impurity_count << std::endl;
         }
     }
-    else if (action.compute_requested) { // Graph / Not interactive
-        SimulationParameters old_sp = sp;
-
-#if 1
-        sp.impurity_density = 5.34e14;
-        sp.impurity_radius = 1.11e-8;
-        sp.region_extends = 1e-6;
-        sp.region_size = 4e-6;
-        sp.alpha = 0.3;
-        sp.dim = 128;
-        sp.tau = 1e-11;
-#else
-        sp.impurity_density = 5.34e12;
-        sp.impurity_radius = 1.11e-7;
-        sp.region_extends = 1e-5;
-        sp.region_size = 4e-5;
-        sp.alpha = PI/4;
-        sp.dim = 128;
-#endif
-
-        const std::vector<double> zs{15, 60 };
-
-        //const std::vector<double> zs{ 1 };
-
-        for (int i = 0; i < zs.size(); i++) {
-            sp.temperature = zs[i];
-
-            QueryPerformanceCounter(&beginClock);
-
-            SimulationResult result;
-            ComputeSimulation(es, result);
-            QueryPerformanceCounter(&endClock);
-            result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-
-            logger.LogResult(sp, result);
-            printf("Simulation completed %d/%d\n", i+1, zs.size());
-        }
-     
-        sp = old_sp;
-    }
-
-#if 0
-    //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_xx;
-    //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_xy;
-    //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_xxi;
-    //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_xyi;
-
-    //std::pair<std::vector<double>::iterator, std::vector<double>::iterator> minmax_rho;
-
-    auto minmax_xx = std::minmax_element(sr.results_xx.begin(), sr.results_xx.end());
-    auto minmax_xy = std::minmax_element(sr.results_xy.begin(), sr.results_xy.end());
-    auto minmax_xxi = std::minmax_element(sr.results_xxi.begin(), sr.results_xxi.end());
-    auto minmax_xyi = std::minmax_element(sr.results_xyi.begin(), sr.results_xyi.end());
-
-    auto minmax_rho = std::minmax_element(sr.results_rho_deriv.begin(), sr.results_rho_deriv.end());
-
-    /*
-    ImGui::Begin("Iteration");
-    if (!first_iteration) {
-        ImPlot::SetNextPlotLimits(0, RESULT_HISTORY_SIZE, *minmax_xxi.first, *minmax_xxi.second);
-        if (ImPlot::BeginPlot("Sigma XX Incoherent", "Magnetic field (tesla)", "Mean free path (km)")) {
-            ImPlot::PlotLine("Sigma XX Incoherent", xs.data(), results_xxi.data(), RESULT_HISTORY_SIZE);
-            ImPlot::EndPlot();
-        }
-
-        ImPlot::SetNextPlotLimits(0, RESULT_HISTORY_SIZE, *minmax_xyi.first, *minmax_xyi.second);
-        if (ImPlot::BeginPlot("Sigma XY Incoherent", "Magnetic field (tesla)", "Mean free path (km)")) {
-            ImPlot::PlotLine("Sigma XY Incoherent", xs.data(), results_xyi.data(), RESULT_HISTORY_SIZE);
-
-            ImPlot::EndPlot();
-        }
-
-        ImPlot::SetNextPlotLimits(0, RESULT_HISTORY_SIZE, *minmax_xx.first, *minmax_xx.second);
-        if (ImPlot::BeginPlot("Sigma XX Coherent", "Magnetic field (tesla)", "Mean free path (km)")) {
-            ImPlot::PlotLine("Sigma XX Coherent", xs.data(), results_xx.data(), RESULT_HISTORY_SIZE);
-            ImPlot::EndPlot();
-        }
-
-        ImPlot::SetNextPlotLimits(0, RESULT_HISTORY_SIZE, *minmax_xy.first, *minmax_xy.second);
-        if (ImPlot::BeginPlot("Sigma XY Coherent", "Magnetic field (tesla)", "Mean free path (km)")) {
-            ImPlot::PlotLine("Sigma XY Coherent", xs.data(), results_xy.data(), RESULT_HISTORY_SIZE);
-
-            ImPlot::EndPlot();
-        }
-
-        ImPlot::SetNextPlotLimits(0, (RESULT_HISTORY_SIZE-1), *minmax_rho.first, *minmax_rho.second);
-        if (ImPlot::BeginPlot("Rho", "Magnetic field (tesla)", "Afgeleide rho")) {
-            ImPlot::PlotLine("Rho", xs_rho.data(), results_rho_deriv.data(), RESULT_HISTORY_SIZE-1);
-
-            ImPlot::EndPlot();
-        }
-    }
-    ImGui::End();
-    */
-#endif
 
     // Output texture view
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -615,3 +350,4 @@ int app_main(const InitParameters& init)
     return 0;
 }
 
+#endif // NO_WINDOW

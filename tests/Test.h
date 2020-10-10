@@ -15,7 +15,7 @@
 
 TEST_CASE("Different scatter modes")
 {
-	SimulationParameters sp = ParametersFactory::GenerateDefault();
+	ScatteringParameters sp = ParametersFactory::GenerateDefault();
 	
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
@@ -41,7 +41,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	auto e  = new CPUElasticScattering();
 	auto e2 = new GPUElasticScattering();
 
-	SimulationParameters sp;
+	ScatteringParameters sp;
 	sp.region_size     = 1e-6;
 	sp.dim             = 64;
 	sp.particle_speed  = 7e5;

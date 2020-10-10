@@ -1,33 +1,5 @@
 #pragma once
 
-typedef struct
-{
-    int mode;
-    int dim; //-
-    int impurity_count;
-    int integrand_steps;
-
-    int is_clockwise;
-    int is_incoherent;
-    int is_diag_regions;
-
-    unsigned int impurity_seed;
-
-    double region_size;
-    double region_extends;
-    double impurity_density;
-    double particle_speed;      // v
-    double impurity_radius;     // r
-    double tau;
-    double temperature;
-
-    double alpha;
-    double phi;
-    double magnetic_field;      // B
-    double angular_speed;       // w
-} SimulationParameters;
-
-
 #ifndef DEVICE_PROGRAM
 struct v4 {
     double x, y, z, w;
@@ -74,3 +46,40 @@ struct v2 {
 
 inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };
 #endif
+
+typedef struct
+{
+    int mode;
+    int dim; //-
+    int impurity_count;
+    int integrand_steps;
+
+    int is_clockwise;
+    int is_incoherent;
+    int is_diag_regions;
+
+    unsigned int impurity_seed;
+
+    double region_size;
+    double region_extends;
+    double impurity_density;
+    double particle_speed;      // v
+    double impurity_radius;     // r
+    double tau;
+    double temperature;
+
+    double alpha;
+    double phi;
+    double magnetic_field;      // B
+    double angular_speed;       // w
+} ScatteringParameters;
+
+typedef struct SimulationParameters
+{
+    ScatteringParameters scattering_params;
+    int runs;
+    int samples_per_run;
+    double magnetic_field_min;
+    double magnetic_field_max;
+
+} SimulationParameters;

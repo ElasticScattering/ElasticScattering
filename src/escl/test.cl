@@ -1,12 +1,12 @@
 #ifdef DEVICE_PROGRAM
     #include "src/escl/util.h"
 
-    #define BUFFER_ARGS __global SimulationParameters* sp, __global double2* impurities
+    #define BUFFER_ARGS __global ScatteringParameters* sp, __global double2* impurities
     #define MIN(p_a, p_b) min((p_a), (p_b))
 #else
     #include "math.h"
     #include "escl/constants.h"
-    #define BUFFER_ARGS SimulationParameters *sp, std::vector<v2> &impurities
+    #define BUFFER_ARGS ScatteringParameters *sp, std::vector<v2> &impurities
     
     #define MIN(p_a, p_b) ((p_a) < (p_b)) ? (p_a) : (p_b)
 

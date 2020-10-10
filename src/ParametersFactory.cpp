@@ -1,8 +1,37 @@
 #include "ParametersFactory.h"
 #include "src/escl/constants.h"
 
-SimulationParameters ParametersFactory::GenerateDefault() {
-	SimulationParameters sp;
+ScatteringParameters& ParametersFactory::GenerateSimulation() {
+    ScatteringParameters sp;
+
+    sp.integrand_steps = 13;
+    sp.dim = 128;
+
+    sp.temperature = 4;
+    sp.tau = 1e-11;
+    sp.magnetic_field = 0;
+    sp.phi = 1.0;
+    sp.alpha = 0.3;
+    sp.particle_speed = 1.67834e5;
+    
+    sp.impurity_density = 5.34e14;
+    sp.impurity_radius = 1.11e-8;
+    sp.impurity_count = 100;
+    sp.impurity_seed = 0;
+    sp.region_extends = 1e-6;
+    sp.region_size = 4e-6;
+
+    sp.is_diag_regions = 0;
+    sp.is_clockwise = 0;
+    sp.is_incoherent = 1;
+
+    sp.mode = MODE_SIMULATION;
+
+    return sp;
+}
+
+ScatteringParameters& ParametersFactory::GenerateDefault() {
+	ScatteringParameters sp;
 
     sp.integrand_steps = 13;
     sp.dim = 128;
@@ -30,8 +59,8 @@ SimulationParameters ParametersFactory::GenerateDefault() {
     return sp;
 }
 
-SimulationParameters ParametersFactory::GenerateNoImpurities() {
-    SimulationParameters sp;
+ScatteringParameters& ParametersFactory::GenerateNoImpurities() {
+    ScatteringParameters sp;
 
     sp.integrand_steps = 13;
     sp.dim = 128;
@@ -59,8 +88,8 @@ SimulationParameters ParametersFactory::GenerateNoImpurities() {
     return sp;
 }
 
-SimulationParameters ParametersFactory::GenerateMinimal() {
-    SimulationParameters sp;
+ScatteringParameters& ParametersFactory::GenerateMinimal() {
+    ScatteringParameters sp;
 
     sp.integrand_steps = 7;
     sp.dim = 64;

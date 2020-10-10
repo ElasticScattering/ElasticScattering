@@ -8,7 +8,7 @@
 
 /* TODO: Get full results not 1.231e07
 TEST_CASE("Compare Sigma XX/XY results to verified results") {
-    SimulationParameters sp = ParametersFactory::GenerateNoImpurities();
+    ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
 
     auto es = new GPUElasticScattering();
 
@@ -32,7 +32,7 @@ TEST_CASE("Compare Sigma XX/XY results to verified results") {
 */
 
 TEST_CASE("Compare Sigma XX to formula (no impurities)") {
-	SimulationParameters sp = ParametersFactory::GenerateNoImpurities();
+	ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
     sp.mode = MODE_SIGMA_XX;
 
 	auto e = new CPUElasticScattering;

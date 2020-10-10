@@ -21,9 +21,7 @@ typedef struct
     // Transforms buffer values to image floats (0..1)
     cl_kernel tex_kernel;
 
-    //
     // Buffers
-    //
     cl_mem parameters;
     cl_mem impurities;
     cl_mem main_buffer;
@@ -36,7 +34,7 @@ OCLResources ocl;
 
 double last_result2;
 
-bool GPUElasticScattering::Compute(SimulationParameters& p_sp, double &result)
+bool GPUElasticScattering::Compute(ScatteringParameters& p_sp, double &result)
 {
     bool need_update = PrepareCompute(p_sp);
     if (!need_update) return false;
@@ -76,7 +74,7 @@ bool GPUElasticScattering::Compute(SimulationParameters& p_sp, double &result)
     return true;
 }
 
-bool GPUElasticScattering::PrepareCompute(SimulationParameters &p_sp)
+bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
 {
     cl_int clStatus;
 
@@ -100,7 +98,7 @@ bool GPUElasticScattering::PrepareCompute(SimulationParameters &p_sp)
     }
 
     if (first_run) {
-        ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(SimulationParameters), nullptr, &clStatus);
+        ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(ScatteringParameters), nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
 #ifndef NO_WINDOW
         ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
@@ -134,7 +132,7 @@ bool GPUElasticScattering::PrepareCompute(SimulationParameters &p_sp)
     first_run = false;
 
     //clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(cl_mem), (void*)&sp, 0, nullptr, nullptr);
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(SimulationParameters), (void*)&sp, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.scatter_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
@@ -252,7 +250,9 @@ GPUElasticScattering::~GPUElasticScattering()
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);
 
+#ifndef NO_WINDOW
     glDeleteVertexArrays(1, &ogl.vao);
     glDeleteBuffers(1, &ogl.vbo);
     glDeleteProgram(ogl.shader_program);
+#endif
 }

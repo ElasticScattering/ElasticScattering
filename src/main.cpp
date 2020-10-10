@@ -2,13 +2,14 @@
 
 #include "ElasticScattering.h"
 #include "tests/test_main.h"
-#include "app_main.h"
+//#include "app_main.h"
+#include "sim_main.h"
 
 #include <string>
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->mode = ProgramMode::Interactive;
-    p_init->use_gpu = false;
+    p_init->use_gpu = true;
     p_init->dont_show_info = false;
 
     if (argc >= 2) {
@@ -27,7 +28,6 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         if (argc >= 3) {
             w.assign(argv[2], strlen(argv[2]));
             p_init->dont_show_info = (w == "silent");
-            p_init->use_gpu = (w == "gpu"); // todo...
         }
     }
 }
@@ -37,9 +37,11 @@ int main(int argc, char **argv)
     InitParameters init;
     ParseArgs(argc, argv, &init);
 
-    if (init.mode == ProgramMode::Test) test_main();
-    if (init.mode == ProgramMode::Simulation) sim_main();
-    else                app_main(init);
+    switch (init.mode) {
+        case Test       : test_main();    break;
+        case Simulation : sim_main(init); break;
+        //case Interactive: app_main(init); break;
+    }
     
     return 0;
 }

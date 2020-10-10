@@ -4,7 +4,6 @@
 #include "ErrorMacros.h"
 
 #include <CL/cl.h>
-#include <CL/cl_gl.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -13,11 +12,16 @@
 #include <sstream>
 #include <algorithm>
 
+#ifndef NO_WINDOW
+#include <CL/cl_gl.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
+#endif
 
+#ifndef NO_WINDOW
 GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
+#endif
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -123,6 +127,7 @@ static void InitializeOpenCL(bool prefer_gpu, cl_device_id *p_deviceID, cl_conte
         }
     }
 
+#ifndef NO_WINDOW
     cl_context_properties props[] =
     {
         CL_CONTEXT_PLATFORM,
@@ -133,6 +138,14 @@ static void InitializeOpenCL(bool prefer_gpu, cl_device_id *p_deviceID, cl_conte
         (cl_context_properties)wglGetCurrentDC(),
         0
     };
+#else
+    cl_context_properties props[] =
+    {
+        CL_CONTEXT_PLATFORM,
+        (cl_context_properties)selected_platform,
+        0
+    };
+#endif
 
     ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_FAIL_CONDITION(cl_status, "Couldn't create context.");
@@ -159,8 +172,12 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
     cl_program program = clCreateProgramWithSource(p_ocl_context, 1, (const char**)&code, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create program.");
 
-    // "-cl-opt-disable"
-    clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
+    if (true) {
+        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM -D NO_WINDOW", NULL, NULL);
+    }
+    else {
+        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
+    }
     if (clStatus != CL_SUCCESS) {
         size_t len;
         char buffer[4086];

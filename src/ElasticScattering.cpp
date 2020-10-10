@@ -10,7 +10,7 @@ double ElasticScattering::ComputeResult(const std::vector<double>& results) {
 	double z = sp.region_size / (double)(sp.dim - 2);
 	double result = total * z * z / 9.0;
 
-	if (IsSigma(sp.mode)) {
+	if (ShouldComputeSigma(sp.mode)) {
 		result = FinishSigma(result);
 	}
 	else {
@@ -31,7 +31,7 @@ double ElasticScattering::FinishSigma(double res) {
 	return outside * res;
 };
 
-void ElasticScattering::CompleteSimulationParameters(SimulationParameters& p_sp) {
+void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp) {
 	p_sp.angular_speed = E * p_sp.magnetic_field / M;
 
 	if (p_sp.is_incoherent == 1) {
@@ -44,7 +44,7 @@ void ElasticScattering::CompleteSimulationParameters(SimulationParameters& p_sp)
 	particle_count = p_sp.dim * p_sp.dim;
 }
 
-bool ElasticScattering::AnythingChanged(const SimulationParameters& p_sp) {
+bool ElasticScattering::AnythingChanged(const ScatteringParameters& p_sp) {
 	bool nothing_changed = (sp.mode == p_sp.mode && sp.impurity_seed == p_sp.impurity_seed &&
 		sp.region_size == p_sp.region_size && sp.dim == p_sp.dim &&
 		sp.particle_speed == p_sp.particle_speed &&
@@ -58,11 +58,11 @@ bool ElasticScattering::AnythingChanged(const SimulationParameters& p_sp) {
 	return !nothing_changed;
 }
 
-bool ElasticScattering::ImpuritySettingsChanged(const SimulationParameters& p_sp) {
+bool ElasticScattering::ImpuritySettingsChanged(const ScatteringParameters& p_sp) {
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };
 
-void ElasticScattering::GenerateImpurities(const SimulationParameters& p_sp, bool p_random) {
+void ElasticScattering::GenerateImpurities(const ScatteringParameters& p_sp, bool p_random) {
 	impurities.clear();
 	impurities.resize(p_sp.impurity_count);
 
@@ -76,16 +76,8 @@ void ElasticScattering::GenerateImpurities(const SimulationParameters& p_sp, boo
 		impurities[i] = { unif(re), unif(re) };
 };
 
-void ElasticScattering::Draw()
-{
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, ogl.tex);
-
-	glUseProgram(ogl.shader_program);
-	glBindVertexArray(ogl.vao);
-	glDrawArrays(GL_QUADS, 0, 4);
-}
-
+#ifndef NO_WINDOW
 uint32_t ElasticScattering::GetTextureID() const {
 	return ogl.tex;
 }
+#endif
