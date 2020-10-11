@@ -9,6 +9,42 @@
 #include "src/SimulationResult.h"
 #include <windows.h>
 
+int sim_main(const InitParameters& init)
+{
+    LARGE_INTEGER beginClock, endClock, clockFrequency;
+    QueryPerformanceFrequency(&clockFrequency);
+
+    ScatteringParameters sp = ParametersFactory::GenerateSimulation();
+
+    SimulationParameters sim_params;
+    sim_params.runs = 10;
+    sim_params.samples_per_run = 2;
+    sim_params.magnetic_field_min = 0.01;
+    sim_params.magnetic_field_max = 40;
+    sim_params.scattering_params = sp;
+
+    const std::vector<double> temperatures{ 15, 60 };
+    PrintInfo(sim_params, temperatures.size());
+
+    SimulationElasticScattering es(init);
+
+    for (int i = 0; i < temperatures.size(); i++) {
+        sp.temperature = temperatures[i];
+
+        SimulationResult sr(sim_params.runs);
+
+        QueryPerformanceCounter(&beginClock);
+        ComputeIteration(es, sim_params, sr);
+        QueryPerformanceCounter(&endClock);
+        sr.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+
+        Logger::LogResult(sim_params, sr);
+        printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
+    }
+
+    return 0;
+}
+
 void ComputeIteration(SimulationElasticScattering &es, SimulationParameters& sp, SimulationResult& sr)
 {
     double coherent_tau = sp.scattering_params.tau;
@@ -17,10 +53,10 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationParameters& sp,
     
     double step_size = (sp.magnetic_field_max - sp.magnetic_field_min) / sp.runs;
 
+    printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
+
     for (int i = 0; i < sp.runs; i++) {
         sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
-        sr.xs[i] = sp.scattering_params.magnetic_field;
-        sr.xs_temperature[i] = sp.scattering_params.temperature;
 
         {
             double total_sigma_xx = 0;
@@ -66,76 +102,39 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationParameters& sp,
                 total_sigma_xyi += sxy_i;
             }
 
-            {
-                sr.results_xxi[i] = (total_sigma_xxi) / (double)(sp.samples_per_run);
-                sr.results_xx[i] = (total_sigma_xx) / (double)(sp.samples_per_run);
+            Result r;
+            r.x = sp.scattering_params.magnetic_field;
+            //sr.xs_temperature[i] = sp.scattering_params.temperature;
 
+            {
                 double sxx_sq_exp = total_sigma_xx_sq / (double)(sp.samples_per_run) + 1e-15;
                 double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(sp.samples_per_run);
 
                 double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(sp.samples_per_run - 1));
-                sr.delta_xxi[i] = sxx_std / sxx_exp;
+                
+                r.xx  = total_sigma_xx / (double)(sp.samples_per_run);
+                r.xxi = total_sigma_xxi / (double)(sp.samples_per_run);
 
-                sr.results_xy[i] = total_sigma_xy / (double)sp.samples_per_run;
-                sr.results_xyi[i] = total_sigma_xyi / (double)sp.samples_per_run;
+                r.xxd = sxx_std / sxx_exp;
+
+                r.xy  = total_sigma_xy / (double)sp.samples_per_run;
+                r.xyi = total_sigma_xyi / (double)sp.samples_per_run;
             }
+
+            sr.results[i] = r;
+            printf("%f %e %e %e %e %f\n", r.x, r.xxi, r.xx, r.xyi, r.xy, r.xxd);
         }
-
-        printf("\tProgress %d/%d\n", i+1, sp.runs);
     }
 }
 
-int sim_main(const InitParameters& init)
-{
-    LARGE_INTEGER beginClock, endClock, clockFrequency;
-    QueryPerformanceFrequency(&clockFrequency);
-
-    ScatteringParameters sp = ParametersFactory::GenerateMinimal();
-    sp.impurity_density             = 5.34e14;
-    sp.impurity_radius              = 1.11e-8;
-    sp.region_extends               = 1e-6;
-    sp.region_size                  = 4e-6;
-    sp.alpha                        = 0.3;
-    sp.dim                          = 64;
-    sp.tau                          = 1e-11;
-
-    SimulationParameters sim_params;
-    sim_params.runs                 = 10;
-    sim_params.samples_per_run      = 2;
-    sim_params.magnetic_field_min   = 0.01; 
-    sim_params.magnetic_field_max   = 40;
-    sim_params.scattering_params    = sp;
-
-    const std::vector<double> temperatures { 15, 60 };
-    PrintInfo(sim_params, temperatures.size());
-
-    SimulationElasticScattering es(init);
-
-    for (int i = 0; i < temperatures.size(); i++) {
-        sp.temperature = temperatures[i];
-        
-        SimulationResult sr(sim_params.runs);
-        
-        QueryPerformanceCounter(&beginClock);
-        ComputeIteration(es, sim_params, sr);
-        QueryPerformanceCounter(&endClock);
-        sr.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-
-        Logger::LogResult(sim_params, sr);
-        printf("Result completed %d/%d\n", i + 1, temperatures.size());
-    }
-
-    return 0;
-}
-
-void PrintInfo(const SimulationParameters& sp, size_t count)
+void PrintInfo(const SimulationParameters& sp, int count)
 {
     const int imp_count = sp.scattering_params.impurity_density * pow(sp.scattering_params.region_extends + sp.scattering_params.region_size, 2);
     const long long intersects_each = sp.samples_per_run * imp_count * 2.0 * pow(sp.scattering_params.dim, 2) * sp.scattering_params.integrand_steps * 4.0;
     const long long intersects = sp.runs * intersects_each;
-    printf("Simulation info:");
-    printf("Total intersections: %d", intersects * count);
+    printf("Simulation info:\n");
+    printf("Total intersections: %e\n", intersects * (long long)count);
     printf("Time estimate per data point: %f minutes.\n", (float)intersects_each / 2e9 / 60);
     printf("Time estimate per temperature: %f hours \n", (float)intersects / 2e9 / 3600.0);
-    printf("Time estimate total: %f hours \n\n", (float)intersects * count / 2e9 / 3600.0);
+    printf("Time estimate total: %f hours \n\n", (float)intersects / 2e9 / 3600.0 * count);
 }

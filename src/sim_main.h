@@ -1,4 +1,5 @@
 #pragma once
 
 int sim_main(const InitParameters& init);
-void PrintInfo(const SimulationParameters& sp, size_t count);
+void ComputeIteration(SimulationElasticScattering& es, SimulationParameters& sp, SimulationResult& sr);
+void PrintInfo(const SimulationParameters& sp, int count);

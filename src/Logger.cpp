@@ -70,16 +70,14 @@ void Logger::LogResult(const SimulationParameters& sim_params, const SimulationR
 
     file << "#\n#Results:\n" << std::endl;
 
-    file << "magnetic_field temperature sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
+    file << "magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
 
-    int n = sr.xs.size();
+    int n = sr.results.size();
 
     int idx = 0;
     for (int i = 0; i < n; i++) {
-        file << sr.xs[i] << " " << sr.xs_temperature[i];
-        file << " " << sr.results_xxi[i] << " " << sr.results_xx[i];
-        file << " " << sr.results_xyi[i] << " " << sr.results_xy[i];
-        file << " " << sr.delta_xxi[i] << std::endl;
+        const auto r = sr.results[i];
+        file << r.x << " " << r.xxi << " " << r.xx << " " << r.xyi << " " << r.xy << " " << r.xxd << std::endl;
     }
 
     file.flush();
