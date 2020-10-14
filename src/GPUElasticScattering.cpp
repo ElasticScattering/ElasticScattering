@@ -35,8 +35,6 @@ typedef struct
 
 OCLResources ocl;
 
-double last_result2;
-
 bool GPUElasticScattering::Compute(ScatteringParameters& p_sp, double &result)
 {
     bool need_update = PrepareCompute(p_sp);
@@ -73,7 +71,6 @@ bool GPUElasticScattering::Compute(ScatteringParameters& p_sp, double &result)
 
     result = ComputeResult(results);
 
-    last_result2 = result;
     return true;
 }
 

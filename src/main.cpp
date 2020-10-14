@@ -12,23 +12,27 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->use_gpu = true;
     p_init->dont_show_info = false;
 
-    if (argc >= 2) {
+    if (argc < 2) {
+        printf("EScl - Elastic Scattering compute application");
+        printf("Usage:");
+        printf("\t escl [sim | app | test ]");
+        exit(0);
+    }
         
-        std::string w;
-        w.assign(argv[1], strlen(argv[1]));
+    std::string w;
+    w.assign(argv[1], strlen(argv[1]));
 
-        if (w == "test") {
-            p_init->mode = ProgramMode::Test;
-        } else if (w == "sim") {
-            p_init->mode = ProgramMode::Simulation;
-        } else {
-            p_init->mode = ProgramMode::Interactive;
-        }
+    if (w == "test") {
+        p_init->mode = ProgramMode::Test;
+    } else if (w == "sim") {
+        p_init->mode = ProgramMode::Simulation;
+    } else if (w == "app") {
+        p_init->mode = ProgramMode::Interactive;
+    }
 
-        if (argc >= 3) {
-            w.assign(argv[2], strlen(argv[2]));
-            p_init->dont_show_info = (w == "silent");
-        }
+    if (argc >= 3) {
+        w.assign(argv[2], strlen(argv[2]));
+        p_init->dont_show_info = (w == "silent");
     }
 }
 

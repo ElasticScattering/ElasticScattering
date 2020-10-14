@@ -1,10 +1,6 @@
 #include "ElasticScattering.h"
 #include "src/escl/common.h"
 
-#ifndef NO_WINDOW
-#include "OpenGLUtils.h"
-#endif //NO_WINDOW
-
 bool CPUElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
 {
     if (!PrepareCompute(p_sp)) return false;

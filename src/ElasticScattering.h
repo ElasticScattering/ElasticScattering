@@ -7,6 +7,7 @@
 
 #ifndef NO_WINDOW
 #include <GL/glew.h>
+#include "OpenGLUtils.h"
 #endif
 
 enum ProgramMode {
