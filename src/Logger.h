@@ -1,10 +1,10 @@
 #pragma once
 
-#include "src/SimulationParameters.h"
-#include "src/SimulationResult.h"
+#include "src/datastructures/SimulationConfiguration.h"
+#include "src/datastructures/SimulationResult.h"
 #include <vector>
 
 class Logger {
 public:
-	static void LogResult(const SimulationParameters& sp, const SimulationResult& sr);
+	static void LogResult(const SimulationConfiguration& sp, const SimulationResult& sr);
 };

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ElasticScattering.h"
 #include "sim_main.h"
 
-#include "src/ParametersFactory.h"
-#include "src/Logger.h"
-#include "src/escl/constants.h"
-#include "src/SimulationResult.h"
+#include "escl/constants.h"
+#include "utils/ParametersFactory.h"
+#include "datastructures/SimulationConfiguration.h"
+#include "datastructures/SimulationResult.h"
+#include "Logger.h"
 #include <windows.h>
 
 int sim_main(const InitParameters& init)
@@ -16,7 +16,7 @@ int sim_main(const InitParameters& init)
 
     ScatteringParameters sp = ParametersFactory::GenerateSimulation();
 
-    SimulationParameters sim_params;
+    SimulationConfiguration sim_params;
     sim_params.runs = 10;
     sim_params.samples_per_run = 2;
     sim_params.magnetic_field_min = 0.01;
@@ -45,7 +45,7 @@ int sim_main(const InitParameters& init)
     return 0;
 }
 
-void ComputeIteration(SimulationElasticScattering &es, SimulationParameters& sp, SimulationResult& sr)
+void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& sp, SimulationResult& sr)
 {
     double coherent_tau = sp.scattering_params.tau;
     bool run_incoherent = sp.scattering_params.alpha > 0.000001;
@@ -127,7 +127,7 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationParameters& sp,
     }
 }
 
-void PrintInfo(const SimulationParameters& sp, int count)
+void PrintInfo(const SimulationConfiguration& sp, int count)
 {
     const int imp_count = sp.scattering_params.impurity_density * pow(sp.scattering_params.region_extends + sp.scattering_params.region_size, 2);
     const long long intersects_each = sp.samples_per_run * imp_count * 2.0 * pow(sp.scattering_params.dim, 2) * sp.scattering_params.integrand_steps * 4.0;

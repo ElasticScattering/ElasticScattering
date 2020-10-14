@@ -2,7 +2,10 @@
 
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
-#include "OpenGLUtils.h"
+
+#ifndef NO_WINDOW
+#include "utils/OpenGLUtils.h"
+#endif
 
 typedef struct
 {

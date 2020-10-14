@@ -37,3 +37,32 @@ __kernel void scatter_sim(__constant ScatteringParameters *sp, __global double2 
         xy[idx] = result.y;
     }
 }
+
+__kernel void add_integral_weights_2d(__global double* A)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+
+    int i = y * row_size + x;
+    A[i] *= GetWeight2D(x, y, row_size-1);
+}
+
+#ifndef NO_WINDOW
+__kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    int row_size = get_global_size(0);
+
+    float k = GetColor((float)(lifetimes[y * row_size + x]), scale, mode);
+    float4 c = (float4)(k, k, k, 1.0f);
+
+    if (mode == MODE_SIGMA_XY) {
+        if (k < 0.0) c = (float4)(0, 0, -k, 1.0f);
+        else 		 c = (float4)(k, 0, 0, 1.0f);
+    }
+
+    write_imagef(screen, (int2)(x, y), c);
+}
+#endif // NO_WINDOW

@@ -367,10 +367,10 @@
     <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\OpenGLUtils.cpp" />
-    <ClCompile Include="src\ParametersFactory.cpp" />
     <ClCompile Include="src\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
+    <ClCompile Include="src\utils\OpenGLUtils.cpp" />
+    <ClCompile Include="src\utils\ParametersFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libs\imgui\imconfig.h" />
@@ -384,19 +384,21 @@
     <ClInclude Include="libs\implot\implot.h" />
     <ClInclude Include="libs\implot\implot_internal.h" />
     <ClInclude Include="src\app_main.h" />
+    <ClInclude Include="src\datastructures\ScatteringParameters.h" />
+    <ClInclude Include="src\datastructures\SimulationConfiguration.h" />
+    <ClInclude Include="src\datastructures\SimulationResult.h" />
+    <ClInclude Include="src\datastructures\v2.h" />
     <ClInclude Include="src\ElasticScattering.h" />
     <ClInclude Include="src\escl\common.h" />
     <ClInclude Include="src\escl\constants.h" />
     <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\Logger.h" />
-    <ClInclude Include="src\OpenGLUtils.h" />
-    <ClInclude Include="src\ParametersFactory.h" />
-    <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\SimulationParameters.h" />
-    <ClInclude Include="src\SimulationResult.h" />
     <ClInclude Include="src\sim_main.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
+    <ClInclude Include="src\utils\OpenGLUtils.h" />
+    <ClInclude Include="src\utils\ParametersFactory.h" />
+    <ClInclude Include="src\utils\Shader.h" />
     <ClInclude Include="tests\CPUComparisonTest.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />

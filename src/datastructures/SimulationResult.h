@@ -1,8 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "src/SimulationParameters.h"
-
 
 struct Result {
     double x;
@@ -19,6 +17,7 @@ struct SimulationResult {
     std::vector<Result> results;
 
     SimulationResult(int size) {
+        time_elapsed = 0;
         results.resize(size);
     }
 };

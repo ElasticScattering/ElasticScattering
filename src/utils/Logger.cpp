@@ -1,6 +1,6 @@
 #pragma warning(disable : 4996)
 
-#include "Logger.h"
+#include "src/Logger.h"
 #include "src/escl/constants.h"
 
 #include <iostream>
@@ -13,7 +13,7 @@
 
 namespace fs = std::filesystem;
 
-void Logger::LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr)
+void Logger::LogResult(const SimulationParameters& sim_params, const SimulationResult& sr)
 {
     auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 

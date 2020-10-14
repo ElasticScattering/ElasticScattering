@@ -1,7 +1,6 @@
 #pragma once
 
-#include "SimulationParameters.h"
-#include "ElasticScattering.h"
+#include "src/datastructures/ScatteringParameters.h"
 
 class ParametersFactory {
 public:

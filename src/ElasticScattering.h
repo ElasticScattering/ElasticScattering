@@ -2,7 +2,8 @@
 #define ELASTIC_SCATTERING_H
 
 #include <vector>
-#include "src/SimulationParameters.h"
+#include "datastructures/ScatteringParameters.h"
+#include "datastructures/v2.h"
 
 #ifndef NO_WINDOW
 #include <GL/glew.h>

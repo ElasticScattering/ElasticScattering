@@ -1,7 +1,7 @@
 #ifndef CL_COMMON_H
 #define CL_COMMON_H
 
-#include "src/SimulationParameters.h"
+#include "src/datastructures/ScatteringParameters.h"
 
 #ifdef DEVICE_PROGRAM
     #include "src/escl/util.h"
@@ -10,6 +10,7 @@
 #else
     #include "math.h"
     #include <windows.h>
+    #include "src/datastructures/v2.h"
     #include "src/escl/constants.h"
     #define BUFFER_ARGS ScatteringParameters *sp, std::vector<v2> &impurities
     #define min(a, b) ((a) < (b)) ? (a) : (b)
@@ -363,50 +364,6 @@ double2 SIM_phi_lifetime(const double2 pos, BUFFER_ARGS)
 
     return integral;
 }
-
-
-/*
-__kernel void SIM_add_integral_weights_2d(__global write_only double* xx, __global write_only double* xy)
-{
-    unsigned int x = get_global_id(0);
-    unsigned int y = get_global_id(1);
-    unsigned int row_size = get_global_size(0);
-
-    unsigned int idx = y * row_size + x;
-    double w = GetWeight2D(x, y, row_size - 1);
-    xx[idx] *= w;
-    xy[idx] *= w;
-}
-*/
-
-__kernel void add_integral_weights_2d(__global double* A)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    int row_size = get_global_size(0);
-
-    int i = y * row_size + x;
-    A[i] *= GetWeight2D(x, y, row_size-1);
-}
-
-#ifndef NO_WINDOW
-__kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    int row_size = get_global_size(0);
-
-    float k = GetColor((float)(lifetimes[y * row_size + x]), scale, mode);
-    float4 c = (float4)(k, k, k, 1.0f);
-
-    if (mode == MODE_SIGMA_XY) {
-        if (k < 0.0) c = (float4)(0, 0, -k, 1.0f);
-        else 		 c = (float4)(k, 0, 0, 1.0f);
-    }
-
-    write_imagef(screen, (int2)(x, y), c);
-}
-#endif // NO_WINDOW
 
 #endif // DEVICE_PROGRAM
 
