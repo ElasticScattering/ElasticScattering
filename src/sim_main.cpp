@@ -7,6 +7,8 @@
 #include "datastructures/SimulationConfiguration.h"
 #include "datastructures/SimulationResult.h"
 #include "Logger.h"
+
+#include <random>
 #include <windows.h>
 
 int sim_main(const InitParameters& init)
@@ -55,6 +57,8 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
 
     printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
+    std::random_device random_device;
+
     for (int i = 0; i < sp.runs; i++) {
         sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
 
@@ -68,7 +72,7 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
             double total_sigma_xy_sq = 0;
 
             for (int j = 0; j < sp.samples_per_run; j++) {
-                sp.scattering_params.impurity_seed = 1123 + j * 831;
+                sp.scattering_params.impurity_seed = random_device();
                 v2 result, resulti;
 
                 if (run_incoherent) {

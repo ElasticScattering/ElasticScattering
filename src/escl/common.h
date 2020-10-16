@@ -365,6 +365,174 @@ double2 SIM_phi_lifetime(const double2 pos, BUFFER_ARGS)
     return integral;
 }
 
+
+
+inline double lifetimeB(const double max_lifetime, const double2 pos, const double phi, const bool clockwise, 
+                        __constant ScatteringParameters* sp, __global uint* impurity_indices, __global double2* impurities)
+{
+    const double orbit_radius = sp->particle_speed / sp->angular_speed;
+    double2 vel = { cos(phi), sin(phi) };
+    vel = vel * sp->particle_speed;
+    const double2 center = GetCyclotronOrbit(pos, vel, orbit_radius, sp->particle_speed, clockwise);
+    const double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+
+    double lifetime = max_lifetime;
+
+    for (int i = 0; i < sp->impurity_count; i++) {
+        const double2 impurity = impurities[i];
+
+        double2 d = pos - impurity;
+        if (impurity_radius_sq > dot(d, d))
+        {
+            lifetime = 0;
+            break;
+        }
+
+        if (CirclesCross(center, orbit_radius, impurity, sp->impurity_radius))
+        {
+            double t = GetFirstCrossTime(center, pos, impurity, orbit_radius, sp->impurity_radius, sp->angular_speed, clockwise);
+
+            lifetime = (t < lifetime) ? t : lifetime;
+        }
+    }
+
+    return lifetime;
+}
+
+double remap(double x, double s0, double s1, double t0, double t1)
+{
+    return t0 + (x - s0) / (s1 - s0) * (t1 - t0);
+}
+
+double lifetime0(const double2 pos, const double phi, 
+                        __constant ScatteringParameters* sp, __global uint* impurity_indices, __global double2* impurities)
+{
+    const double2 unit = { cos(phi), sin(phi) };
+    const double2 vel = unit * sp->particle_speed;
+
+    const double impurity_radius_sq = sp->impurity_radius * sp->impurity_radius;
+
+    double max_lifetime = 15.0 * sp->tau;
+    double lifetime = max_lifetime;
+
+    uint starting_grid_x = (uint)remap(pos.x, -sp->region_extends, sp->region_size + sp->region_extends, 0, 113);
+    uint starting_grid_y = (uint)remap(pos.y, -sp->region_extends, sp->region_size + sp->region_extends, 0, 113);
+
+    uint index = y * 113 + x;
+    uint starting_index_impurities = impurity_indices[index];
+    uint ending_index_impurities = impurity_indices[index+1];
+
+    bool hit = false;
+    while (!hit)
+    {
+        for (int i = starting_index_impurities; i < ending_index_impurities; i++)
+        {
+            const double2 imp_pos = impurities[i];
+            const double inner = (imp_pos.x - pos.x) * unit.x + (imp_pos.y - pos.y) * unit.y;
+            const double2 projected = pos + unit * inner;
+
+            const double2 d = projected - imp_pos;
+            const double diff = impurity_radius_sq - dot(d, d);
+            if (diff < 0.0) {
+                continue;
+            }
+
+            double L = sqrt(diff);
+
+            double2 time_taken;
+
+            if (fabs(vel.x) > (fabs(vel.y) * 1e-9)) {
+                time_taken.x = -((projected.x - L * unit.x) - pos.x) / vel.x;
+                time_taken.y = -((projected.x + L * unit.x) - pos.x) / vel.x;
+            }
+            else {
+                time_taken.x = -((projected.y - L * unit.y) - pos.y) / vel.y;
+                time_taken.y = -((projected.y + L * unit.y) - pos.y) / vel.y;
+            }
+
+            if ((time_taken.x * time_taken.y) < 0) {
+                lifetime = 0;
+                break;
+            }
+
+            if (time_taken.x > 0 && time_taken.x < lifetime) {
+                lifetime = time_taken.x;
+            }
+            if (time_taken.y > 0 && time_taken.y < lifetime) {
+                lifetime = time_taken.y;
+            }
+        }
+
+        hit = lifetime < max_lifetime;
+        if (!hit) {
+            // calculate next grid cell to move to...
+            // index = ....
+            // starting_index / ending_index
+        }
+    }
+    
+    return lifetime;
+}
+
+////////////////////////////////////////////////////
+// Main functions, for single or integrated lifetime
+////////////////////////////////////////////////////
+
+inline double march_lifetime(const double2 pos, const double phi, __constant ScatteringParameters* sp, __global uint* impurity_indices, __global double2* impurities) {
+    if (sp->angular_speed != 0) {
+        const bool clockwise = (sp->is_clockwise == 1);
+        const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, (sp->is_incoherent == 1), (sp->is_diag_regions == 1), clockwise, false);
+
+        return lifetimeB(min(15.0 * sp->tau, bound_time), pos, phi, clockwise, sp, impurity_indices, impurities);
+    }
+    else {
+        return lifetime0(pos, phi, sp, impurity_indices, impurities);
+    }
+}
+
+double2 march_phi_lifetime(const double2 pos, __constant ScatteringParameters* sp, __global uint* impurity_indices, __global double2* impurities)
+{
+    const bool clockwise = (sp->is_clockwise == 1);
+    const double w = (clockwise ? -sp->angular_speed : sp->angular_speed);
+
+    bool diag_regions = (sp->is_diag_regions == 1);
+    bool incoherent = (sp->is_incoherent == 1);
+
+    const double incoherent_area = sp->alpha * 2.0;
+    const double angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+
+    const double step_size = angle_area / (sp->integrand_steps - 1);
+
+    double base = (incoherent ? -sp->alpha : sp->alpha);
+    if (diag_regions) {
+        base += (incoherent ? (PI / 4.0) : -(PI / 4.0));
+    }
+
+    double2 integral = (double2)(0, 0);
+    for (int j = 0; j < 4; j++)
+    {
+        const double start = base + j * (PI * 0.5);
+        double2 total = (double2)(0, 0);;
+
+        for (int i = 0; i < sp->integrand_steps; i++)
+        {
+            const double phi = start + i * step_size;
+
+            double lt = march_lifetime(pos, phi, sp, impurity_indices, impurities);
+            double result = sigma_multiplier(lt, phi, sp->tau, w);
+
+            bool is_edge_value = !(i == 0 || i == (sp->integrand_steps - 1));
+            double w = is_edge_value ? (((i % 2) == 0) ? 2.0 : 4.0) : 1.0;
+
+            total += (double2)(cos(phi), sin(phi)) * (result * w);
+        }
+
+        integral += total * (angle_area / ((sp->integrand_steps - 1) * 3.0));
+    }
+
+    return integral;
+}
+
 #endif // DEVICE_PROGRAM
 
 #endif // CL_COMMON_H

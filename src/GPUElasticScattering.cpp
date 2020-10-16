@@ -76,16 +76,15 @@ bool GPUElasticScattering::Compute(ScatteringParameters& p_sp, double &result)
 
 bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
 {
-    cl_int clStatus;
-
     CompleteSimulationParameters(p_sp);
 
-    if (!first_run && !AnythingChanged(p_sp)) return false;
+    if (!first_run && sp == p_sp) return false;
 
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);
     
     sp = p_sp;
+    cl_int clStatus;
 
     if (first_run || impurities_changed) {
         GenerateImpurities(sp);

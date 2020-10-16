@@ -1,6 +1,5 @@
 #include "ElasticScattering.h"
 #include "src/escl/common.h"
-#include <random>
 
 double ElasticScattering::ComputeResult(const std::vector<double>& results) {
 	double total = 0;
@@ -44,36 +43,10 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 	particle_count = p_sp.dim * p_sp.dim;
 }
 
-bool ElasticScattering::AnythingChanged(const ScatteringParameters& p_sp) {
-	bool nothing_changed = (sp.mode == p_sp.mode && sp.impurity_seed == p_sp.impurity_seed &&
-		sp.region_size == p_sp.region_size && sp.dim == p_sp.dim &&
-		sp.particle_speed == p_sp.particle_speed &&
-		sp.impurity_count == p_sp.impurity_count && sp.impurity_radius == p_sp.impurity_radius &&
-		sp.alpha == p_sp.alpha && sp.phi == p_sp.phi && sp.temperature == p_sp.temperature &&
-		sp.magnetic_field == p_sp.magnetic_field && sp.tau == p_sp.tau &&
-		sp.integrand_steps == p_sp.integrand_steps && sp.is_clockwise == p_sp.is_clockwise &&
-		sp.region_extends == p_sp.region_extends && sp.is_clockwise == p_sp.is_clockwise
-		&& sp.is_diag_regions == p_sp.is_diag_regions && sp.is_incoherent == p_sp.is_incoherent);
 
-	return !nothing_changed;
-}
 
 bool ElasticScattering::ImpuritySettingsChanged(const ScatteringParameters& p_sp) {
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
-};
-
-void ElasticScattering::GenerateImpurities(const ScatteringParameters& p_sp, bool p_random) {
-	impurities.clear();
-	impurities.resize(p_sp.impurity_count);
-
-	std::uniform_real_distribution<double> unif(-p_sp.region_extends, p_sp.region_size + p_sp.region_extends);
-
-	std::random_device random_device;
-	unsigned int seed = p_random ? random_device() : p_sp.impurity_seed;
-	std::default_random_engine re(seed);
-
-	for (int i = 0; i < p_sp.impurity_count; i++)
-		impurities[i] = { unif(re), unif(re) };
 };
 
 #ifndef NO_WINDOW

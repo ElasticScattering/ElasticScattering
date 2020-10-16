@@ -3,7 +3,8 @@
 #include "doctest.h"
 #include "TestMacros.h"
 #include "src/ElasticScattering.h"
-#include "src/ParametersFactory.h"
+#include "src/escl/constants.h"
+#include "src/utils/ParametersFactory.h"
 
 
 /* TODO: Get full results not 1.231e07
@@ -36,7 +37,8 @@ TEST_CASE("Compare Sigma XX to formula (no impurities)") {
     sp.mode = MODE_SIGMA_XX;
 
 	auto e = new CPUElasticScattering;
-    double result = e->Compute(sp);
+    double result;
+    e->Compute(sp, result);
 
 	double kf = M * sp.particle_speed / HBAR;
 	double n = (kf * kf) / (PI2 * C1);

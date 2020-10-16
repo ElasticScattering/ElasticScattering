@@ -36,6 +36,9 @@ class ElasticScattering {
 protected:
 	std::vector<v2> impurities;
 
+	std::vector<v2> impurities2;
+	std::vector<int> imp_index;
+
 	ScatteringParameters sp;
 	int particle_count;
 #ifndef NO_WINDOW
@@ -44,14 +47,12 @@ protected:
 	bool first_run = true;
 
 	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
-	double FinishSigma(double res);
-	double ComputeResult(const std::vector<double>& results);
-
-	bool AnythingChanged(const ScatteringParameters& p_sp);
-	virtual bool PrepareCompute(ScatteringParameters& p_sp) = 0;
-	void GenerateImpurities(const ScatteringParameters& p_sp, bool p_random = false);
-
 	void CompleteSimulationParameters(ScatteringParameters& p_sp);
+	virtual bool PrepareCompute(ScatteringParameters& p_sp) = 0;
+	double ComputeResult(const std::vector<double>& results);
+	double FinishSigma(double res);
+
+	void GenerateImpurities(const ScatteringParameters& p_sp, bool p_random = false);
 
 public:
 	virtual bool Compute(ScatteringParameters &p_sp, double &result) = 0;

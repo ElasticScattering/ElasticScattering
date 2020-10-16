@@ -36,7 +36,7 @@ bool CPUElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
 bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
 
-    if (!first_run && !AnythingChanged(p_sp)) return false;
+    if (!first_run && (p_sp == sp)) return false;
 
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
     bool work_size_changed  = (sp.dim != p_sp.dim);

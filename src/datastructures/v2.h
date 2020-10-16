@@ -40,6 +40,43 @@ struct v2 {
     }
 };
 
+struct v2i {
+    int x, y;
+
+    v2i(int p_x = 0, int p_y = 0)
+        : x(p_x), y(p_y)
+    {
+    }
+
+    v2i& operator=(const v2i& a)
+    {
+        x = a.x;
+        y = a.y;
+        return *this;
+    }
+
+    v2i operator+(const v2i& a) const
+    {
+        return v2i(a.x + x, a.y + y);
+    }
+
+    v2i operator-(const v2i& a) const
+    {
+        return v2i(x - a.x, y - a.y);
+    }
+
+    v2i operator/(int a) const
+    {
+        return v2i(x / a, y / a);
+    }
+
+    v2i operator*(int a) const
+    {
+        return v2i(x * a, y * a);
+    }
+};
+
+
 #define double2 v2
 #define double4 v4
 

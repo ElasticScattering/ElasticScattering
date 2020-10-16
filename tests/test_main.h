@@ -2,7 +2,7 @@
 #include <doctest.h>
 
 #include "CPUComparisonTest.h"
-#include "TestDetails.h"
+#include "DetailsTest.h"
 #include "UtilKernelsTest.h"
 #include "Test.h"
 

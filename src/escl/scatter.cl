@@ -38,6 +38,30 @@ __kernel void scatter_sim(__constant ScatteringParameters *sp, __global double2 
     }
 }
 
+__kernel void scatter_march(
+            __constant ScatteringParameters *sp, 
+            __global read_only double2 *impurities, 
+            __global read_only uint *impurity_indices, 
+            __global double *xx, 
+            __global double *xy) 
+{
+    uint x = get_global_id(0);
+    uint y = get_global_id(1);
+    uint row_size = get_global_size(0);
+    uint limit = row_size-1;
+    
+    if ((x < limit) && (y < limit)) {
+        const double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
+
+        double2 result = march_phi_lifetime(pos, sp, impurities, impurity_indices);
+
+        uint idx = y * row_size + x;
+        xx[idx] = result.x;
+        xy[idx] = result.y;
+    }
+}
+
+
 __kernel void add_integral_weights_2d(__global double* A)
 {
     int x = get_global_id(0);
