@@ -3,9 +3,8 @@
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
 
-#ifndef NO_WINDOW
 #include "utils/OpenGLUtils.h"
-#endif
+#include "src/escl/constants.h"
 
 typedef struct
 {
@@ -14,23 +13,20 @@ typedef struct
     cl_program program;
     cl_command_queue queue;
 
-    // Computes a value (sigma, raw lifetime) for a list of particles.
-    cl_kernel scatter_kernel;
 
-    // Computes the average lifetime of all particles.
+    cl_kernel scatter_kernel;
     cl_kernel add_integral_weights_kernel;
     cl_kernel sum_kernel;
-
-    // Transforms buffer values to image floats (0..1)
     cl_kernel tex_kernel;
 
-    // Buffers
-    cl_mem parameters;
-    cl_mem impurities;
+
     cl_mem main_buffer;
     cl_mem sum_output;
-
     cl_mem image;
+    
+    cl_mem parameters;
+    cl_mem impurities;
+    cl_mem imp_index; 
 } OCLResources;
 
 OCLResources ocl;
@@ -48,10 +44,8 @@ bool GPUElasticScattering::Compute(ScatteringParameters& p_sp, double &result)
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.scatter_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
-#ifndef NO_WINDOW
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.tex_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start tex_kernel kernel execution.");
-#endif //NO_WINDOW
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.add_integral_weights_kernel, 2, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't start add_integral_weights kernel execution.");
@@ -85,24 +79,13 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
     
     sp = p_sp;
     cl_int clStatus;
-
-    if (first_run || impurities_changed) {
-        GenerateImpurities(sp);
-
-        ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
-        CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
-
-        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
-    }
-
+    
     if (first_run) {
         ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(ScatteringParameters), nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
-#ifndef NO_WINDOW
+
         ocl.tex_kernel = clCreateKernel(ocl.program, "to_texture", &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-#endif //NO_WINDOW
     }
     
     if (first_run || work_size_changed) {
@@ -112,9 +95,23 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
         ocl.sum_output = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count / 2, nullptr, &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create summation buffer.");
 
-#ifndef NO_WINDOW
         PrepareTexKernel(sp.dim);
-#endif //NO_WINDOW
+    }
+
+    if (first_run || impurities_changed) {
+        grid.Generate(sp);
+
+        ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * grid.impurities.size(), nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create impurities buffer.");
+
+        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * grid.impurities.size(), grid.impurities.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
+
+        ocl.imp_index = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(int) * grid.imp_index.size(), nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create impurity index buffer.");
+
+        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(int) * grid.imp_index.size(), grid.imp_index.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
     }
 
     if (first_run) {
@@ -130,7 +127,6 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
 
     first_run = false;
 
-    //clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(cl_mem), (void*)&sp, 0, nullptr, nullptr);
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
@@ -140,11 +136,16 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
     clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.imp_index);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(cl_mem), (void*)&ocl.main_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
 
     clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
 
     clStatus = clSetKernelArg(ocl.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
@@ -155,25 +156,30 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
     clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * min(sp.dim, 256), nullptr); //@todo, partial sum_kernel buffer should be synced with kernel invocation / device max work group items.
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-#ifndef NO_WINDOW
+    
     clStatus = clSetKernelArg(ocl.tex_kernel, 0, sizeof(cl_mem), (void*)&ocl.main_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 1, sizeof(int), (void*)&sp.mode);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    //double scale = ShouldComputeSigma(sp.mode) ? sp.tau : sp.tau*3.0;
-    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(double), (void*)&sp.tau);
+    double scale = 0;
+    switch (sp.mode) {
+        case MODE_DIR_LIFETIME: scale = sp.tau; break;
+        case MODE_PHI_LIFETIME: scale = sp.tau * 15.0; break;
+        case MODE_SIGMA_XX:     scale = sp.tau / 3.0; break;
+        case MODE_SIGMA_XY:     scale = sp.tau / 0.5; break;
+    }
+
+    clStatus = clSetKernelArg(ocl.tex_kernel, 2, sizeof(double), (void*)&scale);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.tex_kernel, 3, sizeof(cl_mem), (void*)&ocl.image);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-#endif //NO_WINDOW
 
     return true;
 }
 
-#ifndef NO_WINDOW
 void GPUElasticScattering::PrepareTexKernel(int dim)
 {
     {
@@ -202,7 +208,10 @@ void GPUElasticScattering::PrepareTexKernel(int dim)
     glUseProgram(ogl.shader_program);
     glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
 }
-#endif // NO_WINDOW
+
+uint32_t GPUElasticScattering::GetTextureID() const {
+    return ogl.tex;
+}
 
 GPUElasticScattering::GPUElasticScattering()
 {
@@ -216,10 +225,8 @@ GPUElasticScattering::GPUElasticScattering()
 
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
 
-#ifndef NO_WINDOW
     OpenGLUtils o;
     o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
-#endif //NO_WINDOW
 }
 
 GPUElasticScattering::GPUElasticScattering(const InitParameters& init)
@@ -230,10 +237,8 @@ GPUElasticScattering::GPUElasticScattering(const InitParameters& init)
 
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
     
-#ifndef NO_WINDOW
     OpenGLUtils o;
     o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
-#endif //NO_WINDOW
 }
 
 GPUElasticScattering::~GPUElasticScattering()
@@ -243,15 +248,14 @@ GPUElasticScattering::~GPUElasticScattering()
     clReleaseMemObject(ocl.main_buffer);
     clReleaseMemObject(ocl.image);
     clReleaseMemObject(ocl.sum_output);
+    clReleaseKernel(ocl.add_integral_weights_kernel);
     clReleaseKernel(ocl.scatter_kernel);
     clReleaseKernel(ocl.tex_kernel);
     clReleaseProgram(ocl.program);
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);
 
-#ifndef NO_WINDOW
     glDeleteVertexArrays(1, &ogl.vao);
     glDeleteBuffers(1, &ogl.vbo);
     glDeleteProgram(ogl.shader_program);
-#endif
 }

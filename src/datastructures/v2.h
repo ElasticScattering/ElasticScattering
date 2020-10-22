@@ -55,6 +55,17 @@ struct v2i {
         return *this;
     }
 
+    friend bool operator==(const v2i& a, const v2i& b)
+    {
+        return (a.x == b.x && a.y == b.y);
+    }
+
+    friend bool operator!=(const v2i& a, const v2i& b)
+    {
+        return !(a == b);
+    }
+
+
     v2i operator+(const v2i& a) const
     {
         return v2i(a.x + x, a.y + y);
@@ -79,5 +90,6 @@ struct v2i {
 
 #define double2 v2
 #define double4 v4
+#define int2 v2i
 
 inline double dot(double2 a, double2 b) { return a.x * b.x + b.y * b.y; };

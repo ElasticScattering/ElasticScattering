@@ -12,22 +12,19 @@ typedef struct
     cl_kernel scatter_kernel;
     cl_kernel add_integral_weights_kernel;
     cl_kernel sum_kernel;
+    
     cl_mem parameters;
     cl_mem impurities;
+    cl_mem imp_index;
 
     cl_mem xx_buffer;
-    cl_mem xx_sum;
-
     cl_mem xy_buffer;
+    
+    cl_mem xx_sum;
     cl_mem xy_sum;
 } OCLSimResources;
 
 OCLSimResources ocl;
-
-bool SimulationElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
-{
-    return true;
-}
 
 bool SimulationElasticScattering::Compute(ScatteringParameters& p_sp, v2& result)
 {
@@ -110,13 +107,19 @@ bool SimulationElasticScattering::PrepareCompute(ScatteringParameters& p_sp)
     sp = p_sp;
 
     if (first_run || impurities_changed) {
-        GenerateImpurities(sp);
+        grid.Generate(sp);
 
-        ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * impurities.size(), nullptr, &clStatus);
-        CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
+        ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(v2) * grid.impurities.size(), nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create impurities buffer.");
 
-        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * impurities.size(), impurities.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
+        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * grid.impurities.size(), grid.impurities.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
+
+        ocl.imp_index = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(int) * grid.imp_index.size(), nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create impurity index buffer.");
+
+        clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(int) * grid.imp_index.size(), grid.imp_index.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
     }
 
     if (first_run) {
@@ -160,15 +163,23 @@ bool SimulationElasticScattering::PrepareCompute(ScatteringParameters& p_sp)
     clStatus = clSetKernelArg(ocl.scatter_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.xx_buffer);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 2, sizeof(cl_mem), (void*)&ocl.imp_index);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(cl_mem), (void*)&ocl.xy_buffer);
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 3, sizeof(cl_mem), (void*)&ocl.xx_buffer);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clSetKernelArg(ocl.scatter_kernel, 4, sizeof(cl_mem), (void*)&ocl.xy_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clSetKernelArg(ocl.add_integral_weights_kernel, 0, sizeof(cl_mem), (void*)&ocl.xx_buffer);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
+    return true;
+}
+
+bool SimulationElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
+{
     return true;
 }
 

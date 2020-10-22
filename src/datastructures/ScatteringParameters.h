@@ -5,29 +5,32 @@ typedef struct ScatteringParameters
     int mode;
     int dim;
     int impurity_count;
-    int integrand_steps;
+
+    double magnetic_field;
+    double tau;
+    double temperature;
+    double particle_speed;
+    double angular_speed;
+    double alpha;
+    double phi;
 
     int is_clockwise;
     int is_incoherent;
     int is_diag_regions;
-
-    unsigned int impurity_seed;
+    
+    int integrand_steps;
+    double integrand_step_size;
+    double integrand_start_angle;
+    double integrand_angle_area;
 
     double region_size;
     double region_extends;
     double impurity_density;
-    int impurity_grid_dim;
-    
-    double particle_speed;
     double impurity_radius;
-    double tau;
-    double temperature;
 
-    double alpha;
-    double phi;
-    double magnetic_field;
-    double angular_speed;
-
+    int max_expected_impurities_in_cell;
+    unsigned int impurity_seed;
+    
     friend bool operator==(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
         return (lhs.mode == rhs.mode && lhs.impurity_seed == rhs.impurity_seed &&
             lhs.region_size == rhs.region_size && lhs.dim == rhs.dim &&

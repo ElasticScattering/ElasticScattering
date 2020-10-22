@@ -40,17 +40,23 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 	double area_dim = (p_sp.region_size + p_sp.region_extends * 2);
 	p_sp.impurity_count = max(1, ceil(area_dim * area_dim * p_sp.impurity_density));
 
+	{
+		bool diag_regions = (p_sp.is_diag_regions == 1);
+		bool incoherent = (p_sp.is_incoherent == 1);
+
+		const double incoherent_area = p_sp.alpha * 2.0;
+		p_sp.integrand_angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+		p_sp.integrand_step_size = p_sp.integrand_angle_area / (p_sp.integrand_steps - 1);
+		
+		p_sp.integrand_start_angle = (incoherent ? -p_sp.alpha : p_sp.alpha);
+		if (diag_regions) {
+			p_sp.integrand_start_angle += (incoherent ? (PI / 4.0) : -(PI / 4.0));
+		}
+	}
+
 	particle_count = p_sp.dim * p_sp.dim;
 }
-
-
 
 bool ElasticScattering::ImpuritySettingsChanged(const ScatteringParameters& p_sp) {
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };
-
-#ifndef NO_WINDOW
-uint32_t ElasticScattering::GetTextureID() const {
-	return ogl.tex;
-}
-#endif

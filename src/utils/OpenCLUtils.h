@@ -12,16 +12,12 @@
 #include <sstream>
 #include <algorithm>
 
-#ifndef NO_WINDOW
 #include <CL/cl_gl.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
-#endif
 
-#ifndef NO_WINDOW
 GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
-#endif
 
 static std::string CLErrorString(int err) {
     switch (err) {

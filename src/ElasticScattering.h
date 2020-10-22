@@ -4,11 +4,10 @@
 #include <vector>
 #include "datastructures/ScatteringParameters.h"
 #include "datastructures/v2.h"
+#include "ImpurityGrid.h"
 
-#ifndef NO_WINDOW
 #include <GL/glew.h>
-#include "OpenGLUtils.h"
-#endif
+#include "utils/OpenGLUtils.h"
 
 enum ProgramMode {
 	Test,
@@ -23,42 +22,31 @@ typedef struct
 	bool dont_show_info;
 } InitParameters;
 
-#ifndef NO_WINDOW
 typedef struct
 {
 	GLuint tex;
 	GLuint vbo, vao;
 	GLuint shader_program;
 } OpenGLResources;
-#endif // NO_WINDOW
 
 class ElasticScattering {
 protected:
-	std::vector<v2> impurities;
-
-	std::vector<v2> impurities2;
-	std::vector<int> imp_index;
+	ImpurityGrid grid;
 
 	ScatteringParameters sp;
 	int particle_count;
-#ifndef NO_WINDOW
-	OpenGLResources ogl;
-#endif
+	
 	bool first_run = true;
 
-	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
-	void CompleteSimulationParameters(ScatteringParameters& p_sp);
 	virtual bool PrepareCompute(ScatteringParameters& p_sp) = 0;
+	void CompleteSimulationParameters(ScatteringParameters& p_sp);
+	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
+
 	double ComputeResult(const std::vector<double>& results);
 	double FinishSigma(double res);
 
-	void GenerateImpurities(const ScatteringParameters& p_sp, bool p_random = false);
-
 public:
 	virtual bool Compute(ScatteringParameters &p_sp, double &result) = 0;
-#ifndef NO_WINDOW
-	uint32_t GetTextureID() const;
-#endif
 };
 
 class CPUElasticScattering : public ElasticScattering {
@@ -66,15 +54,14 @@ class CPUElasticScattering : public ElasticScattering {
 	std::vector<float>  pixels;
 
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
-	void MakeTexture();
 
 public:
 	virtual bool Compute(ScatteringParameters &p_sp, double& result) override;
-
-	CPUElasticScattering();
 };
 
 class GPUElasticScattering : public ElasticScattering {
+	OpenGLResources ogl;
+
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
 	void PrepareTexKernel(int pixels);
 
@@ -84,6 +71,8 @@ public:
 	GPUElasticScattering();
 	GPUElasticScattering(const InitParameters &init);
 	~GPUElasticScattering();
+	
+	uint32_t GetTextureID() const;
 };
 
 class SimulationElasticScattering : public ElasticScattering {

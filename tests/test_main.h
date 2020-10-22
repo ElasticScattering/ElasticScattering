@@ -3,6 +3,7 @@
 
 #include "CPUComparisonTest.h"
 #include "DetailsTest.h"
+#include "IntegrandWeightsTest.h"
 #include "UtilKernelsTest.h"
 #include "Test.h"
 

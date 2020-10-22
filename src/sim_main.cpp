@@ -6,10 +6,17 @@
 #include "utils/ParametersFactory.h"
 #include "datastructures/SimulationConfiguration.h"
 #include "datastructures/SimulationResult.h"
-#include "Logger.h"
 
 #include <random>
 #include <windows.h>
+
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
+#include <filesystem>
+#include <string>
+#include <iomanip> 
+#include <ctime>
 
 int sim_main(const InitParameters& init)
 {
@@ -141,4 +148,76 @@ void PrintInfo(const SimulationConfiguration& sp, int count)
     printf("Time estimate per data point: %f minutes.\n", (float)intersects_each / 2e9 / 60);
     printf("Time estimate per temperature: %f hours \n", (float)intersects / 2e9 / 3600.0);
     printf("Time estimate total: %f hours \n\n", (float)intersects / 2e9 / 3600.0 * count);
+}
+
+//#pragma warning(disable : 4996)
+void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr)
+{
+    auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    std::filesystem::create_directory("ES Logs");
+
+    std::ofstream file;
+
+    for (unsigned int n = 0; ; ++n) { //todo leidende nullen 0008
+        std::string fname = std::string("Es Logs/results_") + std::to_string(n) + std::string(".dat");
+
+        std::ifstream ifile;
+        ifile.open(fname.c_str());
+
+        if (!ifile.is_open()) {
+            file.open(fname.c_str());
+            break;
+        }
+
+        ifile.close();
+    }
+
+    ScatteringParameters sp = sim_params.scattering_params;
+
+    file << std::scientific << std::setprecision(10);
+    file << "# Elastic Scattering Results" << std::endl;
+    file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
+    file << "# Elapsed time: " << sr.time_elapsed << " seconds." << std::endl;
+    file << "# Each row is the average of " << sim_params.samples_per_run << " iterations with different impurity seeds): " << std::endl;
+    file << "# Scattering parameters:" << std::endl;
+    file << "#\t" << "Integrand steps:  " << sp.integrand_steps << std::endl;
+    file << "#\t" << "Dimension:        " << sp.dim << std::endl;
+    file << "#\t" << "Diag. regions:    " << ((sp.is_diag_regions == 1) ? "True" : "False") << std::endl;
+    file << "#\t" << "Clockwise:        " << ((sp.is_clockwise == 1) ? "True" : "False") << std::endl;
+    file << "#" << std::endl;
+    file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
+    file << "#\t" << "Tau:              " << sp.tau << std::endl;
+    file << "#\t" << "Magnetic field:   " << sp.magnetic_field << std::endl;
+    file << "#\t" << "Alpha:            " << sp.alpha << std::endl;
+    file << "#\t" << "Particle speed:   " << sp.particle_speed << std::endl;
+    file << "#\t" << "Angular speed:    " << sp.angular_speed << std::endl;
+    file << "#\n# Impurities:" << std::endl;
+    file << "#\t" << "Region size:      " << sp.region_size << std::endl;
+    file << "#\t" << "Region extends:   " << sp.region_extends << std::endl;
+    file << "#\t" << "Density:          " << sp.impurity_density << std::endl;
+    file << "#\t" << "Count:            " << sp.impurity_count << std::endl;
+    file << "#\t" << "Radius:           " << sp.impurity_radius << std::endl;
+
+    file << "#\n#Constants:" << std::endl;
+    file << "#\t" << "Particle mass: " << M << std::endl;
+    file << "#\t" << "E:             " << E << std::endl;
+    file << "#\t" << "HBAR:          " << HBAR << std::endl;
+    file << "#\t" << "C:             " << C1 << std::endl;
+    file << "#\t" << "KB:            " << KB << std::endl;
+
+    file << "#\n#Results:\n" << std::endl;
+
+    file << "magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
+
+    int n = sr.results.size();
+
+    int idx = 0;
+    for (int i = 0; i < n; i++) {
+        const auto r = sr.results[i];
+        file << r.x << " " << r.xxi << " " << r.xx << " " << r.xyi << " " << r.xy << " " << r.xxd << std::endl;
+    }
+
+    file.flush();
+    file.close();
 }

@@ -14,14 +14,10 @@ bool CPUElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
             v2 pos(i, j);
             pos = pos * (sp.region_size / (double)(sp.dim - 2));
 
-            double particle_result = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp.phi, &sp, impurities) : phi_lifetime(pos, &sp, impurities);
-            main_buffer[j * sp.dim + i] = particle_result;
+            main_buffer[j * sp.dim + i] = (sp.mode == MODE_DIR_LIFETIME) ? single_lifetime(pos, sp.phi, &sp, grid.impurities, grid.imp_index) : 
+                                                                           phi_lifetime(pos, &sp, grid.impurities, grid.imp_index);
         }
     }
-
-#ifndef NO_WINDOW
-    MakeTexture();
-#endif
 
     // Apply weights for integration.
     for (int j = 0; j < limit; j++)
@@ -35,7 +31,7 @@ bool CPUElasticScattering::Compute(ScatteringParameters& p_sp, double& result)
 
 bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
-
+    
     if (!first_run && (p_sp == sp)) return false;
 
     bool impurities_changed = ImpuritySettingsChanged(p_sp);
@@ -44,7 +40,7 @@ bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
     sp = p_sp;
         
     if (first_run || impurities_changed)
-        GenerateImpurities(sp);
+        grid.Generate(sp);
 
     if (first_run || work_size_changed) {
         main_buffer.clear();
@@ -54,56 +50,4 @@ bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
     first_run = false;
 
     return true;
-}
-
-#ifndef NO_WINDOW
-void CPUElasticScattering::MakeTexture() 
-{
-    pixels.clear();
-    pixels.resize(particle_count * 4L);
-
-    int j = 0;
-    for (int i = 0; i < particle_count; i++)
-    {
-        float k = GetColor(main_buffer[i], sp.tau, sp.mode);
-
-        if (sp.mode != MODE_SIGMA_XY) {
-            pixels[j]      = k;
-            pixels[j + 1L] = k;
-            pixels[j + 2L] = k;
-        }
-        else {
-            if (k < 0.0) {
-                pixels[j] = 0;
-                pixels[j + 1L] = 0;
-                pixels[j + 2L] = -k;
-            } else {
-                pixels[j] = k;
-                pixels[j + 1L] = 0;
-                pixels[j + 2L] = 0;
-            }
-        }
-        pixels[j + 3L] = 1.0;
-        j += 4;
-    }
-
-    glGenTextures(1, &ogl.tex);
-    glBindTexture(GL_TEXTURE_2D, ogl.tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, sp.dim, sp.dim, 0, GL_RGBA, GL_FLOAT, pixels.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glUseProgram(ogl.shader_program);
-    glUniform1i(glGetUniformLocation(ogl.shader_program, "texture1"), 0);
-}
-#endif //NO_WINDOW
-
-CPUElasticScattering::CPUElasticScattering()
-{
-#ifndef NO_WINDOW
-    OpenGLUtils o;
-    o.Init(ogl.vbo, ogl.vao, ogl.shader_program);
-#endif //NO_WINDOW
 }
