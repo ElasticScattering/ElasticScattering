@@ -46,7 +46,7 @@ __kernel void scatter_march(
             __global read_only double2 *impurities, __global read_only int *impurity_indices, 
             __global double *xx, __global double *xy)
 {
-    uint x = get_global_id(0);
+    size_t x = get_global_id(0);
     uint y = get_global_id(1);
     uint row_size = get_global_size(0);
     uint limit = row_size-1;

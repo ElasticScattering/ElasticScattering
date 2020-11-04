@@ -1,4 +1,4 @@
-#include <windows.h>
+/*#include <windows.h>
 
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
@@ -115,7 +115,7 @@ bool GPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp)
     }
 
     if (first_run) {
-        ocl.scatter_kernel = clCreateKernel(ocl.program, "lifetime", &clStatus);
+        ocl.scatter_kernel = clCreateKernel(ocl.program, "lifetime_old", &clStatus);
         CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
     
         ocl.add_integral_weights_kernel = clCreateKernel(ocl.program, "add_integral_weights_2d", &clStatus);
@@ -259,3 +259,4 @@ GPUElasticScattering::~GPUElasticScattering()
     glDeleteBuffers(1, &ogl.vbo);
     glDeleteProgram(ogl.shader_program);
 }
+*/

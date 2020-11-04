@@ -1,4 +1,4 @@
-#include "windows.h"
+/*#include "windows.h"
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
 
@@ -210,3 +210,4 @@ SimulationElasticScattering::~SimulationElasticScattering()
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);
 }
+*/

@@ -1,13 +1,36 @@
 #include "ElasticScattering.h"
 #include "src/escl/common.h"
 
-double ElasticScattering::ComputeResult(const std::vector<double>& results) {
-	double total = 0;
-	for (int i = 0; i < results.size(); i++)
-		total += results[i];
+ScatterResult ElasticScattering::FinishResult(ResultBuffer &buffer) {
+	ScatterResult result;
+	result.xx = 0;
+	result.xy = 0;
+
+	for (int i = 0; i < buffer.intermediate_results.size(); i++) {
+		result.xx += buffer.intermediate_results[i].xx;
+		result.xy += buffer.intermediate_results[i].xy;
+	}
 
 	double z = sp.region_size / (double)(sp.dim - 2);
-	double result = total * z * z / 9.0;
+	double factor = z * z / 9.0;
+	
+	result.xx *= factor;
+	result.xy *= factor;
+
+	result.xx = FinishSigma(result.xx);
+	result.xy = FinishSigma(result.xy);
+
+	return result;
+}
+
+double ElasticScattering::FinishSingle(std::vector<double> &buffer) {
+	double result = 0;
+
+	for (int i = 0; i < buffer.size(); i++)
+		result += buffer[i];
+
+	double z = sp.region_size / (double)(sp.dim - 2);
+	result *= z * z / 9.0;
 
 	if (ShouldComputeSigma(sp.mode)) {
 		result = FinishSigma(result);

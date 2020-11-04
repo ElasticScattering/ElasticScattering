@@ -364,6 +364,7 @@
     <ClCompile Include="libs\implot\implot_items.cpp" />
     <ClCompile Include="src\app_main.cpp" />
     <ClCompile Include="src\CPUElasticScattering.cpp" />
+    <ClCompile Include="src\datastructures\IntegralResult.h" />
     <ClCompile Include="src\ElasticScattering.cpp" />
     <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\ImpurityGrid.cpp" />
@@ -385,6 +386,7 @@
     <ClInclude Include="libs\implot\implot.h" />
     <ClInclude Include="libs\implot\implot_internal.h" />
     <ClInclude Include="src\app_main.h" />
+    <ClInclude Include="src\datastructures\ImpurityGrid.h" />
     <ClInclude Include="src\datastructures\ScatteringParameters.h" />
     <ClInclude Include="src\datastructures\SimulationConfiguration.h" />
     <ClInclude Include="src\datastructures\SimulationResult.h" />

@@ -12,7 +12,7 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
-
+/*
 TEST_CASE("Different scatter modes")
 {
 	ScatteringParameters sp = ParametersFactory::GenerateDefault();
@@ -34,6 +34,10 @@ TEST_CASE("Different scatter modes")
 	sp.mode = MODE_SIGMA_XY;
 	CHECK_CPU_GPU_APPROX("Sigma XY Lifetime")
 }
+*/
+
+
+
 
 /*
 TEST_CASE("Comparing kernel results on CPU and GPU")
@@ -62,7 +66,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	double cpu_result, gpu_result, diff;
 
-	SUBCASE("Directional lifetime") {
+	SUBCASE("Directional lifetime_old") {
 		CHECK_CPU_GPU_ALMOST("Default parameters")
 
 		sp.phi = -sp.alpha - 1e-10;
@@ -84,7 +88,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 		CHECK_CPU_GPU_ALMOST("Clockwise off")
 	}
 
-	SUBCASE("Phi integrated lifetime") {
+	SUBCASE("Phi integrated lifetime_old") {
 		sp.mode = MODE_PHI_LIFETIME;
 
 		CHECK_CPU_GPU_APPROX("PHI - Default parameters")

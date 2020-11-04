@@ -24,7 +24,6 @@ int sim_main(const InitParameters& init)
     QueryPerformanceFrequency(&clockFrequency);
 
     ScatteringParameters sp = ParametersFactory::GenerateSimulation();
-
     SimulationConfiguration sim_params;
     sim_params.runs = 10;
     sim_params.samples_per_run = 2;
@@ -32,29 +31,27 @@ int sim_main(const InitParameters& init)
     sim_params.magnetic_field_max = 40;
     sim_params.scattering_params = sp;
 
-    const std::vector<double> temperatures{ 15, 60 };
+    const std::vector<double> temperatures { 15, 60 };
     PrintInfo(sim_params, temperatures.size());
 
-    SimulationElasticScattering es(init);
+    CPUElasticScattering es;
 
     for (int i = 0; i < temperatures.size(); i++) {
         sp.temperature = temperatures[i];
 
-        SimulationResult sr(sim_params.runs);
-
         QueryPerformanceCounter(&beginClock);
-        ComputeIteration(es, sim_params, sr);
+        auto simulation_result = RunSimulation(es, sim_params);
         QueryPerformanceCounter(&endClock);
-        sr.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+        simulation_result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
 
-        Logger::LogResult(sim_params, sr);
+        LogResult(sim_params, simulation_result);
         printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
     }
 
     return 0;
 }
 
-void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& sp, SimulationResult& sr)
+SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& sp)
 {
     double coherent_tau = sp.scattering_params.tau;
     bool run_incoherent = sp.scattering_params.alpha > 0.000001;
@@ -65,6 +62,8 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
     printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
     std::random_device random_device;
+
+    SimulationResult sr(sp.runs);
 
     for (int i = 0; i < sp.runs; i++) {
         sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
@@ -80,30 +79,24 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
 
             for (int j = 0; j < sp.samples_per_run; j++) {
                 sp.scattering_params.impurity_seed = random_device();
-                v2 result, resulti;
+                ScatterResult result_coherent, result_incoherent;
 
                 if (run_incoherent) {
                     sp.scattering_params.is_incoherent = 1;
-                    es.Compute(sp.scattering_params, resulti);
-                }
-                else {
-                    resulti = 0;
+                    result_incoherent = es.ComputeResult(sp.scattering_params);
                 }
 
                 if (run_coherent) {
                     sp.scattering_params.is_incoherent = 0;
                     sp.scattering_params.tau = coherent_tau;
-                    es.Compute(sp.scattering_params, result);
-                }
-                else {
-                    result = 0;
+                    result_coherent = es.ComputeResult(sp.scattering_params);
                 }
 
-                double sxx = result.x / 1e8;
-                double sxy = result.y / 1e8;
+                double sxx = result_coherent.xx / 1e8;
+                double sxy = result_coherent.xy / 1e8;
                 
-                double sxx_i = resulti.x / 1e8;
-                double sxy_i = resulti.y / 1e8;
+                double sxx_i = result_incoherent.xx / 1e8;
+                double sxy_i = result_incoherent.xy / 1e8;
 
                 total_sigma_xx += sxx;
                 total_sigma_xxi += sxx_i;
@@ -113,9 +106,9 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
                 total_sigma_xyi += sxy_i;
             }
 
-            Result r;
-            r.x = sp.scattering_params.magnetic_field;
-            //sr.xs_temperature[i] = sp.scattering_params.temperature;
+            DataRow row;
+            row.temperature = sp.scattering_params.temperature;
+            row.magnetic_field = sp.scattering_params.magnetic_field;
 
             {
                 double sxx_sq_exp = total_sigma_xx_sq / (double)(sp.samples_per_run) + 1e-15;
@@ -123,19 +116,21 @@ void ComputeIteration(SimulationElasticScattering &es, SimulationConfiguration& 
 
                 double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(sp.samples_per_run - 1));
                 
-                r.xx  = total_sigma_xx / (double)(sp.samples_per_run);
-                r.xxi = total_sigma_xxi / (double)(sp.samples_per_run);
+                row.coherent.xx = total_sigma_xx / (double)(sp.samples_per_run);
+                row.incoherent.xx = total_sigma_xxi / (double)(sp.samples_per_run);
 
-                r.xxd = sxx_std / sxx_exp;
+                row.xxd = sxx_std / sxx_exp;
 
-                r.xy  = total_sigma_xy / (double)sp.samples_per_run;
-                r.xyi = total_sigma_xyi / (double)sp.samples_per_run;
+                row.coherent.xy  = total_sigma_xy / (double)sp.samples_per_run;
+                row.incoherent.xy = total_sigma_xyi / (double)sp.samples_per_run;
             }
 
-            sr.results[i] = r;
-            printf("%f %e %e %e %e %f\n", r.x, r.xxi, r.xx, r.xyi, r.xy, r.xxd);
+            sr.results[i] = row;
+            printf("%f %e %e %e %e %f\n", row.temperature, row.incoherent.xx, row.coherent.xx, row.incoherent.xy, row.coherent.xy, row.xxd);
         }
     }
+
+    return sr;
 }
 
 void PrintInfo(const SimulationConfiguration& sp, int count)
@@ -150,7 +145,6 @@ void PrintInfo(const SimulationConfiguration& sp, int count)
     printf("Time estimate total: %f hours \n\n", (float)intersects / 2e9 / 3600.0 * count);
 }
 
-//#pragma warning(disable : 4996)
 void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr)
 {
     auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -214,8 +208,8 @@ void LogResult(const SimulationConfiguration& sim_params, const SimulationResult
 
     int idx = 0;
     for (int i = 0; i < n; i++) {
-        const auto r = sr.results[i];
-        file << r.x << " " << r.xxi << " " << r.xx << " " << r.xyi << " " << r.xy << " " << r.xxd << std::endl;
+        const auto row = sr.results[i];
+        file << row.temperature << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
     }
 
     file.flush();

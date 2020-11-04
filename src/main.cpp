@@ -13,7 +13,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->dont_show_info = false;
 
     if (argc < 2) {
-        printf("EScl - Elastic Scattering compute application");
+        printf("|| EScl ||");
         printf("Usage:");
         printf("\t escl [sim | app | test ]");
         exit(0);

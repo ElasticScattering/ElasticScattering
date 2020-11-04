@@ -5,6 +5,6 @@
 #include "ElasticScattering.h"
 
 int sim_main(const InitParameters& init);
-void ComputeIteration(SimulationElasticScattering& es, SimulationConfiguration& sp, SimulationResult& sr);
+SimulationResult& RunSimulation(ElasticScattering& es, SimulationConfiguration& sp);
 void PrintInfo(const SimulationConfiguration& sp, int count);
 void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr);

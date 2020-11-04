@@ -4,6 +4,8 @@
 #include <vector>
 #include "datastructures/ScatteringParameters.h"
 #include "datastructures/v2.h"
+#include "datastructures/IntegralResult.h"
+#include "datastructures/SimulationResult.h"
 #include "ImpurityGrid.h"
 
 #include <GL/glew.h>
@@ -42,23 +44,24 @@ protected:
 	void CompleteSimulationParameters(ScatteringParameters& p_sp);
 	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
 
-	double ComputeResult(const std::vector<double>& results);
+	double FinishSingle(std::vector<double> &buffer);
+	ScatterResult FinishResult(ResultBuffer &buffer);
 	double FinishSigma(double res);
 
 public:
-	virtual bool Compute(ScatteringParameters &p_sp, double &result) = 0;
+	virtual ScatterResult ComputeResult(ScatteringParameters& p_sp) = 0;
+	virtual bool ComputeSingle(ScatteringParameters& p_sp, double &buffer) = 0;
 };
 
 class CPUElasticScattering : public ElasticScattering {
-	std::vector<double> main_buffer;
-	std::vector<float>  pixels;
-
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
 
 public:
-	virtual bool Compute(ScatteringParameters &p_sp, double& result) override;
+	virtual ScatterResult ComputeResult(ScatteringParameters &p_sp) override;
+	virtual bool ComputeSingle(ScatteringParameters& p_sp, double& buffer) override;
 };
 
+/*
 class GPUElasticScattering : public ElasticScattering {
 	OpenGLResources ogl;
 
@@ -66,7 +69,7 @@ class GPUElasticScattering : public ElasticScattering {
 	void PrepareTexKernel(int pixels);
 
 public:
-	virtual bool Compute(ScatteringParameters &p_sp, double& result) override;
+	virtual bool Compute(ScatteringParameters &p_sp, IntegralResult& result) override;
 
 	GPUElasticScattering();
 	GPUElasticScattering(const InitParameters &init);
@@ -80,12 +83,12 @@ class SimulationElasticScattering : public ElasticScattering {
 
 public:
 	bool Compute(ScatteringParameters& p_sp, v2& result);
-	virtual bool Compute(ScatteringParameters& p_sp, double& result) override;
+	virtual bool Compute(ScatteringParameters& p_sp, IntegralResult& result) override;
 
 	SimulationElasticScattering();
 	SimulationElasticScattering(bool use_gpu, bool show_info);
 	SimulationElasticScattering(const InitParameters& init);
 	~SimulationElasticScattering();
 };
-
+*/
 #endif // ELASTIC_SCATTERING_H
