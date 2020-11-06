@@ -11,3 +11,5 @@
 
 	#define min(a, b) ((a) < (b)) ? (a) : (b)
 #endif
+
+#define EPSILON 0.000001

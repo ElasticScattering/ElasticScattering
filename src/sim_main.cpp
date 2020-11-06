@@ -79,7 +79,7 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
 
             for (int j = 0; j < sp.samples_per_run; j++) {
                 sp.scattering_params.impurity_seed = random_device();
-                ScatterResult result_coherent, result_incoherent;
+                SigmaResult result_coherent, result_incoherent;
 
                 if (run_incoherent) {
                     sp.scattering_params.is_incoherent = 1;

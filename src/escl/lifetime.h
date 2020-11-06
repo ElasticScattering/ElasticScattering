@@ -5,6 +5,7 @@
 #include "impurity_grid.h"
 
 #include "windows.h"
+
 double SIM_lifetime(const v2 pos, const double phi, ScatteringParameters* sp, std::vector<v2>& impurities, std::vector<int>& cell_index) {
     const v2 unit = { cos(phi), sin(phi) };
     const v2 vel = unit * sp->particle_speed;

@@ -8,42 +8,16 @@
 #include "device_macros.h"
 #include "lifetime.h"
 
-inline ScatterResult sim_phi_lifetime(const double2 pos, BUFFER_ARGS)
+inline double sim_phi_lifetime(const double2 pos, int quadrant, int step, BUFFER_ARGS)
 {
-    bool should_compute_sigma = ShouldComputeSigma(sp->mode);
     bool clockwise = (sp->is_clockwise == 1);
     bool incoherent = (sp->is_incoherent == 1);
     bool diag_regions = (sp->is_diag_regions == 1);
-    
-    ScatterResult result;
-    result.xx = 0;
-    result.xy = 0;
 
-    for (int j = 0; j < 4; j++) {
-        const double start = sp->integrand_start_angle + j * (PI * 0.5);
-        double2 section_total = { 0.0, 0.0 };
+    const double phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
 
-        for (int i = 0; i < sp->integrand_steps; i++) {
-            const double phi = start + i * sp->integrand_step_size;
-
-            const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
-            const double lt = lifetime_old(min(15.0 * sp->tau, bound_time), pos, phi, clockwise, sp, impurities, cell_index);
-
-            double result = GetSigma(lt, phi, sp->tau, sp->angular_speed, clockwise);
-            double xx = result * cos(phi);
-            double xy = result * sin(phi);
-      
-            double w = GetWeight(i, sp->integrand_steps);
-            section_total = section_total + (double2)(xx, xy) * w;
-        }
-
-        section_total = section_total * (sp->integrand_angle_area / ((sp->integrand_steps - 1) * 3.0));
-
-        result.xx += section_total.x;
-        result.xy += section_total.y;
-    }
-
-    return result;
+    const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
+    return lifetime(min(15.0 * sp->tau, bound_time), pos, phi, clockwise, sp, impurities, cell_index);
 }
 
 inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
@@ -76,7 +50,7 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
                 }
             }
 
-            double w = GetWeight(i, sp->integrand_steps);
+            double w = SimpsonWeight(i, sp->integrand_steps);
             total += result * w;
         }
 
@@ -86,14 +60,24 @@ inline double phi_lifetime(const double2 pos, BUFFER_ARGS)
     return integral;
 }
 
+inline double SimpsonWeight(const int i, const int dim) {
+    const double main_multiplier = (i % 2 == 0) ? 2.0 : 4.0;
+    const bool is_edge = i == 0 || i == (dim - 1);
+    return is_edge ? main_multiplier : 1.0;
+}
+
+inline double GetWeight2D(unsigned int i, int j, int dim) {
+    double w = SimpsonWeight(i, dim) * SimpsonWeight(j, dim);
+
+    return w;
+}
+
 inline bool ShouldComputeSigma(int m) {
     return (m == MODE_SIMULATION || m == MODE_SIGMA_XX || m == MODE_SIGMA_XY);
 }
 
-inline double GetSigma(double lt, double phi, double tau, double w, bool clockwise)
+inline double GetSigma(double lt, double phi, double tau, double w)
 {
-    w = clockwise ? -w : w;
-
     double z = exp(-lt / tau);
 
     double r = cos(phi) - cos(phi + w * lt) * z;

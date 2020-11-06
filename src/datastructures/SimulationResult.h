@@ -17,21 +17,21 @@ struct DataRow {
     double temperature;
     double magnetic_field;
     
-    ScatterResult incoherent;
-    ScatterResult coherent;
+    SigmaResult incoherent;
+    SigmaResult coherent;
     double xxd;
 };
 
 struct ResultBuffer
 {
-    std::vector<ScatterResult> intermediate_results;
+    std::vector<SigmaResult> intermediate_results;
 
     ResultBuffer(int size) {
         intermediate_results.resize(size);
     }
 };
 
-struct ScatterResult {
+struct SigmaResult {
     double xx;
     double xy;
 };

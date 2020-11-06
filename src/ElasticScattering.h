@@ -45,11 +45,10 @@ protected:
 	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
 
 	double FinishSingle(std::vector<double> &buffer);
-	ScatterResult FinishResult(ResultBuffer &buffer);
-	double FinishSigma(double res);
+	double SigmaFactor() const;
 
 public:
-	virtual ScatterResult ComputeResult(ScatteringParameters& p_sp) = 0;
+	virtual SigmaResult ComputeResult(ScatteringParameters& p_sp) = 0;
 	virtual bool ComputeSingle(ScatteringParameters& p_sp, double &buffer) = 0;
 };
 
@@ -57,7 +56,7 @@ class CPUElasticScattering : public ElasticScattering {
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
 
 public:
-	virtual ScatterResult ComputeResult(ScatteringParameters &p_sp) override;
+	virtual SigmaResult ComputeResult(ScatteringParameters &p_sp) override;
 	virtual bool ComputeSingle(ScatteringParameters& p_sp, double& buffer) override;
 };
 
