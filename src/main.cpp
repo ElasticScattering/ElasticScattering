@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
-#include "ElasticScattering.h"
+#include "scattering/ElasticScattering.h"
 #include "tests/test_main.h"
 //#include "app_main.h"
 #include "sim_main.h"
@@ -8,9 +8,8 @@
 #include <string>
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
-    p_init->mode = ProgramMode::Interactive;
     p_init->use_gpu = true;
-    p_init->dont_show_info = false;
+    //p_init->dont_show_info = false;
 
     if (argc < 2) {
         printf("|| EScl ||");

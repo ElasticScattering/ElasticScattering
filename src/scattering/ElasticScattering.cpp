@@ -1,5 +1,6 @@
 #include "ElasticScattering.h"
-#include "src/escl/common.h"
+#include "escl/lifetime.h"
+#include "escl/util.h"
 
 double ElasticScattering::FinishSingle(std::vector<double> &buffer) {
 	double result = 0;
@@ -8,7 +9,7 @@ double ElasticScattering::FinishSingle(std::vector<double> &buffer) {
 		result += buffer[i];
 
 	double z = sp.region_size / (double)(sp.dim - 2);
-	result *= z * z / 9.0;
+	result *= z * z / 9.0; // phi integraal, 27?
 
 	if (ShouldComputeSigma(sp.mode)) {
 		result *= SigmaFactor();
@@ -38,9 +39,13 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 		p_sp.tau = HBAR / (KB * p_sp.temperature);
 	}
 	
-	double area_dim = (p_sp.region_size + p_sp.region_extends * 2);
-	p_sp.impurity_count = max(1, ceil(area_dim * area_dim * p_sp.impurity_density));
-
+	{
+		p_sp.impurity_spawn_range = { -p_sp.region_extends, p_sp.region_size + p_sp.region_extends };
+		double area_length = p_sp.impurity_spawn_range.y - p_sp.impurity_spawn_range.x;
+		p_sp.impurity_count = max(1, ceil(area_length * area_length * p_sp.impurity_density));
+		p_sp.cells_per_row = max(sqrt(sp.impurity_count / sp.max_expected_impurities_in_cell), 1);
+	}
+	
 	{
 		bool diag_regions = (p_sp.is_diag_regions == 1);
 		bool incoherent = (p_sp.is_incoherent == 1);

@@ -363,13 +363,14 @@
     <ClCompile Include="libs\implot\implot_demo.cpp" />
     <ClCompile Include="libs\implot\implot_items.cpp" />
     <ClCompile Include="src\app_main.cpp" />
-    <ClCompile Include="src\CPUElasticScattering.cpp" />
-    <ClCompile Include="src\datastructures\IntegralResult.h" />
-    <ClCompile Include="src\ElasticScattering.cpp" />
-    <ClCompile Include="src\GPUElasticScattering.cpp" />
-    <ClCompile Include="src\ImpurityGrid.cpp" />
+    <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
+    <ClCompile Include="src\scattering\ElasticScattering.cpp" />
+    <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
+    <ClCompile Include="src\scattering\escl\details.cpp" />
+    <ClCompile Include="src\scattering\escl\impurity_grid.cpp" />
+    <ClCompile Include="src\scattering\ImpurityGrid.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\SimulationElasticScattering.cpp" />
+    <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\OpenGLUtils.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
@@ -386,26 +387,23 @@
     <ClInclude Include="libs\implot\implot.h" />
     <ClInclude Include="libs\implot\implot_internal.h" />
     <ClInclude Include="src\app_main.h" />
-    <ClInclude Include="src\datastructures\ImpurityGrid.h" />
-    <ClInclude Include="src\datastructures\ScatteringParameters.h" />
-    <ClInclude Include="src\datastructures\SimulationConfiguration.h" />
-    <ClInclude Include="src\datastructures\SimulationResult.h" />
-    <ClInclude Include="src\datastructures\v2.h" />
-    <ClInclude Include="src\ElasticScattering.h" />
-    <ClInclude Include="src\escl\common.h" />
-    <ClInclude Include="src\escl\constants.h" />
-    <ClInclude Include="src\escl\details.h" />
-    <ClInclude Include="src\escl\device_macros.h" />
-    <ClInclude Include="src\escl\impurity_grid.h" />
-    <ClInclude Include="src\escl\lifetime.h" />
-    <ClInclude Include="src\escl\weights.h" />
-    <ClInclude Include="src\ImpurityGrid.h" />
+    <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
+    <ClInclude Include="src\SimulationConfiguration.h" />
+    <ClInclude Include="src\SimulationResult.h" />
+    <ClInclude Include="src\scattering\escl\v2.h" />
+    <ClInclude Include="src\scattering\ElasticScattering.h" />
+    <ClInclude Include="src\scattering\escl\constants.h" />
+    <ClInclude Include="src\scattering\escl\details.h" />
+    <ClInclude Include="src\scattering\escl\device_macros.h" />
+    <ClInclude Include="src\scattering\escl\impurity_grid.h" />
+    <ClInclude Include="src\scattering\escl\lifetime.h" />
+    <ClInclude Include="src\scattering\escl\util.h" />
+    <ClInclude Include="src\scattering\ImpurityGrid.h" />
     <ClInclude Include="src\sim_main.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\OpenGLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />
-    <ClInclude Include="src\utils\Shader.h" />
     <ClInclude Include="tests\CPUComparisonTest.h" />
     <ClInclude Include="tests\IntegrandWeightsTest.h" />
     <ClInclude Include="tests\SigmaTest.h" />
@@ -416,8 +414,11 @@
     <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\escl\scatter.cl" />
-    <None Include="src\escl\test.cl" />
+    <None Include="src\scattering\escl\scatter.cl" />
+    <None Include="src\scattering\escl\test.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="docs\todo.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

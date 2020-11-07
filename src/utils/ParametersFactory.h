@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/datastructures/ScatteringParameters.h"
+#include "src/scattering/escl/ScatteringParameters.h"
 
 class ParametersFactory {
 public:

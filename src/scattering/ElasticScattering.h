@@ -1,15 +1,14 @@
 #ifndef ELASTIC_SCATTERING_H
 #define ELASTIC_SCATTERING_H
 
-#include <vector>
-#include "datastructures/ScatteringParameters.h"
-#include "datastructures/v2.h"
-#include "datastructures/IntegralResult.h"
-#include "datastructures/SimulationResult.h"
 #include "ImpurityGrid.h"
+#include "escl/ScatteringParameters.h"
+#include "escl/v2.h"
+#include "src/SimulationResult.h"
+#include "src/utils/OpenGLUtils.h"
 
+#include <vector>
 #include <GL/glew.h>
-#include "utils/OpenGLUtils.h"
 
 enum ProgramMode {
 	Test,
@@ -49,15 +48,13 @@ protected:
 
 public:
 	virtual SigmaResult ComputeResult(ScatteringParameters& p_sp) = 0;
-	virtual bool ComputeSingle(ScatteringParameters& p_sp, double &buffer) = 0;
 };
 
-class CPUElasticScattering : public ElasticScattering {
+class ElasticScatteringCPU : public ElasticScattering {
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
 
 public:
 	virtual SigmaResult ComputeResult(ScatteringParameters &p_sp) override;
-	virtual bool ComputeSingle(ScatteringParameters& p_sp, double& buffer) override;
 };
 
 /*

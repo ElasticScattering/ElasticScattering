@@ -1,5 +1,5 @@
 #include "ParametersFactory.h"
-#include "src/escl/constants.h"
+#include "src/scattering/escl/constants.h"
 
 ScatteringParameters& ParametersFactory::GenerateSimulation() {
     ScatteringParameters sp;

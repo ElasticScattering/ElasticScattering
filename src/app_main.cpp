@@ -1,8 +1,8 @@
 #pragma once
 #ifndef NO_WINDOW
 #include <windows.h>
-
-#include "ElasticScattering.h"
+/*
+#include "src/scattering/ElasticScattering.h"
 #include "app_main.h"
 #include "utils/OpenCLUtils.h"
 #include "utils/ErrorMacros.h"
@@ -349,5 +349,5 @@ int app_main(const InitParameters& init)
     glfwTerminate();
     return 0;
 }
-
+*/
 #endif // NO_WINDOW

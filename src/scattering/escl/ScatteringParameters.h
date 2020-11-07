@@ -1,4 +1,5 @@
 #pragma once
+#include "v2.h"
 
 typedef struct ScatteringParameters
 {
@@ -28,9 +29,12 @@ typedef struct ScatteringParameters
     double impurity_density;
     double impurity_radius;
 
+    int cells_per_row;
     int max_expected_impurities_in_cell;
     unsigned int impurity_seed;
-    
+    double2 impurity_spawn_range;
+
+    // @Fix, outdated!
     friend bool operator==(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
         return (lhs.mode == rhs.mode && lhs.impurity_seed == rhs.impurity_seed &&
             lhs.region_size == rhs.region_size && lhs.dim == rhs.dim &&

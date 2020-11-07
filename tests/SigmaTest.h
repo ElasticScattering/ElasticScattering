@@ -36,7 +36,7 @@ TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 	ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
     sp.mode = MODE_SIGMA_XX;
 
-	auto e = new CPUElasticScattering;
+	auto e = new ElasticScatteringCPU;
     double result;
     e->Compute(sp, result);
 

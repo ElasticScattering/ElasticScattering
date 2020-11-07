@@ -1,4 +1,4 @@
-#include "common.h"
+#include "lifetime.h"
 #include "constants.h"
 
 __kernel void lifetime(__constant ScatteringParameters *sp, __global read_only double2 *impurities, __global read_only int *impurity_index, __global double *lifetimes) 

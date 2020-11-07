@@ -2,6 +2,25 @@
 
 #include <vector>
 
+struct SigmaResult {
+    double xx;
+    double xy;
+
+    SigmaResult() {
+        xx = 0;
+        xy = 0;
+    }
+};
+
+struct DataRow {
+    double temperature;
+    double magnetic_field;
+
+    SigmaResult incoherent;
+    SigmaResult coherent;
+    double xxd;
+};
+
 struct SimulationResult {
     double time_elapsed;
 
@@ -13,15 +32,6 @@ struct SimulationResult {
     }
 }; 
 
-struct DataRow {
-    double temperature;
-    double magnetic_field;
-    
-    SigmaResult incoherent;
-    SigmaResult coherent;
-    double xxd;
-};
-
 struct ResultBuffer
 {
     std::vector<SigmaResult> intermediate_results;
@@ -29,9 +39,4 @@ struct ResultBuffer
     ResultBuffer(int size) {
         intermediate_results.resize(size);
     }
-};
-
-struct SigmaResult {
-    double xx;
-    double xy;
 };

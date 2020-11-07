@@ -1,11 +1,13 @@
 #pragma once
-
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #include "sim_main.h"
 
-#include "escl/constants.h"
+#include "SimulationConfiguration.h"
+#include "SimulationResult.h"
 #include "utils/ParametersFactory.h"
-#include "datastructures/SimulationConfiguration.h"
-#include "datastructures/SimulationResult.h"
+#include "scattering/escl/constants.h"
 
 #include <random>
 #include <windows.h>
@@ -25,7 +27,7 @@ int sim_main(const InitParameters& init)
 
     ScatteringParameters sp = ParametersFactory::GenerateSimulation();
     SimulationConfiguration sim_params;
-    sim_params.runs = 10;
+    sim_params.number_of_runs = 10;
     sim_params.samples_per_run = 2;
     sim_params.magnetic_field_min = 0.01;
     sim_params.magnetic_field_max = 40;
@@ -34,7 +36,7 @@ int sim_main(const InitParameters& init)
     const std::vector<double> temperatures { 15, 60 };
     PrintInfo(sim_params, temperatures.size());
 
-    CPUElasticScattering es;
+    ElasticScatteringCPU es;
 
     for (int i = 0; i < temperatures.size(); i++) {
         sp.temperature = temperatures[i];
@@ -57,15 +59,15 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
     bool run_incoherent = sp.scattering_params.alpha > 0.000001;
     bool run_coherent = abs(sp.scattering_params.alpha - (PI / 4)) > 0.000001;
     
-    double step_size = (sp.magnetic_field_max - sp.magnetic_field_min) / sp.runs;
+    double step_size = (sp.magnetic_field_max - sp.magnetic_field_min) / sp.number_of_runs;
 
     printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
     std::random_device random_device;
 
-    SimulationResult sr(sp.runs);
+    SimulationResult sr(sp.number_of_runs);
 
-    for (int i = 0; i < sp.runs; i++) {
+    for (int i = 0; i < sp.number_of_runs; i++) {
         sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
 
         {
@@ -137,7 +139,7 @@ void PrintInfo(const SimulationConfiguration& sp, int count)
 {
     const int imp_count = sp.scattering_params.impurity_density * pow(sp.scattering_params.region_extends + sp.scattering_params.region_size, 2);
     const long long intersects_each = sp.samples_per_run * imp_count * 2.0 * pow(sp.scattering_params.dim, 2) * sp.scattering_params.integrand_steps * 4.0;
-    const long long intersects = sp.runs * intersects_each;
+    const long long intersects = sp.number_of_runs * intersects_each;
     printf("Simulation info:\n");
     printf("Total intersections: %e\n", intersects * (long long)count);
     printf("Time estimate per data point: %f minutes.\n", (float)intersects_each / 2e9 / 60);

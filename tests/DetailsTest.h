@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/escl/details.h"
+#include "src/scattering/escl/details.h"
 
 TEST_CASE("Cyclotron Orbit")
 {

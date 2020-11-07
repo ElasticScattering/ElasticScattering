@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/ElasticScattering.h"
+#include "src/scattering/ElasticScattering.h"
 #include "src/utils/OpenCLUtils.h"
 
 TEST_CASE("Sum kernel")
@@ -81,7 +81,7 @@ TEST_CASE("Add weights kernel")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "common.h", &program);
+	CompileOpenCLProgram(device, context, "scatter.cl", &program);
 
 	cl_int clStatus;
 	cl_kernel main_kernel = clCreateKernel(program, "add_integral_weights_2d", &clStatus);
@@ -126,7 +126,7 @@ TEST_CASE("Add weights kernel")
 
 	for (int j = 0; j < limit; j++) {
 		for (int i = 0; i < limit; i++) {
-			cpu_result = A[j * dim + i] * GetWeight2D(i, j, limit);
+			cpu_result = A[j * dim + i] * SimpsonWeight2D(i, j, limit);
 			gpu_result = gpu_results[j * dim + i];
 
 			CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")

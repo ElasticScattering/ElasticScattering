@@ -1,7 +1,7 @@
 #pragma once
 
 #include "src/utils/OpenCLUtils.h"
-#include "src/ElasticScattering.h"
+#include "src/scattering/ElasticScattering.h"
 #include <random>
 
 #include <doctest.h>

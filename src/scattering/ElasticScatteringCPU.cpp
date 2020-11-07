@@ -1,7 +1,8 @@
 #include "ElasticScattering.h"
-#include "src/escl/common.h"
+#include "escl/lifetime.h"
+#include "escl/util.h"
 
-SigmaResult CPUElasticScattering::ComputeResult(ScatteringParameters& p_sp)
+SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
 {
     PrepareCompute(p_sp);
 
@@ -25,9 +26,10 @@ SigmaResult CPUElasticScattering::ComputeResult(ScatteringParameters& p_sp)
     }
 
     // Apply weights for integration.
-    const double w = (p_sp.is_clockwise == 1) ? -w : w;
+    const double w = (p_sp.is_clockwise == 1) ? -p_sp.angular_speed : p_sp.angular_speed;
 
     SigmaResult sr;
+
     double integral_total = 0;
     for (int j = 0; j < limit; j++) {
         double wy = SimpsonWeight(j, limit);
@@ -56,37 +58,7 @@ SigmaResult CPUElasticScattering::ComputeResult(ScatteringParameters& p_sp)
     return sr;
 }
 
-bool CPUElasticScattering::ComputeSingle(ScatteringParameters& p_sp, double& result)
-{
-    if (!PrepareCompute(p_sp)) return false;
-
-    std::vector<double> buffer;
-    buffer.resize(p_sp.dim * p_sp.dim);
-    
-    // GPU kernel works only with even work size.
-    int limit = sp.dim - 1;
-
-    for (int j = 0; j < limit; j++) {
-        for (int i = 0; i < limit; i++)
-        {
-            v2 pos(i, j);
-            pos = pos * (sp.region_size / (double)(sp.dim - 2));
-
-            buffer[j * sp.dim + i] = phi_lifetime(pos, &p_sp, grid.impurities, grid.imp_index);;
-        }
-    }
-
-    // Apply weights for integration.
-    for (int j = 0; j < limit; j++)
-        for (int i = 0; i < limit; i++)
-            buffer[j * sp.dim + i] *= GetWeight2D(i, j, limit);
-    
-    result = FinishSingle(buffer);
-
-    return true;
-}
-
-bool CPUElasticScattering::PrepareCompute(ScatteringParameters &p_sp) {
+bool ElasticScatteringCPU::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
     
     bool impurities_changed = ImpuritySettingsChanged(p_sp);

@@ -1,12 +1,11 @@
 #pragma once
 
-#ifndef DEVICE_PROGRAM
-	#include "src/datastructures/v2.h"
-#endif
+#include "impurity_grid.h"
 
-struct Intersection {
-	double2 p1, p2;
-};
+#ifndef DEVICE_PROGRAM
+	#include <cmath>
+#endif
+#include "constants.h"
 
 double GetAngle(double2 pos, double2 circle, double radius) {
 	if (abs(pos.y - circle.y) > EPSILON) {
@@ -19,25 +18,15 @@ double GetAngle(double2 pos, double2 circle, double radius) {
 	}
 }
 
-void BoxIntersects(double2 low, double L, double2 circle, double circle_radius) {
-	Intersection right	= BoundaryIntersects(low,				  low + double2(L, 0), circle, circle_radius, L);
-	Intersection up		= BoundaryIntersects(low,				  low + double2(0, L), circle, circle_radius, L);
-	Intersection down	= BoundaryIntersects(low + double2(L, 0), low + double2(L, L), circle, circle_radius, L);
-	Intersection left	= BoundaryIntersects(low + double2(0, L), low + double2(L, L), circle, circle_radius, L);
-
-	//Intersects = <filter out the Empty>
-	//Intersects3 = AddAngleToIntersects(Intersects, xc, yc, rc)
-	//Return Intersects3
-}
-
 Intersection BoundaryIntersects(double2 pos, double2 pos2, double2 circle, double radius, double L) {
 	double2 u = (pos2 - pos) / L;
 	double projection_distance = u.x * (circle.x - pos.x) + u.y * (circle.y - pos.y);
 	double2 proj = pos + (u * projection_distance);
 	double proj_circle_distance_sq = pow(proj.x - circle.x, 2) + pow(proj.x - circle.x, 2);
 	double r2 = (radius * radius);
+	Intersection i;
 	if (proj_circle_distance_sq >= r2) {
-		return; //empty
+		return i; //should be empty
 	}
 
 	double dist = sqrt(r2 - proj_circle_distance_sq);
@@ -57,8 +46,6 @@ Intersection BoundaryIntersects(double2 pos, double2 pos2, double2 circle, doubl
 		valid_intersect_b = ((pos.y < intersection_b.y) && (pos2.y > intersection_b.y)) || ((pos.y > intersection_b.y) && (pos2.y < intersection_b.y));
 	}
 
-	Intersection i;
-
 	if (valid_intersect_a) {
 		i.p1 = intersection_a;
 	}
@@ -66,6 +53,45 @@ Intersection BoundaryIntersects(double2 pos, double2 pos2, double2 circle, doubl
 		i.p2 = intersection_b;
 	}
 }
+
+void BoxIntersects(double2 low, double L, double2 circle, double circle_radius) {
+	Intersection right = BoundaryIntersects(low, low + double2(L, 0), circle, circle_radius, L);
+	Intersection up = BoundaryIntersects(low, low + double2(0, L), circle, circle_radius, L);
+	Intersection down = BoundaryIntersects(low + double2(L, 0), low + double2(L, L), circle, circle_radius, L);
+	Intersection left = BoundaryIntersects(low + double2(0, L), low + double2(L, L), circle, circle_radius, L);
+
+	//Intersects = <filter out the Empty>
+	//Intersects3 = AddAngleToIntersects(Intersects, xc, yc, rc)
+	//Return Intersects3
+}
+
+CellRange GetNextCell(int current_cell, int cells_per_row, double2 spawn_range, double2 orbit, double orbit_radius)
+{
+	v2 low_left = to_world(current_cell, cells_per_row, spawn_range);
+
+	double L = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+	auto intersects = BoxIntersects(low_left, L, );
+}
+
+////////////////////////////
+
+int get_cell_index(const v2 pos, const v2 range, const int cells_per_row)
+{
+	return to_index(to_grid(pos.x, pos.y, range, cells_per_row), cells_per_row);
+}
+
+CellRange get_cell_range(const v2 pos, const v2 range, const int cells_per_row)
+{
+	CellRange cell_range;
+
+	cell_range.start = to_index(to_grid(pos.x, pos.y, range, cells_per_row), cells_per_row);
+	cell_range.end = cell_range.start + 1;
+
+	return cell_range;
+}
+
+////////////////////////
+
 
 int to_grid(const double x, const double2 range, const int cells_per_row)
 {
@@ -80,6 +106,16 @@ v2i to_grid(const double x, const double y, const double2 range, const int cells
 	};
 }
 
+v2 to_world(const int cell_index, const int cells_per_row, const double2 spawn_range)
+{
+
+	double x = cell_index % cells_per_row;
+	double y = floor(cell_index / cells_per_row);
+	double2 low_left = (double2)(x, y) * (spawn_range.y - spawn_range.x) + spawn_range.x;
+
+	return low_left;
+}
+
 bool within_bounds(v2i p, const int cells_per_row) {
 	return (p.x >= 0 && p.x < cells_per_row) && (p.y >= 0 && p.y < cells_per_row);
 }
@@ -89,7 +125,7 @@ int to_index(const int x, const int y, const int cells_per_row) {
 }
 
 int to_index(const v2i p, const int cells_per_row) {
-	to_index(p.x, p.y, cells_per_row);
+	return to_index(p.x, p.y, cells_per_row);
 }
 
 double remap(double x, double s0, double s1, double t0, double t1)

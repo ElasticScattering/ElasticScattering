@@ -16,4 +16,6 @@
 #define MODE_SIGMA_XY 3
 #define MODE_SIMULATION 4
 
+#define EPSILON 0.000001
+
 #endif // CL_CONSTANTS
