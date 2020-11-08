@@ -2,8 +2,8 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
-#include "src/ElasticScattering.h"
-#include "src/escl/constants.h"
+#include "src/scattering/ElasticScattering.h"
+#include "src/scattering/escl/constants.h"
 #include "src/utils/ParametersFactory.h"
 
 

@@ -368,6 +368,7 @@
     <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
     <ClCompile Include="src\scattering\escl\details.cpp" />
     <ClCompile Include="src\scattering\escl\impurity_grid.cpp" />
+    <ClCompile Include="src\scattering\escl\lifetime.cpp" />
     <ClCompile Include="src\scattering\ImpurityGrid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />

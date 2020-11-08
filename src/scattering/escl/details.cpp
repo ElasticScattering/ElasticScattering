@@ -89,7 +89,7 @@ double GetCrossAngle(const double p, const double q, const bool clockwise)
     return smod(g, PI2);
 }
 
-double GetFirstCrossTime(const double2 pos, const Orbit c1, const double2 ip, const double r, const double ir, const double w, const double clockwise)
+double GetFirstCrossTime(const double2 pos, const Orbit c1, const double2 ip, const double ir, const double w)
 {
     const double4 cross_points = GetCrossPoints(c1, ip, ir);
 
@@ -100,10 +100,8 @@ double GetFirstCrossTime(const double2 pos, const Orbit c1, const double2 ip, co
     const double phi1 = GetPhi(p1, c1);
     const double phi2 = GetPhi(p2, c1);
 
-    const double t1 = GetCrossAngle(phi0, phi1, clockwise) / w;
-    const double t2 = GetCrossAngle(phi0, phi2, clockwise) / w;
-
-    double a = min(2, 2);
+    const double t1 = GetCrossAngle(phi0, phi1, c1.clockwise) / w;
+    const double t2 = GetCrossAngle(phi0, phi2, c1.clockwise) / w;
 
     return min(t1, t2);
 }

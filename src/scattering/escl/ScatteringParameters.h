@@ -31,6 +31,8 @@ typedef struct ScatteringParameters
 
     int cells_per_row;
     int max_expected_impurities_in_cell;
+    double cell_size;
+
     unsigned int impurity_seed;
     double2 impurity_spawn_range;
 

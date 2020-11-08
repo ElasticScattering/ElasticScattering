@@ -7,70 +7,112 @@
 #endif
 #include "constants.h"
 
-double GetAngle(double2 pos, double2 circle, double radius) {
-	if (abs(pos.y - circle.y) > EPSILON) {
-		double sign = (pos.x < circle.x) ? -1.0 : 1.0;
-		double angle = sign * asin((pos.y - circle.y) / radius);
+double GetAngle(double2 pos, Orbit o) {
+	if (abs(pos.y - o.center.y) > EPSILON) {
+		double sign = (pos.x < o.center.x) ? -1.0 : 1.0;
+		double angle = sign * asin((pos.y - o.center.y) / o.radius);
 		return fmod(angle, PI2);
 	}
 	else {
-		return (pos.x > circle.x) ? 0 : PI;
+		return (pos.x > o.center.x) ? 0 : PI;
 	}
 }
 
-Intersection BoundaryIntersects(double2 pos, double2 pos2, double2 circle, double radius, double L) {
-	double2 u = (pos2 - pos) / L;
-	double projection_distance = u.x * (circle.x - pos.x) + u.y * (circle.y - pos.y);
-	double2 proj = pos + (u * projection_distance);
-	double proj_circle_distance_sq = pow(proj.x - circle.x, 2) + pow(proj.x - circle.x, 2);
-	double r2 = (radius * radius);
-	Intersection i;
-	if (proj_circle_distance_sq >= r2) {
-		return i; //should be empty
-	}
-
-	double dist = sqrt(r2 - proj_circle_distance_sq);
-
-	double2 intersection_a = proj + u * dist;
-	double2 intersection_b = proj - u * dist;
-
-	bool valid_intersect_a = false;
-	bool valid_intersect_b = false;
-
-	if (abs(u.x) > abs(u.y)) {
-		valid_intersect_a = ((pos.x < intersection_a.x) && (pos2.x > intersection_a.x)) || ((pos.x > intersection_a.x) && (pos2.x < intersection_a.x));
-		valid_intersect_b = ((pos.x < intersection_b.x) && (pos2.x > intersection_b.x)) || ((pos.x > intersection_b.x) && (pos2.x < intersection_b.x));
-	}
-	else {
-		valid_intersect_a = ((pos.y < intersection_a.y) && (pos2.y > intersection_a.y)) || ((pos.y > intersection_a.y) && (pos2.y < intersection_a.y));
-		valid_intersect_b = ((pos.y < intersection_b.y) && (pos2.y > intersection_b.y)) || ((pos.y > intersection_b.y) && (pos2.y < intersection_b.y));
-	}
-
-	if (valid_intersect_a) {
-		i.p1 = intersection_a;
-	}
-	if (valid_intersect_b) {
-		i.p2 = intersection_b;
-	}
-}
-
-void BoxIntersects(double2 low, double L, double2 circle, double circle_radius) {
-	Intersection right = BoundaryIntersects(low, low + double2(L, 0), circle, circle_radius, L);
-	Intersection up = BoundaryIntersects(low, low + double2(0, L), circle, circle_radius, L);
-	Intersection down = BoundaryIntersects(low + double2(L, 0), low + double2(L, L), circle, circle_radius, L);
-	Intersection left = BoundaryIntersects(low + double2(0, L), low + double2(L, L), circle, circle_radius, L);
-
-	//Intersects = <filter out the Empty>
-	//Intersects3 = AddAngleToIntersects(Intersects, xc, yc, rc)
-	//Return Intersects3
-}
-
-CellRange GetNextCell(int current_cell, int cells_per_row, double2 spawn_range, double2 orbit, double orbit_radius)
+bool PointInSegment(double point, double l0, double l1)
 {
-	v2 low_left = to_world(current_cell, cells_per_row, spawn_range);
+	return ((point > l0) && (point < l1)) || ((point < l0) && (point > l1));
+}
 
-	double L = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-	auto intersects = BoxIntersects(low_left, L, );
+bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, const double L, SideIntersection *intersection) {
+	double2 u = (p2 - p1) / L;
+	double projection_distance = u.x * (o.center.x - p1.x) + u.y * (o.center.y - p1.y);
+	double2 proj = p1 + (u * projection_distance);
+	double proj_circle_distance_sq = pow(proj.x - o.center.x, 2) + pow(proj.y - o.center.y, 2);
+	
+	// Test if line enters circle.
+	if (proj_circle_distance_sq >= o.radius_squared) {
+		return false; 
+	}
+	
+	// Calculate segment to the edge of the circle.
+	double2 to_edge = u * sqrt(o.radius_squared - proj_circle_distance_sq);
+
+	double2 i1 = proj + to_edge;
+	double2 i2 = proj - to_edge;
+
+	// Determine if the intersection happen on the line segment.
+	bool horizontal_line = abs(u.x) > abs(u.y);
+
+	bool i1_valid = horizontal_line ? PointInSegment(i1.x, p1.x, p2.x) : PointInSegment(i1.y, p1.y, p2.y);
+	bool i2_valid = horizontal_line ? PointInSegment(i2.x, p1.x, p2.x) : PointInSegment(i2.y, p1.y, p2.y);
+
+	// @Todo, decide which to return?
+	if (i1_valid) {
+		Intersection i;
+		i.position = i1;
+		i.incident_angle = GetAngle(i.position, o);
+		i.dphi = GetCrossAngle(, i.incident_angle, o.clockwise);
+		intersection->i1 = i;
+	}
+	if (i2_valid) {
+		Intersection i;
+		i.position = i2;
+		i.incident_angle = GetAngle(i.position, o);
+		i.dphi = GetCrossAngle(, i.incident_angle, o.clockwise);
+		intersection->i2 = i;
+	}
+
+	return true;
+}
+
+void FindExitIntersect(Orbit o, double phi, Intersection start_intersect)
+{
+	// IN: Intersects ...
+
+	double dphi_closest = GetCrossAngle(start_intersect.incident_angle, phi, o.clockwise);
+
+// for intersects
+	Intersection i; // from for loop
+	double dphi = GetCrossAngle(start_intersect.incident_angle, i.incident_angle, o.clockwise);
+	if (dphi < dphi_closest) {
+		// save this intersect?
+	}
+}
+
+bool GetNextCell(
+	const int current_cell,
+	const Orbit orbit, 
+	const double2 last_intersection,
+	const int cells_per_row,
+	const double L,
+	const double2 spawn_range,
+	int *next_cell,
+	double2* intersection_point)
+{
+	double2 low_left = to_world(current_cell, cells_per_row, spawn_range);
+	double2 top_right = low_left + double2(L, L);
+	double2 top_left = low_left + double2(0, L);
+	double2 low_right = low_left + double2(L, 0);
+
+	SideIntersection up, down, left, right;
+	bool up_hit    = GetBoundaryIntersects(low_left, top_left, orbit, L, &up);
+	bool down_hit  = GetBoundaryIntersects(low_right, top_right, orbit, L, &down);
+	bool left_hit  = GetBoundaryIntersects(top_left, top_right, orbit, L, &left);
+	bool right_hit = GetBoundaryIntersects(low_left, low_right, orbit, L, &right);
+
+	if (!right_hit && !up_hit && !left_hit && !down_hit)
+		return false;
+
+	// Select [one] from all valid intersects.
+	// Some succeeded, with 1 or 2 intersects....
+
+	// One attempt would be 
+
+	if (up_hit) {
+		// One or two?
+	}
+
+	return true;
 }
 
 ////////////////////////////
@@ -80,7 +122,7 @@ int get_cell_index(const v2 pos, const v2 range, const int cells_per_row)
 	return to_index(to_grid(pos.x, pos.y, range, cells_per_row), cells_per_row);
 }
 
-CellRange get_cell_range(const v2 pos, const v2 range, const int cells_per_row)
+CellRange get_cell_id(const v2 pos, const v2 range, const int cells_per_row)
 {
 	CellRange cell_range;
 

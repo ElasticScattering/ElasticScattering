@@ -3,33 +3,32 @@
 #ifndef DEVICE_PROGRAM
 	#include "src/scattering/escl/v2.h"
 #endif
+#include "details.h"
 
-struct Intersection {
-	double2 p1, p2;
-};
+typedef struct Intersection {
+	double2 position;
+	double incident_angle;
+
+	double dphi;
+} Intersection;
+
+typedef struct SideIntersection {
+	Intersection i1, i2;
+} SideIntersection;
 
 struct CellRange {
 	int start, end;
 };
 
-double GetAngle(double2 pos, double2 circle, double radius);
+double GetAngle(double2 pos, Orbit o);
 
-Intersection BoundaryIntersects(double2 pos, double2 pos2, double2 circle, double radius, double L); 
-
-void BoxIntersects(double2 low, double L, double2 circle, double circle_radius);
-
-int get_cell_index(const v2 pos, const v2 range, const int cells_per_row);
-
-CellRange GetNextCell();
-
-////////////////////////////
+void FindExitIntersect(Orbit o, double phi, Intersection start_intersect);
+bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, const double L, SideIntersection* intersection);
+bool GetNextCell(const int current_cell, const Orbit orbit, const double2 last_intersection, const int cells_per_row, const double L, const double2 spawn_range, int* next_cell, double2* intersection_point);
 
 int get_cell_index(const v2 pos, const v2 range, const int cells_per_row);
-
-CellRange get_cell_range(const v2 pos, const v2 range, const int cells_per_row);
 
 ////////////////////////
-
 
 int to_grid(const double x, const double2 range, const int cells_per_row);
 
