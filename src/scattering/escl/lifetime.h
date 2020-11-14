@@ -20,10 +20,6 @@ Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters* sp);
 
 inline double SingleLifetime(const Particle* p, const Orbit* orbit, const double2 impurity, const double impurity_radius, const double angular_speed, const double2 valid_range)
 {
-    double2 d = p->starting_position - impurity;
-    if ((impurity_radius * impurity_radius) > dot(d, d))
-        return 0;
-
     if (CirclesCross(orbit, impurity, impurity_radius))
     {
         return GetFirstCrossTime(orbit, p->starting_position, impurity, impurity_radius, angular_speed, valid_range);
@@ -108,9 +104,13 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
 
     const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
 
-    // @Todo, Check if we start inside an impurity.
     int impurity_start = cell_indices[p.cell_index];
-    // ....
+    int impurity_end = cell_indices[p.cell_index + 1];
+    for (int i = impurity_start; i < impurity_end; i++)
+    {
+        if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
+            return 0;
+    }
 
     double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices);
     return lt;

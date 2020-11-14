@@ -179,3 +179,9 @@ inline double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, 
 
     return is_electron ? (p - shift) : (p + shift);
 }
+
+inline bool InsideImpurity(double2 pos, double2 impurity, double impurity_radius)
+{
+    double2 d = pos - impurity;
+    return (impurity_radius * impurity_radius) > dot(d, d);
+}
