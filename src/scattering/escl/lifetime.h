@@ -25,7 +25,7 @@ inline Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters
 
     const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
     const double bound_angle = GetBoundAngle(phi, sp->alpha, clockwise);
-    const double bound_phi = GetCrossAngle(phi, bound_angle, clockwise);
+    const double bound_phi = sp->is_incoherent ? GetCrossAngle(phi, bound_angle, clockwise) : INF;
 
     const v2 vel = (double2)(cos(phi), sin(phi)) * sp->particle_speed;
     const double orbit_radius = sp->particle_speed / sp->angular_speed;

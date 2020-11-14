@@ -1,0 +1,19 @@
+Bereken phi, BoundTime waardes vooraf?
+
+clockwise vooraf bepalen?.
+
+impurity randomness model per materiaal?
+
+visualisatie.
+
+
+ __kernel ...(__global uint *intersectCounter)
+#ifdef EFFICIENCY_METRICS
+	atomic_inc(intersectCounter);
+#endif // EFFICIENCY_METRICS
+
+    //max_lifetime = 15.0 * sp->tau;  Move to SP
+
+
+
+diagonale kruising.
