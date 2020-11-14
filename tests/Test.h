@@ -13,6 +13,8 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
+
+
 /*
 TEST_CASE("Different scatter modes")
 {

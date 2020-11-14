@@ -90,23 +90,23 @@ TEST_CASE("BoundTime Corners")
 
 TEST_CASE("Circles Cross")
 {
-	Orbit orbit1({ 1, 2 }, 1, true);
-	Orbit orbit2({ 0, 0 }, 1, true);
-	Orbit orbit3({ 0, 0 }, 1000, true);
+	Orbit orbit1({ 1, 2 }, 1, true, 0, 0);
+	Orbit orbit2({ 0, 0 }, 1, true, 0, 0);
+	Orbit orbit3({ 0, 0 }, 1000, true, 0, 0);
 
-	CHECK(!CirclesCross(orbit1, { 5, 5 }, 1));
-	CHECK(!CirclesCross(orbit1, { 1, 3 }, 5));
-	CHECK(CirclesCross(orbit2, { 0, 0.5 }, 0.6));
-	CHECK(CirclesCross(orbit3, { 2, 0 }, 1001));
+	CHECK(!CirclesCross(&orbit1, { 5, 5 }, 1));
+	CHECK(!CirclesCross(&orbit1, { 1, 3 }, 5));
+	CHECK(CirclesCross(&orbit2, { 0, 0.5 }, 0.6));
+	CHECK(CirclesCross(&orbit3, { 2, 0 }, 1001));
 }
 
 TEST_CASE("Circle Crosspoints")
 {
 	SUBCASE("Symmetric")
 	{
-		Orbit orbit1({ -1, 0 }, 1.5, true);
+		Orbit orbit1({ -1, 0 }, 1.5, true, 0, 0);
 
-		auto ps = GetCrossPoints(orbit1, { 1, 0 }, 1.5);
+		auto ps = GetCrossPoints(&orbit1, { 1, 0 }, 1.5);
 		v2 p1 = { ps.x, ps.y };
 		v2 p2 = { ps.z, ps.w };
 		CHECK(p1.x == 0);
@@ -118,9 +118,9 @@ TEST_CASE("Circle Crosspoints")
 
 	SUBCASE("Somewhat Symmetric")
 	{
-		Orbit orbit1({ 0, 0 }, 1, true);
+		Orbit orbit1({ 0, 0 }, 1, true, 0, 0);
 
-		auto ps = GetCrossPoints(orbit1, { 1, 1 }, 1.5);
+		auto ps = GetCrossPoints(&orbit1, { 1, 1 }, 1.5);
 		v2 p1 = { ps.x, ps.y };
 		v2 p2 = { ps.z, ps.w };
 		CHECK_APPROX(1, pow(p1.x, 2) + pow(p1.y, 2));
@@ -132,9 +132,9 @@ TEST_CASE("Circle Crosspoints")
 
 	SUBCASE("Asymmetric")
 	{
-		Orbit orbit1({ 100, 0 }, 100, true);
+		Orbit orbit1({ 100, 0 }, 100, true, 0, 0);
 
-		auto ps = GetCrossPoints(orbit1, { -1, 0 }, 1.5);
+		auto ps = GetCrossPoints(&orbit1, { -1, 0 }, 1.5);
 		v2 p1 = { ps.x, ps.y };
 		v2 p2 = { ps.z, ps.w };
 
@@ -147,9 +147,9 @@ TEST_CASE("Circle Crosspoints")
 
 	SUBCASE("Asymmetric, inside")
 	{
-		Orbit orbit1({ 100, -0.5 }, 100, true);
+		Orbit orbit1({ 100, -0.5 }, 100, true, 0, 0);
 
-		auto ps = GetCrossPoints(orbit1, { 1, 0.5 }, 1.5);
+		auto ps = GetCrossPoints(&orbit1, { 1, 0.5 }, 1.5);
 		v2 p1 = { ps.x, ps.y };
 		v2 p2 = { ps.z, ps.w };
 
@@ -163,21 +163,21 @@ TEST_CASE("Circle Crosspoints")
 
 TEST_CASE("Phi")
 {
-	Orbit orbit1({ 0, 0 }, 1, true);
+	Orbit orbit1({ 0, 0 }, 1, true, 0, 0);
 
-	double phi = GetPhi({ 1, 0 }, orbit1);
+	double phi = GetPhi({ 1, 0 }, &orbit1);
 	CHECK(phi == 0);
 
-	phi = GetPhi({ 0, 1 }, orbit1);
+	phi = GetPhi({ 0, 1 }, &orbit1);
 	CHECK(phi == PI / 2);
 
-	phi = GetPhi({ -1, 0 }, orbit1);
+	phi = GetPhi({ -1, 0 }, &orbit1);
 	CHECK(phi == PI);
 
-	phi = GetPhi({ 0, -1 }, orbit1);
+	phi = GetPhi({ 0, -1 }, &orbit1);
 	CHECK(phi == 3 * PI / 2);
 
-	phi = GetPhi({ 0.99999, -0.0045 }, orbit1);
+	phi = GetPhi({ 0.99999, -0.0045 }, &orbit1);
 	CHECK_APPROX_LOW(phi, PI2);
 }
 
@@ -192,23 +192,23 @@ TEST_CASE("Cross Angle")
 
 TEST_CASE("Cross Time")
 {
-	Orbit orbit1({ 0,0 }, 5, true);
-	Orbit orbit2({ 0,0 }, 5, false);
+	Orbit orbit1({ 0,0 }, 5, true, 0, 0);
+	Orbit orbit2({ 0,0 }, 5, false, 0, 0);
 
 	const v2 pos = { 3, 4 };
 	double ir = 0.1;
 	double w = 2;
 
-	double t = GetFirstCrossTime(pos, orbit1, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t = GetFirstCrossTime(pos, &orbit1, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
 	CHECK_APPROX_LOW(t, 0.907 / 2);
 
-	double t2 = GetFirstCrossTime(pos, orbit2, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t2 = GetFirstCrossTime(pos, &orbit2, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit2.radius)) / w);
 
 	ir = 0.059;
 	w = 100;
 
-	t = GetFirstCrossTime(pos, orbit1, { 5, 0 }, ir, w);
-	t2 = GetFirstCrossTime(pos, orbit2, { 5, 0 }, ir, w);
+	t = GetFirstCrossTime(pos, &orbit1, { 5, 0 }, ir, w);
+	t2 = GetFirstCrossTime(pos, &orbit2, { 5, 0 }, ir, w);
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit1.radius)) / w);
 }

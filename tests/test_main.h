@@ -1,11 +1,10 @@
 #pragma once
 #include <doctest.h>
 
-#include "CPUComparisonTest.h"
-#include "DetailsTest.h"
+#include "OrbitDetailsTest.h"
 #include "IntegrandWeightsTest.h"
+#include "CPUComparisonTest.h"
 #include "UtilKernelsTest.h"
-#include "Test.h"
 
 void test_main() {
     doctest::Context context;

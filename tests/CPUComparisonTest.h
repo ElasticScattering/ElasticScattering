@@ -1,11 +1,12 @@
 #pragma once
 
-#include "src/utils/OpenCLUtils.h"
-#include "src/scattering/ElasticScattering.h"
-#include <random>
-
 #include <doctest.h>
 #include "TestMacros.h"
+
+#include "src/utils/OpenCLUtils.h"
+#include <random>
+#include <vector>
+
 
 TEST_CASE("Generic gpu/cpu precision test by performing many operations on small values")
 {
@@ -18,7 +19,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "test.cl", &program);
+	CompileOpenCLProgram(device, context, "tests/kernels/test_precision.cl", &program);
 
 	std::vector<double> A;
 	A.clear();
@@ -77,6 +78,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	}
 }
 
+
 TEST_CASE("Test double2")
 {
 	int buffer_size = 4096;
@@ -87,7 +89,7 @@ TEST_CASE("Test double2")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "test.cl", &program);
+	CompileOpenCLProgram(device, context, "tests/kernels/test_double2.cl", &program);
 
 	size_t global_work_size = buffer_size;
 	size_t local_work_size = 128;
@@ -130,6 +132,75 @@ TEST_CASE("Test double2")
 		cpu_result += x.x + x.y;
 	}
 
-	std::cout << "[Double2] CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result - cpu_result) << std::endl;
+	//std::cout << "[Double2] CPU: " << cpu_result << ", GPU: " << gpu_result << ", diff: " << abs(gpu_result - cpu_result) << std::endl;
 	CHECK_ALMOST(cpu_result, gpu_result, "double2 should be the same on cpu and gpu.");
 }
+
+
+TEST_CASE("Test if cpp can be compiled and executed by opencl")
+{
+	int buffer_size = 1024;
+
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	InitializeOpenCL(true, &device, &context, &queue);
+
+	cl_program program;
+	CompileOpenCLProgram(device, context, "tests/kernels/test_cpp.cl", &program);
+
+	size_t global_work_size = buffer_size;
+	size_t local_work_size = 128;
+
+	cl_int clStatus;
+	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * buffer_size, nullptr, &clStatus);
+	CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+
+	cl_kernel main_kernel = clCreateKernel(program, "test_cpp", &clStatus);
+	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+
+	clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&out_buffer);
+	CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
+
+	clStatus = clFinish(queue);
+
+	std::vector<int> gpu_results;
+	gpu_results.resize(buffer_size);
+	clEnqueueReadBuffer(queue, out_buffer, CL_TRUE, 0, sizeof(int) * buffer_size, gpu_results.data(), 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Failed to read back result.");
+
+	for (int j = 0; j < buffer_size; j++) {
+		int expected = j + 1;
+		CHECK_ALMOST(gpu_results[j], expected, "");
+	}
+}
+
+
+/*
+TEST_CASE("Test if opencl can printf without fail")
+{
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	InitializeOpenCL(true, &device, &context, &queue);
+
+	cl_program program;
+	CompileOpenCLProgram(device, context, "tests/kernels/test_printf.cl", &program);
+
+	size_t global_work_size = 32;
+	size_t local_work_size = 32;
+
+	cl_int clStatus;
+
+	cl_kernel main_kernel = clCreateKernel(program, "test_printf", &clStatus);
+	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+
+	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
+
+	clStatus = clFinish(queue);
+}
+*/

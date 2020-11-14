@@ -1,67 +1,46 @@
-#include "lifetime.h"
-#include "constants.h"
+#include "src/scattering/escl/lifetime.h"
+#include "src/scattering/escl/constants.h"
 
-__kernel void lifetime(__constant ScatteringParameters *sp, __global read_only double2 *impurities, __global read_only int *impurity_index, __global double *lifetimes) 
+
+__kernel void lifetime(__constant ScatteringParameters* sp, __global read_only double2* impurities, __global read_only int* cell_indices)
 {
-    int x = get_global_id(0);
+	int x = get_global_id(0);
     int y = get_global_id(1);
-    int row_size = get_global_size(0);
-    int limit = row_size-1;
-    
-    double result = 0;
-    if ((x < limit) && (y < limit)) {
-        //Remove 1 from row_size to have an inclusive range, another because the kernel work dimension is even, but the integral requires uneven dimensions.
-        const double s = sp->region_size / (row_size - 2);
-        const double2 pos = (double2)(x*s, y*s);
+	int q = get_global_id(2);
 
-        if (sp->mode == MODE_DIR_LIFETIME) result = single_lifetime(pos, sp->phi, sp, impurities, impurity_index);
-        else                               result = phi_lifetime   (pos,          sp, impurities, impurity_index);
+	int row_size = get_global_size(0);
+    int limit = row_size-1;
+	if (x >= limit || y >= limit) {
+		return;
 	}
 
-    lifetimes[y * row_size + x] = result;
+	const double s = sp->region_size / (row_size - 2);
+    const double2 pos = (double2)(x*s, y*s);
+
+	double quadrant_start = q * (PI * 0.5);
+	unsigned int index_base = y * limit + x * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
+
+	for (int i = 0; i < sp->integrand_steps; i++)
+	{
+		const double phi = sp->integrand_start_angle + quadrant_start + step * sp->integrand_step_size;
+		const Orbit orbit = MakeOrbit(pos, phi, sp);
+   
+		Particle particle;
+		particle.starting_position = pos;
+		particle.phi = phi;
+		particle.cell_index = get_cell_index(pos, sp->impurity_spawn_range, sp->max_expected_impurities_in_cell);
+
+		const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
+
+		// @Todo, Check if we start inside an impurity.
+		int impurity_start = cell_indices[particle.cell_index];
+		// ....
+		//
+
+
+		lifetimes[index_base+i] = TraceOrbit(&particle, &orbit, sp, impurities, cell_indices);
+	}
 }
-
-/* ! Deprecated once impuritygrid works.
-__kernel void scatter_sim(__constant ScatteringParameters *sp, __global double2 *impurities, __global double *xx, __global double *xy) 
-{
-    uint x = get_global_id(0);
-    uint y = get_global_id(1);
-    uint row_size = get_global_size(0);
-    uint limit = row_size-1;
-    
-    if ((x < limit) && (y < limit)) {
-        const double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
-
-        double2 result = SIM_phi_lifetime(pos, sp, impurities);
-
-        uint idx = y * row_size + x;
-        xx[idx] = result.x;
-        xy[idx] = result.y;
-    }
-}
-*/
-
-__kernel void scatter_march(
-            __constant ScatteringParameters *sp, 
-            __global read_only double2 *impurities, __global read_only int *impurity_indices, 
-            __global double *xx, __global double *xy)
-{
-    size_t x = get_global_id(0);
-    uint y = get_global_id(1);
-    uint row_size = get_global_size(0);
-    uint limit = row_size-1;
-    
-    if ((x < limit) && (y < limit)) {
-        const double2 pos = (double2)(x, y) * (sp->region_size / (row_size - 2));
-
-        double2 result = march_phi_lifetime(pos, sp, impurities, impurity_indices);
-
-        uint idx = y * row_size + x;
-        xx[idx] = result.x;
-        xy[idx] = result.y;
-    }
-}
-
 
 __kernel void add_integral_weights_2d(__global double* A)
 {
@@ -72,7 +51,6 @@ __kernel void add_integral_weights_2d(__global double* A)
     int i = y * row_size + x;
     A[i] *= GetWeight2D(x, y, row_size-1);
 }
-
 
 __kernel void sum(__global double* A, __global double* B, __local double* local_sums)
 {

@@ -1,6 +1,8 @@
 #ifndef OPENCL_UTIL_H
 #define OPENCL_UTIL_H
 
+#define CL_TARGET_OPENCL_VERSION 220
+
 #include "ErrorMacros.h"
 
 #include <CL/cl.h>
@@ -16,6 +18,7 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GL/glfw3.h>
+
 
 GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
 
@@ -158,9 +161,8 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
 {
     cl_int clStatus;
     
-    std::string relative_path("src/escl/");
-    relative_path.append(p_soure_file);
-    std::fstream kernelFile(relative_path);
+    std::string path(p_soure_file);
+    std::fstream kernelFile(path);
     std::string content((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
     const char *code = new char[content.size()];
     code = content.c_str();

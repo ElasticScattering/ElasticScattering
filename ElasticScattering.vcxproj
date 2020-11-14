@@ -366,15 +366,13 @@
     <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
     <ClCompile Include="src\scattering\ElasticScattering.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
-    <ClCompile Include="src\scattering\escl\details.cpp" />
-    <ClCompile Include="src\scattering\escl\impurity_grid.cpp" />
-    <ClCompile Include="src\scattering\escl\lifetime.cpp" />
     <ClCompile Include="src\scattering\ImpurityGrid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\OpenGLUtils.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
+    <ClCompile Include="tests\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libs\imgui\imconfig.h" />
@@ -407,6 +405,7 @@
     <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\CPUComparisonTest.h" />
     <ClInclude Include="tests\IntegrandWeightsTest.h" />
+    <ClInclude Include="tests\kernels\test_cpp.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
     <ClInclude Include="tests\DetailsTest.h" />
@@ -415,8 +414,13 @@
     <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="src\scattering\escl\scatter.cl" />
-    <None Include="src\scattering\escl\test.cl" />
+    <None Include="src\scattering\escl\scatter_one_file.cl" />
+    <None Include="tests\kernels\test_cpp.cl" />
+    <None Include="tests\kernels\test_precision.cl" />
+    <None Include="tests\kernels\test_double2.cl" />
+    <None Include="tests\kernels\test_printf.cl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="docs\todo.txt" />

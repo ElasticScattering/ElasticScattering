@@ -1,5 +1,7 @@
 #pragma once
-#include "v2.h"
+#ifndef DEVICE_PROGRAM
+    #include "v2.h"
+#endif
 
 typedef struct ScatteringParameters
 {
@@ -38,7 +40,8 @@ typedef struct ScatteringParameters
     unsigned int impurity_seed;
     double2 impurity_spawn_range;
 
-    // @Fix, outdated!
+#ifndef DEVICE_PROGRAM
+    // @Fixme, outdated!
     friend bool operator==(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
         return (lhs.mode == rhs.mode && lhs.impurity_seed == rhs.impurity_seed &&
             lhs.region_size == rhs.region_size && lhs.dim == rhs.dim &&
@@ -54,4 +57,6 @@ typedef struct ScatteringParameters
     friend bool operator!=(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
         return !(lhs == rhs);
     }
+#endif
+
 } ScatteringParameters;

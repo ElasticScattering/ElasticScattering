@@ -30,7 +30,7 @@ TEST_CASE("Compare Sigma XX/XY results to verified results") {
         CHECK(result2 == result2);
     }
 }
-*/
+
 
 TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 	ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
@@ -46,3 +46,4 @@ TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 
 	CHECK_RELATIVE(result, formula);
 }
+*/

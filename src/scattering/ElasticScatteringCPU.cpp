@@ -19,7 +19,7 @@ SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
 
             for (int q = 0; q < 4; q++) {
                 for (int p = 0; p < p_sp.integrand_steps; p++) {
-                    matrix[j * limit + i * values_per_particle + (q*p_sp.integrand_steps) + p] = sim_phi_lifetime(pos, q, p, &p_sp, grid.impurities, grid.imp_index);
+                    matrix[j * limit + i * values_per_particle + (q*p_sp.integrand_steps) + p] = lifetime(q, p, pos, &p_sp, grid.impurities, grid.imp_index);
                 }
             }
         }
