@@ -10,6 +10,8 @@ typedef struct ScatteringParameters
     double magnetic_field;
     double tau;
     double temperature;
+    double default_max_lifetime;
+
     double particle_speed;
     double angular_speed;
     double alpha;

@@ -21,12 +21,22 @@ double GetBoundTime(const double phi, const double alpha, const double w, const 
     const double v = is_diag_region ? (phi + alpha - PI / 4.0) : (phi + alpha);
     const double remaining = smod(v, PI * 0.5);
 
-    const double remaining2 = 2.0 * alpha - remaining;
+    // Oud
+    //double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);
+    double dphi = (is_electron != is_future) ? remaining : (2.0 * alpha - remaining);
+    return dphi / w;
+}
 
-    double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : remaining2;
-    dphi /= w;
+double GetBoundAngle(const double phi, const double alpha, const bool clockwise)
+{
+    const int multiple = (int)(phi + alpha / (PI / 2.0));
+    const double bound1 = multiple * PI / 2.0 - alpha;
+    const double bound2 = multiple * PI / 2.0 + alpha;
 
-    return dphi;
+    double dangle1 = GetCrossAngle(phi, bound1, clockwise);
+    double dangle2 = GetCrossAngle(phi, bound2, clockwise);
+
+    return (dangle1 < dangle2) ? bound1 : bound2;
 }
 
 double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, const double radius, const double vf, const bool is_electron)
@@ -39,32 +49,34 @@ double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, const d
 
 bool CirclesCross(const Orbit c1, const double2 p2, const double r2)
 {
-    const double2 q = c1.position - p2;
+    const double2 q = c1.center - p2;
     const double dist_squared = q.x * q.x + q.y * q.y;
 
     const double r_add = c1.radius + r2;
     const double r_min = c1.radius - r2;
 
-    return (dist_squared >= r_add * r_add || dist_squared <= r_min * r_min) ? false : true;
+    //Oud
+    //return (dist_squared >= r_add * r_add || dist_squared <= r_min * r_min) ? false : true;
+    return !(dist_squared >= r_add * r_add || dist_squared <= r_min * r_min);
 }
 
 double4 GetCrossPoints(const Orbit c1, const double2 p2, const double r2)
 {
-    const double2 q = c1.position - p2;
+    const double2 q = c1.center - p2;
 
     const double dist_squared = dot(q, q);
     const double dist = sqrt(dist_squared);
     const double xs = (dist_squared + c1.radius_squared - r2 * r2) / (2.0 * dist);
     const double ys = sqrt(c1.radius_squared - xs * xs);
 
-    const double2 u = (p2 - c1.position) / dist;
+    const double2 u = (p2 - c1.center) / dist;
 
     double4 points = {
-        c1.position.x + u.x * xs + u.y * ys,
-        c1.position.y + u.y * xs + -u.x * ys,
+        c1.center.x + u.x * xs + u.y * ys,
+        c1.center.y + u.y * xs + -u.x * ys,
 
-        c1.position.x + u.x * xs + -u.y * ys,
-        c1.position.y + u.y * xs + u.x * ys
+        c1.center.x + u.x * xs + -u.y * ys,
+        c1.center.y + u.y * xs + u.x * ys
     };
 
     return points;
@@ -72,13 +84,13 @@ double4 GetCrossPoints(const Orbit c1, const double2 p2, const double r2)
 
 double GetPhi(const double2 pos, const Orbit c1)
 {
-    double p = (pos.x - c1.position.x) / c1.radius;
+    double p = (pos.x - c1.center.x) / c1.radius;
 
     p = (p > 1.0) ? 1.0 : p;
     p = (p < -1.0) ? -1.0 : p;
 
     double phi = acos(p);
-    phi = (pos.y < c1.position.y) ? PI2 - phi : phi;
+    phi = (pos.y < c1.center.y) ? PI2 - phi : phi;
 
     return phi;
 }

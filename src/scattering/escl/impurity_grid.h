@@ -8,23 +8,21 @@
 typedef struct Intersection {
 	double2 position;
 	double incident_angle;
-
 	double dphi;
+	int entered_cell;
 } Intersection;
-
-typedef struct SideIntersection {
-	Intersection i1, i2;
-} SideIntersection;
 
 struct CellRange {
 	int start, end;
 };
 
+
 double GetAngle(double2 pos, Orbit o);
 
-void FindExitIntersect(Orbit o, double phi, Intersection start_intersect);
-bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, const double L, SideIntersection* intersection);
-bool GetNextCell(const int current_cell, const Orbit orbit, const double2 last_intersection, const int cells_per_row, const double L, const double2 spawn_range, int* next_cell, double2* intersection_point);
+//bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, const double L, SideIntersection* intersection);
+bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const Orbit o, const double L, const double start_phi, Intersection* intersection);
+
+bool GetNextCell(const Orbit orbit, const int current_cell, const double2 current_cell_lowleft, const Intersection last_intersection, const double L, const int cells_per_row, int* next_cell, Intersection* next_intersection);
 
 int get_cell_index(const v2 pos, const v2 range, const int cells_per_row);
 

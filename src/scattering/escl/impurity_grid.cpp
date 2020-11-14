@@ -20,10 +20,10 @@ double GetAngle(double2 pos, Orbit o) {
 
 bool PointInSegment(double point, double l0, double l1)
 {
-	return ((point > l0) && (point < l1)) || ((point < l0) && (point > l1));
+	return (point > l0 && point < l1) || (point < l0 && point > l1);
 }
 
-bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, const double L, SideIntersection *intersection) {
+bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const Orbit o, const double L, const double start_phi, Intersection *intersection) {
 	double2 u = (p2 - p1) / L;
 	double projection_distance = u.x * (o.center.x - p1.x) + u.y * (o.center.y - p1.y);
 	double2 proj = p1 + (u * projection_distance);
@@ -43,74 +43,89 @@ bool GetBoundaryIntersects(const double2 p1, const double2 p2, const Orbit o, co
 	// Determine if the intersection happen on the line segment.
 	bool horizontal_line = abs(u.x) > abs(u.y);
 
+	Intersection in1;
+	in1.position = i1;
+	in1.incident_angle = GetAngle(i1, o);
+	in1.dphi = GetCrossAngle(start_phi, in1.incident_angle, o.clockwise);
+	
+	Intersection in2;
+	in2.position = i2;
+	in2.incident_angle = GetAngle(i2, o);
+	in2.dphi = GetCrossAngle(start_phi, in2.incident_angle, o.clockwise);
+
 	bool i1_valid = horizontal_line ? PointInSegment(i1.x, p1.x, p2.x) : PointInSegment(i1.y, p1.y, p2.y);
 	bool i2_valid = horizontal_line ? PointInSegment(i2.x, p1.x, p2.x) : PointInSegment(i2.y, p1.y, p2.y);
-
-	// @Todo, decide which to return?
-	if (i1_valid) {
-		Intersection i;
-		i.position = i1;
-		i.incident_angle = GetAngle(i.position, o);
-		i.dphi = GetCrossAngle(, i.incident_angle, o.clockwise);
-		intersection->i1 = i;
+	
+	//@Refactor, kan dit simpeler omdat clockwise al in GetCrossAngle zit?
+	if (i1_valid && i2_valid)
+	{
+		bool phi1_lower = in1.dphi < in2.dphi;
+		if (o.clockwise) intersection = (phi1_lower) ? &in1 : &in2;
+		else             intersection = (phi1_lower) ? &in2 : &in1;
 	}
-	if (i2_valid) {
-		Intersection i;
-		i.position = i2;
-		i.incident_angle = GetAngle(i.position, o);
-		i.dphi = GetCrossAngle(, i.incident_angle, o.clockwise);
-		intersection->i2 = i;
-	}
+	else if (i1_valid) intersection = &in1;
+	else               intersection = &in2;
 
 	return true;
 }
 
-void FindExitIntersect(Orbit o, double phi, Intersection start_intersect)
-{
-	// IN: Intersects ...
-
-	double dphi_closest = GetCrossAngle(start_intersect.incident_angle, phi, o.clockwise);
-
-// for intersects
-	Intersection i; // from for loop
-	double dphi = GetCrossAngle(start_intersect.incident_angle, i.incident_angle, o.clockwise);
-	if (dphi < dphi_closest) {
-		// save this intersect?
-	}
-}
-
-bool GetNextCell(
+bool GetNextCell(const Orbit orbit,
 	const int current_cell,
-	const Orbit orbit, 
-	const double2 last_intersection,
-	const int cells_per_row,
+	const double2 current_cell_lowleft, 
+	const Intersection last_intersection,
 	const double L,
-	const double2 spawn_range,
-	int *next_cell,
-	double2* intersection_point)
+	const int cells_per_row,
+	int *next_cell, 
+	Intersection* next_intersection)
 {
-	double2 low_left = to_world(current_cell, cells_per_row, spawn_range);
+	double2 low_left = current_cell_lowleft;
+	double2 low_right = low_left + double2(L, 0);
 	double2 top_right = low_left + double2(L, L);
 	double2 top_left = low_left + double2(0, L);
-	double2 low_right = low_left + double2(L, 0);
 
-	SideIntersection up, down, left, right;
-	bool up_hit    = GetBoundaryIntersects(low_left, top_left, orbit, L, &up);
-	bool down_hit  = GetBoundaryIntersects(low_right, top_right, orbit, L, &down);
-	bool left_hit  = GetBoundaryIntersects(top_left, top_right, orbit, L, &left);
-	bool right_hit = GetBoundaryIntersects(low_left, low_right, orbit, L, &right);
+	Intersection left, right, up, down;
 
-	if (!right_hit && !up_hit && !left_hit && !down_hit)
+	double last_phi = last_intersection.dphi;
+	bool up_hit = GetFirstBoundaryIntersect(top_left, top_right, orbit, L, last_phi, &up);
+	bool down_hit = GetFirstBoundaryIntersect(low_left, low_right, orbit, L, last_phi, &down);
+	bool right_hit = GetFirstBoundaryIntersect(low_right, top_right, orbit, L, last_phi, &right);
+	bool left_hit = GetFirstBoundaryIntersect(low_left, top_left, orbit, L, last_phi, &left);
+
+	if (!up_hit && !down_hit && !right_hit && !left_hit)
 		return false;
 
 	// Select [one] from all valid intersects.
-	// Some succeeded, with 1 or 2 intersects....
-
-	// One attempt would be 
-
+	//	double dphi = GetCrossAngle(start_intersect.incident_angle, i.incident_angle, o.clockwise);
+	int closest_cell_index = current_cell; // ???
+	Intersection closest_intersection = last_intersection; //
+	
 	if (up_hit) {
-		// One or two?
+		// Test if this intersection is closer than what we have
+		double dphi = GetCrossAngle(last_intersection.incident_angle, up.incident_angle, orbit.clockwise);
+		int next_cell_candidate = current_cell - cells_per_row;
+		if (dphi < closest_intersection.dphi && next_cell_candidate >= 0) {
+			closest_intersection.dphi = dphi;
+			closest_cell_index = current_cell - cells_per_row;
+		}
 	}
+
+	if (down_hit) {
+		// Test if this intersection is closer than what we have
+		double dphi = GetCrossAngle(last_intersection.incident_angle, up.incident_angle, orbit.clockwise);
+		int next_cell_candidate = current_cell + cells_per_row; // @Todo, dit controleren..
+		if (dphi < closest_intersection.dphi && next_cell_candidate >= 0) {
+			closest_intersection.dphi = dphi;
+			closest_cell_index = current_cell - cells_per_row;
+		}
+	}
+	//etc ...
+
+	if (closest_cell_index == current_cell) {
+		return false;
+	}
+
+	// The intersection can not put us out of bounds.
+	//@Todo: doe dit met cell_x, cell_y, tijdens de 4-test, of achteraf?
 
 	return true;
 }
