@@ -408,7 +408,7 @@
     <ClInclude Include="tests\kernels\test_cpp.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
-    <ClInclude Include="tests\DetailsTest.h" />
+    <ClInclude Include="tests\OrbitDetailsTest.h" />
     <ClInclude Include="tests\TestMacros.h" />
     <ClInclude Include="tests\test_main.h" />
     <ClInclude Include="tests\UtilKernelsTest.h" />

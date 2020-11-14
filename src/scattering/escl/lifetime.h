@@ -14,7 +14,6 @@
 
 
 double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS);
-double SingleLifetime(const Particle* p, const Orbit* orbit, const double2 impurity, const double impurity_radius, const double angular_speed, const double2 valid_range);
 double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS);
 Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters* sp);
 
@@ -37,56 +36,49 @@ inline Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters
     return orbit;
 }
 
-inline double SingleLifetime(const Particle* p, const Orbit* orbit, const double2 impurity, const double impurity_radius, const double angular_speed, const double2 valid_range)
-{
-    if (CirclesCross(orbit, impurity, impurity_radius))
-    {
-        return GetFirstCrossTime(orbit, p->starting_position, impurity, impurity_radius, angular_speed, valid_range);
-    }
-
-    return DBL_MAX;
-}
-
 inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
 {
-    Intersection entry_point;
-    entry_point.position = p->starting_position;
-    entry_point.dphi = 0; // ????
+    double position_angle = GetPositionAngle(p->phi, orbit->clockwise); //@Todo, wat is dit...
 
-    // Early exit als laatste intersectie een grotere hoek heeft dan bound_angle.
+    Intersection next_intersection;
+    next_intersection.position = p->starting_position;
+    next_intersection.entering_cell = p->cell_index;
+    
+    double lifetime = INF;
+    while (1) {
+        // Move to the next cell. @Todo, kopieert dit de referentie (conflict met volgende intersectie)?
+        //Intersection entry_point = next_intersection;
+        Intersection entry_point;
+        entry_point.position = next_intersection.position;
+        entry_point.entering_cell = next_intersection.entering_cell;
+        entry_point.dphi = next_intersection.dphi;
+        entry_point.incident_angle = next_intersection.incident_angle;
 
-    double lifetime = DBL_MAX;
-    bool hit = false;
-    while (!hit) {
-        double2 cell_pos = to_world(p->cell_index, sp->cells_per_row, sp->impurity_spawn_range);
-        
-        int next_cell;
-        Intersection next_cell_intersection;
-        bool next_box_available = GetNextCell(orbit, p->cell_index, cell_pos, entry_point, sp->cell_size, sp->cells_per_row, &next_cell, &next_cell_intersection);
+        // Find the next intersection point. If this orbit crosses the current
+        // cell twice, we should limit valid intersections to those that happen before
+        // leaving this cell for the next cell.
+        double2 cell_pos = to_world(entry_point.entering_cell, sp->cells_per_row, sp->impurity_spawn_range);
+        bool next_box_available = GetNextCell(orbit, cell_pos, entry_point, sp->cell_size, sp->cells_per_row, &next_intersection);
+        double2 valid_phi_range = (double2)(entry_point.dphi, next_box_available ? next_intersection.dphi : position_angle); // ??
 
-        double angle_max = next_box_available ? next_cell_intersection.dphi : GetPositionAngle(p->phi, orbit->clockwise);
-        double2 valid_phi_range = (double2)(entry_point.dphi, angle_max);
-        
-        int impurity_start = (p->cell_index - 1 < 0) ? 0 : cell_indices[p->cell_index - 1];
-        int impurity_end = cell_indices[p->cell_index];
+        // Try to find an intersection in the current cell.
+        int impurity_start = (entry_point.entering_cell - 1 < 0) ? 0 : cell_indices[entry_point.entering_cell-1];
+        int impurity_end = cell_indices[entry_point.entering_cell];
 
         for (int i = impurity_start; i < impurity_end; i++) {
-            double t = SingleLifetime(p, orbit, impurities[i], sp->impurity_radius, sp->angular_speed, valid_phi_range);
-
-            lifetime = (t < lifetime) ? t : lifetime;
-            hit = (lifetime < DBL_MAX);
-        }
-
-        if (!hit) {
-            if (!next_box_available) {
-                // The End?
-                break;
+            double2 impurity = impurities[i];
+            if (CirclesCross(orbit, impurity, sp->impurity_radius)) {
+                double t = GetFirstCrossTime(orbit, p->starting_position, impurity, sp->impurity_radius, sp->angular_speed, valid_phi_range);
+                lifetime = (t < lifetime) ? t : lifetime;
             }
-
-            // Move to the next cell.
-            p->cell_index = next_cell;
-            entry_point = next_cell_intersection;
         }
+
+        // Exit early if an intersection was found, or if no valid 
+        // intersection can occur anymore, because the orbit doesn't
+        // cross any more cells, or if the particle's lifetime has
+        // ended.
+        if (lifetime < INF || !next_box_available || orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise))
+            break;
     }
 
     return lifetime;

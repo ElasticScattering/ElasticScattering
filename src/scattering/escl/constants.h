@@ -17,5 +17,6 @@
 #define MODE_SIMULATION 4
 
 #define EPSILON 0.000001
+#define INF (DBL_MAX)
 
 #endif // CL_CONSTANTS

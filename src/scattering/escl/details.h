@@ -132,7 +132,7 @@ inline double GetFirstCrossTime(const Orbit* orbit, const double2 pos, const dou
     const double phi1 = GetPhi(p1, orbit);
     const double phi2 = GetPhi(p2, orbit);
 
-    double traversal_time = DBL_MAX;
+    double traversal_time = INF;
 
     if (AngleInRange(phi1, valid_range, orbit->clockwise)) {
         const double t = GetCrossAngle(phi0, phi1, orbit->clockwise) / w;
@@ -149,7 +149,7 @@ inline double GetFirstCrossTime(const Orbit* orbit, const double2 pos, const dou
 
 inline double GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_diag_region, const bool is_electron, const bool is_future)
 {
-    if (!is_incoherent) return DBL_MAX;
+    if (!is_incoherent) return INF;
 
     const double v = is_diag_region ? (phi + alpha - PI / 4.0) : (phi + alpha);
     const double remaining = smod(v, PI * 0.5);

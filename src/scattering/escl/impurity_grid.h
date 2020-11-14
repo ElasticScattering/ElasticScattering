@@ -12,7 +12,7 @@ typedef struct Intersection {
 	double2 position;
 	double incident_angle;
 	double dphi;
-	int entered_cell;
+	int entering_cell;
 } Intersection;
 
 struct CellRange {
@@ -82,12 +82,10 @@ inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const 
 }
 
 inline bool GetNextCell(const Orbit* orbit,
-	const int current_cell,
 	const double2 current_cell_lowleft,
 	const Intersection last_intersection,
 	const double L,
 	const int cells_per_row,
-	int* next_cell,
 	Intersection* next_intersection)
 {
 	double2 low_left = current_cell_lowleft;
@@ -106,33 +104,31 @@ inline bool GetNextCell(const Orbit* orbit,
 	if (!up_hit && !down_hit && !right_hit && !left_hit)
 		return false;
 
-	// Select [one] from all valid intersects.
-	//	double dphi = GetCrossAngle(start_intersect.incident_angle, i.incident_angle, orbit->clockwise);
-	int closest_cell_index = current_cell; // ???
-	Intersection closest_intersection = last_intersection; //
+	// Select one valid intersect.
+	Intersection closest_intersection = last_intersection;
 
 	if (up_hit) {
 		// Test if this intersection is closer than what we have
 		double dphi = GetCrossAngle(last_intersection.incident_angle, up.incident_angle, orbit->clockwise);
-		int next_cell_candidate = current_cell - cells_per_row;
+		int next_cell_candidate = last_intersection.entering_cell - cells_per_row;
 		if (dphi < closest_intersection.dphi && next_cell_candidate >= 0) {
 			closest_intersection.dphi = dphi;
-			closest_cell_index = current_cell - cells_per_row;
+			closest_intersection.entering_cell = last_intersection.entering_cell - cells_per_row;
 		}
 	}
 
 	if (down_hit) {
 		// Test if this intersection is closer than what we have
 		double dphi = GetCrossAngle(last_intersection.incident_angle, up.incident_angle, orbit->clockwise);
-		int next_cell_candidate = current_cell + cells_per_row; // @Todo, dit controleren..
+		int next_cell_candidate = last_intersection.entering_cell + cells_per_row; // @Todo, dit controleren..
 		if (dphi < closest_intersection.dphi && next_cell_candidate >= 0) {
 			closest_intersection.dphi = dphi;
-			closest_cell_index = current_cell - cells_per_row;
+			closest_intersection.entering_cell = last_intersection.entering_cell - cells_per_row; // ....
 		}
 	}
 	//etc ...
 
-	if (closest_cell_index == current_cell) {
+	if (closest_intersection.entering_cell == last_intersection.entering_cell) {
 		return false;
 	}
 
