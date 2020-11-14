@@ -2,7 +2,7 @@
 #include "src/scattering/escl/constants.h"
 
 
-__kernel void lifetime(__constant ScatteringParameters* sp, __global read_only double2* impurities, __global read_only int* cell_indices)
+__kernel void quadrant_lifetime(__constant ScatteringParameters* sp, __global read_only double2* impurities, __global read_only int* cell_indices)
 {
 	int x = get_global_id(0);
     int y = get_global_id(1);
@@ -20,24 +20,46 @@ __kernel void lifetime(__constant ScatteringParameters* sp, __global read_only d
 	double quadrant_start = q * (PI * 0.5);
 	unsigned int index_base = y * limit + x * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
 
+	Particle particle;
+	particle.starting_position = pos;
+	
+	int starting_cell = get_cell_index(pos, sp->impurity_spawn_range, sp->max_expected_impurities_in_cell);
+	particle.cell_index = starting_cell;
+
+	{
+		// See if the particle starts inside an impurity.
+		// If this is the case, we can skip all phi angles.
+		int impurity_start = (p.cell_index - 1 < 0) ? 0 : cell_indices[p.cell_index - 1];
+		int impurity_end = cell_indices[p.cell_index];
+
+		bool starts_inside_impurity = false;
+		for (int i = impurity_start; i < impurity_end; i++)
+		{
+			if (InsideImpurity(pos, impurities[i], sp->impurity_radius)) {
+				starts_inside_impurity = true;
+				break;
+			}
+		}
+
+		if (starts_inside_impurity) {
+			for (int i = 0; i < sp->integrand_steps; i++) {
+				lifetimes[index_base+i] = 0;
+			}
+
+			return;
+		}
+	}
+
+	// Trace the orbit for this quadrant.
 	for (int i = 0; i < sp->integrand_steps; i++)
 	{
 		const double phi = sp->integrand_start_angle + quadrant_start + step * sp->integrand_step_size;
 		const Orbit orbit = MakeOrbit(pos, phi, sp);
    
-		Particle particle;
-		particle.starting_position = pos;
+		particle.cell_index = starting_cell;
 		particle.phi = phi;
-		particle.cell_index = get_cell_index(pos, sp->impurity_spawn_range, sp->max_expected_impurities_in_cell);
 
 		const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
-
-		// @Todo, Check if we start inside an impurity.
-		int impurity_start = cell_indices[particle.cell_index];
-		// ....
-		//
-
-
 		lifetimes[index_base+i] = TraceOrbit(&particle, &orbit, sp, impurities, cell_indices);
 	}
 }

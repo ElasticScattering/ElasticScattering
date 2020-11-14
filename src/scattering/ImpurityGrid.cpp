@@ -13,15 +13,13 @@ void ImpurityGrid::Generate(ScatteringParameters& sp) {
 	for (int j = 0; j < cells_per_row; j++) {
 		for (int i = 0; i < cells_per_row; i++) {
 			Cell c(i, j);
-			c.impurities.clear();
+			cells[j * cells_per_row + i] = c;
 		}
 	}
 
-	range = { -sp.region_extends, sp.region_size + sp.region_extends };
-
 	// Generate impurities and put them into a cell.
 	{
-		std::uniform_real_distribution<double> unif(range.x, range.y);
+		std::uniform_real_distribution<double> unif(sp.impurity_spawn_range.x, sp.impurity_spawn_range.y);
 
 		std::random_device random_device;
 		std::default_random_engine re(sp.impurity_seed);
@@ -37,17 +35,17 @@ void ImpurityGrid::Generate(ScatteringParameters& sp) {
 	}
 
 	// Move impurities to single array and build an index.
-	imp_index.resize(cells_per_row * cells_per_row);
+	imp_index.resize(max(cells_per_row * cells_per_row, 2));
 
-	int z = 0;
+	int impurity_counter = 0;
 	for (int j = 0; j < cells_per_row; j++) {
 		for (int i = 0; i < cells_per_row; i++) {
 			auto imps = cells[j * cells_per_row + i].impurities;
-			imp_index[j * cells_per_row + i] = imps.size();
-
-			for (int k = 0; k < imps.size(); k++) {
-				impurities[z++] = imps[k];
+ 			for (int k = 0; k < imps.size(); k++) {
+				impurities[impurity_counter++] = imps[k];
 			}
+
+			imp_index[j * cells_per_row + i] = imps.size() + impurity_counter;
 		}
 	}
 }

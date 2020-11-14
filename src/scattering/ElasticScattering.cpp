@@ -43,7 +43,7 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 		p_sp.impurity_spawn_range = { -p_sp.region_extends, p_sp.region_size + p_sp.region_extends };
 		double area_length = p_sp.impurity_spawn_range.y - p_sp.impurity_spawn_range.x;
 		p_sp.impurity_count = max(1, ceil(area_length * area_length * p_sp.impurity_density));
-		p_sp.cells_per_row = max(sqrt(sp.impurity_count / sp.max_expected_impurities_in_cell), 1);
+		p_sp.cells_per_row = max((int)sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell), 1);
 		p_sp.cell_size = (p_sp.impurity_spawn_range.y - p_sp.impurity_spawn_range.x) / (double)p_sp.cells_per_row;
 	}
 	

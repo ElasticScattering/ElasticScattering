@@ -18,6 +18,25 @@ double SingleLifetime(const Particle* p, const Orbit* orbit, const double2 impur
 double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS);
 Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters* sp);
 
+inline Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters* sp)
+{
+    const bool clockwise = sp->is_clockwise == 1;
+    const bool incoherent = sp->is_incoherent == 1;
+    const bool diag_regions = sp->is_diag_regions == 1;
+
+    const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
+    const double bound_angle = GetBoundAngle(phi, sp->alpha, clockwise);
+    const double bound_phi = GetCrossAngle(phi, bound_angle, clockwise);
+
+    const v2 vel = (double2)(cos(phi), sin(phi)) * sp->particle_speed;
+    const double orbit_radius = sp->particle_speed / sp->angular_speed;
+    const double2 center = GetCyclotronOrbitCenter(pos, vel, orbit_radius, sp->particle_speed, clockwise);
+
+    Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
+
+    return orbit;
+}
+
 inline double SingleLifetime(const Particle* p, const Orbit* orbit, const double2 impurity, const double impurity_radius, const double angular_speed, const double2 valid_range)
 {
     if (CirclesCross(orbit, impurity, impurity_radius))
@@ -39,9 +58,6 @@ inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
     double lifetime = DBL_MAX;
     bool hit = false;
     while (!hit) {
-        int impurity_start = cell_indices[p->cell_index];
-        int impurity_end = cell_indices[p->cell_index + 1]; // null?
-
         double2 cell_pos = to_world(p->cell_index, sp->cells_per_row, sp->impurity_spawn_range);
         
         int next_cell;
@@ -50,6 +66,9 @@ inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
 
         double angle_max = next_box_available ? next_cell_intersection.dphi : GetPositionAngle(p->phi, orbit->clockwise);
         double2 valid_phi_range = (double2)(entry_point.dphi, angle_max);
+        
+        int impurity_start = (p->cell_index - 1 < 0) ? 0 : cell_indices[p->cell_index - 1];
+        int impurity_end = cell_indices[p->cell_index];
 
         for (int i = impurity_start; i < impurity_end; i++) {
             double t = SingleLifetime(p, orbit, impurities[i], sp->impurity_radius, sp->angular_speed, valid_phi_range);
@@ -73,25 +92,6 @@ inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
     return lifetime;
 }
 
-inline Orbit MakeOrbit(const double2 pos, const double phi, ScatteringParameters* sp)
-{
-    const bool clockwise = sp->is_clockwise == 1;
-    const bool incoherent = sp->is_incoherent == 1;
-    const bool diag_regions = sp->is_diag_regions == 1;
-
-    const double bound_time = GetBoundTime(phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
-    const double bound_angle = GetBoundAngle(phi, sp->alpha, clockwise);
-    const double bound_phi = GetCrossAngle(phi, bound_angle, clockwise);
-
-    const v2 vel = (double2)(cos(phi), sin(phi)) * sp->particle_speed;
-    const double orbit_radius = sp->particle_speed / sp->angular_speed;
-    const double2 center = GetCyclotronOrbitCenter(pos, vel, orbit_radius, sp->particle_speed, clockwise);
-
-    Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
-
-    return orbit;
-}
-
 inline double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)
 {
     const double phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
@@ -104,8 +104,8 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
 
     const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
 
-    int impurity_start = cell_indices[p.cell_index];
-    int impurity_end = cell_indices[p.cell_index + 1];
+    int impurity_start = (p.cell_index - 1 < 0) ? 0 : cell_indices[p.cell_index - 1];
+    int impurity_end = cell_indices[p.cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {
         if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
