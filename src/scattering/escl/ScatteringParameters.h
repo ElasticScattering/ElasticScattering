@@ -5,7 +5,6 @@
 
 typedef struct ScatteringParameters
 {
-    int mode;
     int dim;
     int impurity_count;
 
@@ -17,7 +16,6 @@ typedef struct ScatteringParameters
     double particle_speed;
     double angular_speed;
     double alpha;
-    double phi;
 
     int is_clockwise;
     int is_incoherent;
@@ -43,11 +41,11 @@ typedef struct ScatteringParameters
 #ifndef DEVICE_PROGRAM
     // @Fixme, outdated!
     friend bool operator==(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
-        return (lhs.mode == rhs.mode && lhs.impurity_seed == rhs.impurity_seed &&
-            lhs.region_size == rhs.region_size && lhs.dim == rhs.dim &&
+        return (lhs.impurity_seed == rhs.impurity_seed &&
+            lhs.region_size == rhs.region_size      && lhs.dim == rhs.dim &&
             lhs.particle_speed == rhs.particle_speed &&
             lhs.impurity_count == rhs.impurity_count && lhs.impurity_radius == rhs.impurity_radius &&
-            lhs.alpha == rhs.alpha && lhs.phi == rhs.phi && lhs.temperature == rhs.temperature &&
+            lhs.alpha == rhs.alpha                  && lhs.temperature == rhs.temperature &&
             lhs.magnetic_field == rhs.magnetic_field && lhs.tau == rhs.tau &&
             lhs.integrand_steps == rhs.integrand_steps && lhs.is_clockwise == rhs.is_clockwise &&
             lhs.region_extends == rhs.region_extends && lhs.is_clockwise == rhs.is_clockwise &&

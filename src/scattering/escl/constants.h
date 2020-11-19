@@ -10,12 +10,6 @@
 #define C1   1e-9
 #define KB   1.38e-23
 
-#define MODE_DIR_LIFETIME 0
-#define MODE_PHI_LIFETIME 1
-#define MODE_SIGMA_XX 2
-#define MODE_SIGMA_XY 3
-#define MODE_SIMULATION 4
-
 #define EPSILON 0.000001
 #define INF (DBL_MAX)
 

@@ -65,7 +65,6 @@ void ElasticScatteringCPU::GenerateTextures(ScatteringParameters& p_sp)
     // SigmaXX, SigmaXY, inc, coh
 }
 
-
 bool ElasticScatteringCPU::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
     

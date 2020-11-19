@@ -9,6 +9,7 @@
 #include "utils/ParametersFactory.h"
 #include "scattering/escl/constants.h"
 
+#include <stb_image_write/stb_image_write.h>
 #include <random>
 #include <windows.h>
 
@@ -55,13 +56,13 @@ int sim_main(const InitParameters& init)
 
 SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& sp)
 {
-    double coherent_tau = sp.scattering_params.tau;
+    double coherent_tau = sp.scattering_params.tau; //@Refactor
     bool run_incoherent = sp.scattering_params.alpha > 0.000001;
     bool run_coherent = abs(sp.scattering_params.alpha - (PI / 4)) > 0.000001;
     
     double step_size = (sp.magnetic_field_max - sp.magnetic_field_min) / sp.number_of_runs;
 
-    printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
+    //printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
     std::random_device random_device;
 
@@ -128,7 +129,7 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
             }
 
             sr.results[i] = row;
-            printf("%f %e %e %e %e %f\n", row.temperature, row.incoherent.xx, row.coherent.xx, row.incoherent.xy, row.coherent.xy, row.xxd);
+            //printf("%f %e %e %e %e %f\n", row.temperature, row.incoherent.xx, row.coherent.xx, row.incoherent.xy, row.coherent.xy, row.xxd);
         }
     }
 
@@ -151,22 +152,24 @@ void LogResult(const SimulationConfiguration& sim_params, const SimulationResult
 {
     auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
-    std::filesystem::create_directory("ES Logs");
+    std::filesystem::create_directory("ESLogs");
+    std::filesystem::create_directory("ESLogs");
 
+    std::string base_file_name = "ESLogs/Result_";
     std::ofstream file;
 
-    for (unsigned int n = 0; ; ++n) { //todo leidende nullen 0008
-        std::string fname = std::string("Es Logs/results_") + std::to_string(n) + std::string(".dat");
+    for (unsigned int n = 0; ; ++n) 
+    {
+        std::string dir = base_file_name + std::to_string(n);
+        if (!std::filesystem::exists(dir))
+        {
+            std::filesystem::create_directory(dir);
 
-        std::ifstream ifile;
-        ifile.open(fname.c_str());
+            std::string fname = dir + std::string("results.dat");
 
-        if (!ifile.is_open()) {
             file.open(fname.c_str());
             break;
         }
-
-        ifile.close();
     }
 
     ScatteringParameters sp = sim_params.scattering_params;

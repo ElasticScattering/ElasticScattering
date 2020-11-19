@@ -10,15 +10,18 @@ double ElasticScattering::FinishSingle(std::vector<double> &buffer) {
 
 	double z = sp.region_size / (double)(sp.dim - 2);
 	result *= z * z / 9.0; // phi integraal, 27?
+	
+	result *= SigmaFactor();
 
+	/*
 	if (ShouldComputeSigma(sp.mode)) {
-		result *= SigmaFactor();
 	}
 	else {
 		result /= (sp.region_size * sp.region_size);
 		result *= sp.particle_speed;
 		result /= PI2;
 	}
+	*/
 	
 	return result;
 };
@@ -68,6 +71,12 @@ bool ElasticScattering::ImpuritySettingsChanged(const ScatteringParameters& p_sp
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };
 
-uint32_t ElasticScattering::GetTextureID() const {
-	return ogl.tex;
+ElasticScattering::ElasticScattering()
+{
+	//Shader the_shader("shader.vs", "shader.fs");
+
+	//auto t = Texture2D::Create(400, 400);
+
+	//the_shader.Bind();
+	//the_shader.SetInt("texture0", )
 }

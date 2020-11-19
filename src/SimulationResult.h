@@ -12,36 +12,14 @@ struct SigmaResult {
     }
 };
 
-struct DataRow {
-    double temperature;
-    double magnetic_field;
-
-    SigmaResult incoherent;
-    SigmaResult coherent;
-    double xxd;
-};
-
-struct SimulationResult {
-    double time_elapsed;
-
-    double xx;
-    double xy;
-    double xx_inc;
-    double xy_inc;
-
-    std::vector<DataRow> results;
-
-    SimulationResult(int size) {
-        time_elapsed = 0;
-        results.resize(size);
-    }
-};
-
-struct ResultBuffer
+struct TextureResults
 {
-    std::vector<SigmaResult> intermediate_results;
+    std::vector<double> xx, xy, xx_inc, xy_inc;
 
-    ResultBuffer(int size) {
-        intermediate_results.resize(size);
+    TextureResults(int size) {
+        xx.resize(size); 
+        xy.resize(size); 
+        xx_inc.resize(size);
+        xy_inc.resize(size);
     }
 };

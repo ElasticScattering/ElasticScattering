@@ -10,7 +10,6 @@ ScatteringParameters& ParametersFactory::GenerateSimulation() {
     sp.temperature = 4;
     sp.tau = 1e-11;
     sp.magnetic_field = 0;
-    sp.phi = 1.0;
     sp.alpha = 0.3;
     sp.particle_speed = 1.67834e5;
     
@@ -25,8 +24,6 @@ ScatteringParameters& ParametersFactory::GenerateSimulation() {
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
-    sp.mode = MODE_SIMULATION;
-
     return sp;
 }
 
@@ -39,7 +36,6 @@ ScatteringParameters& ParametersFactory::GenerateDefault() {
     sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
-    sp.phi = 1.0;
     sp.alpha = PI / 4.0;
     sp.particle_speed = 1.67834e5;
     sp.impurity_density = 1e12;
@@ -54,8 +50,6 @@ ScatteringParameters& ParametersFactory::GenerateDefault() {
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
-    sp.mode = MODE_DIR_LIFETIME;
-
     return sp;
 }
 
@@ -68,7 +62,6 @@ ScatteringParameters& ParametersFactory::GenerateNoImpurities() {
     sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
-    sp.phi = 1.0;
     sp.alpha = PI / 4.0;
     sp.particle_speed = 1.67834e5;
 
@@ -83,8 +76,6 @@ ScatteringParameters& ParametersFactory::GenerateNoImpurities() {
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
-    sp.mode = MODE_DIR_LIFETIME;
-
     return sp;
 }
 
@@ -97,7 +88,6 @@ ScatteringParameters& ParametersFactory::GenerateMinimal() {
     sp.temperature = 4;
     sp.tau = 1.5e-12;
     sp.magnetic_field = 0;
-    sp.phi = 1.0;
     sp.alpha = PI / 4.0;
     sp.particle_speed = 1.67834e5;
 
@@ -112,7 +102,6 @@ ScatteringParameters& ParametersFactory::GenerateMinimal() {
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
-    sp.mode = MODE_DIR_LIFETIME;
 
     return sp;
 }

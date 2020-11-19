@@ -5,10 +5,12 @@
 #include "escl/ScatteringParameters.h"
 #include "escl/v2.h"
 #include "src/SimulationResult.h"
+
 #include "src/utils/OpenGLUtils.h"
+//#include "src/rendering/Texture.h"
+//#include "src/rendering/Shader.h"
 
 #include <vector>
-#include <GL/glew.h>
 
 enum ProgramMode {
 	Test,
@@ -21,21 +23,30 @@ typedef struct
 	ProgramMode mode;
 	bool use_gpu;
 	bool dont_show_info;
+	bool write_images;
 } InitParameters;
 
+/*
 typedef struct
 {
-	GLuint tex;
+	Texture2D textures[4];
 	GLuint vbo, vao;
 	GLuint shader_program;
 } OpenGLResources;
+
+
+class ES {
+public:
+	static SigmaResult ComputeResult(ScatteringParameters& p_sp);
+	static void GenerateTextures(ScatteringParameters& p_sp);
+};
+*/
 
 class ElasticScattering {
 protected:
 	ImpurityGrid grid;
 
 	ScatteringParameters sp;
-	OpenGLResources ogl;
 
 	int particle_count;
 	
@@ -51,13 +62,14 @@ protected:
 public:
 	virtual SigmaResult ComputeResult(ScatteringParameters& p_sp) = 0;
 	virtual void GenerateTextures(ScatteringParameters& p_sp) = 0;
-	uint32_t GetTextureID() const;
+	ElasticScattering();
 };
 
 class ElasticScatteringCPU : public ElasticScattering {
 	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
 
 public:
+
 	virtual SigmaResult ComputeResult(ScatteringParameters &p_sp) override;
 	virtual void GenerateTextures(ScatteringParameters& p_sp) override;
 };
