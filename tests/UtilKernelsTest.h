@@ -4,11 +4,10 @@
 #include "TestMacros.h"
 #include "src/scattering/ElasticScattering.h"
 #include "src/utils/OpenCLUtils.h"
-/*
+#include <vector>
+
 TEST_CASE("Sum kernel")
 {
-	int buffer_size = 4096;
-
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
@@ -17,15 +16,11 @@ TEST_CASE("Sum kernel")
 	cl_program program;
 	CompileOpenCLProgram(device, context, "src/scattering/escl/scatter.cl", &program);
 
+	int buffer_size = 4096;
+	std::vector<double> A(buffer_size, 1);
+
 	size_t global_work_size = buffer_size / 2;
 	size_t local_work_size = 128;
-
-	std::vector<double> A;
-	A.clear();
-	A.resize(buffer_size);
-
-	for (int i = 0; i < buffer_size; i++)
-		A[i] = 1.0;
 
 	cl_int clStatus;
 	cl_mem in_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
@@ -81,10 +76,10 @@ TEST_CASE("Add weights kernel")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "src/scattering/escl/scatter.cl", &program);
+	CompileOpenCLProgram(device, context, "src/scattering/escl/util_kernels.cl", &program);
 
 	cl_int clStatus;
-	cl_kernel main_kernel = clCreateKernel(program, "add_integral_weights_2d", &clStatus);
+	cl_kernel main_kernel = clCreateKernel(program, "add_simpson_weights_2d", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
 
@@ -139,4 +134,3 @@ TEST_CASE("Add weights kernel")
 	std::cout << "[Weights] CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
 	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
-*/

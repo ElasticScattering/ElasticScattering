@@ -58,6 +58,14 @@ SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
     return sr;
 }
 
+void ElasticScatteringCPU::GenerateTextures(ScatteringParameters& p_sp)
+{
+    // Run the base loop.
+    // Generate all textures.
+    // SigmaXX, SigmaXY, inc, coh
+}
+
+
 bool ElasticScatteringCPU::PrepareCompute(ScatteringParameters &p_sp) {
     CompleteSimulationParameters(p_sp);
     

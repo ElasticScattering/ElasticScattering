@@ -17,3 +17,21 @@ visualisatie.
 
 
 diagonale kruising.
+
+
+Tests
+	Af
+		StartsInside
+		AngleInRange
+		x CrossAngle
+		x IsCrossed
+		x CrossPoints
+	
+	Half
+		FindExitIntersect // mijn methode is anders...
+		Lifetime // test impurities...
+		GetAngle // heb zelf deze functie niet...
+		BoundaryIntersect // mijn methode returned maar één intersectie.
+
+	Moet deze?
+		Boxmotion

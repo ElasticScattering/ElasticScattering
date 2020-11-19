@@ -35,6 +35,8 @@ protected:
 	ImpurityGrid grid;
 
 	ScatteringParameters sp;
+	OpenGLResources ogl;
+
 	int particle_count;
 	
 	bool first_run = true;
@@ -48,6 +50,8 @@ protected:
 
 public:
 	virtual SigmaResult ComputeResult(ScatteringParameters& p_sp) = 0;
+	virtual void GenerateTextures(ScatteringParameters& p_sp) = 0;
+	uint32_t GetTextureID() const;
 };
 
 class ElasticScatteringCPU : public ElasticScattering {
@@ -55,6 +59,7 @@ class ElasticScatteringCPU : public ElasticScattering {
 
 public:
 	virtual SigmaResult ComputeResult(ScatteringParameters &p_sp) override;
+	virtual void GenerateTextures(ScatteringParameters& p_sp) override;
 };
 
 /*

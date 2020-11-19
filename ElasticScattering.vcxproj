@@ -161,13 +161,16 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Temp|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>escl</TargetName>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -177,9 +180,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -403,8 +408,10 @@
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\OpenGLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />
-    <ClInclude Include="tests\CPUComparisonTest.h" />
-    <ClInclude Include="tests\IntegrandWeightsTest.h" />
+    <ClInclude Include="tests\BasicOpenCLTest.h" />
+    <ClInclude Include="tests\ImpurityGridTests.h" />
+    <ClInclude Include="tests\LifetimeTests.h" />
+    <ClInclude Include="tests\SimpsonWeightsTest.h" />
     <ClInclude Include="tests\kernels\test_cpp.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
@@ -417,6 +424,7 @@
     <None Include="cpp.hint" />
     <None Include="src\scattering\escl\scatter.cl" />
     <None Include="src\scattering\escl\scatter_one_file.cl" />
+    <None Include="src\scattering\escl\util_kernels.cl" />
     <None Include="tests\kernels\test_cpp.cl" />
     <None Include="tests\kernels\test_precision.cl" />
     <None Include="tests\kernels\test_double2.cl" />

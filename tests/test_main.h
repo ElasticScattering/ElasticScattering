@@ -2,9 +2,11 @@
 #include <doctest.h>
 
 #include "OrbitDetailsTest.h"
-#include "IntegrandWeightsTest.h"
-#include "CPUComparisonTest.h"
-#include "UtilKernelsTest.h"
+#include "SimpsonWeightsTest.h"
+#include "ImpurityGridTests.h"
+
+//#include "BasicOpenCLTest.h"
+//#include "UtilKernelsTest.h"
 
 void test_main() {
     doctest::Context context;

@@ -24,13 +24,18 @@ struct DataRow {
 struct SimulationResult {
     double time_elapsed;
 
+    double xx;
+    double xy;
+    double xx_inc;
+    double xy_inc;
+
     std::vector<DataRow> results;
 
     SimulationResult(int size) {
         time_elapsed = 0;
         results.resize(size);
     }
-}; 
+};
 
 struct ResultBuffer
 {

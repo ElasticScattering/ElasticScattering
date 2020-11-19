@@ -67,3 +67,7 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 bool ElasticScattering::ImpuritySettingsChanged(const ScatteringParameters& p_sp) {
 	return (sp.impurity_count != p_sp.impurity_count || sp.region_extends != p_sp.region_extends || sp.region_size != p_sp.region_size || sp.impurity_seed != p_sp.impurity_seed);
 };
+
+uint32_t ElasticScattering::GetTextureID() const {
+	return ogl.tex;
+}

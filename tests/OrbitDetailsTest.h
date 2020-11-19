@@ -4,6 +4,81 @@
 #include "TestMacros.h"
 #include "src/scattering/escl/details.h"
 
+TEST_CASE("AngleInRange")
+{
+	SUBCASE("Direct inequality")
+	{
+		bool result = AngleInRange(1, { 0.5, 1.5 }, false);
+		CHECK(result == true);
+	}
+
+	SUBCASE("")
+	{
+		bool result = AngleInRange(1, { 0.5, 1.5 }, true);
+		CHECK(result == false);
+	}
+	
+	SUBCASE("")
+	{
+		bool result = AngleInRange(2, { 0.5, 1.5 }, true);
+		CHECK(result == true);
+	}
+
+	SUBCASE("")
+	{
+		bool result = AngleInRange(0.1, { 0.5, 1.5 }, true);
+		CHECK(result == true);
+	}
+
+	SUBCASE("Go up from 1.5 through 2pi to 0.5")
+	{
+		bool result = AngleInRange(1, { 1.5, 0.5 }, false);
+		CHECK(result == false);
+	}
+
+	SUBCASE("Go down from 1.to 0.5, direct inequality.")
+	{
+		bool result = AngleInRange(1, { 1.5, 0.5 }, true);
+		CHECK(result == true);
+	}
+
+	SUBCASE("Full circle.")
+	{
+		bool result = AngleInRange(1, { 1, 1 }, true);
+		CHECK(result == true);
+
+		result = AngleInRange(2, { 1, 1 }, true);
+		CHECK(result == true);
+	}
+}
+
+TEST_CASE("InsideImpurity")
+{
+	SUBCASE("returns true")
+	{
+		bool inside = InsideImpurity({ 1, 1 }, { 0, 0 }, 2);
+		CHECK(inside == true);
+	}
+
+	SUBCASE("returns true")
+	{
+		bool inside = InsideImpurity({ 0, 0 }, { 1, 1 }, 2);
+		CHECK(inside == true);
+	}
+
+	SUBCASE("returns false")
+	{
+		bool inside = InsideImpurity({ 2, 1 }, { 0, 0 }, 2);
+		CHECK(inside == false);
+	}
+
+	SUBCASE("Position on edge of impurity returns false")
+	{
+		bool inside = InsideImpurity({ 1, 0 }, { 0, 0 }, 1);
+		CHECK(inside == false);
+	}
+}
+
 TEST_CASE("Cyclotron Orbit")
 {
 	v2 pos = { 1e-6, 1e-6 };
@@ -199,16 +274,16 @@ TEST_CASE("Cross Time")
 	double ir = 0.1;
 	double w = 2;
 
-	double t = GetFirstCrossTime(pos, &orbit1, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t = GetFirstCrossTime(&orbit1, pos, { 5, 0 }, ir, w, { 0, 0}); // @todo, pos/center omdraaien geeft GetPhi assert error!
 	CHECK_APPROX_LOW(t, 0.907 / 2);
 
-	double t2 = GetFirstCrossTime(pos, &orbit2, { 5, 0 }, ir, w); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t2 = GetFirstCrossTime(&orbit2, pos, { 5, 0 }, ir, w, { -0, 0 }); // @todo, pos/center omdraaien geeft GetPhi assert error!
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit2.radius)) / w);
 
 	ir = 0.059;
 	w = 100;
 
-	t = GetFirstCrossTime(pos, &orbit1, { 5, 0 }, ir, w);
-	t2 = GetFirstCrossTime(pos, &orbit2, { 5, 0 }, ir, w);
+	t = GetFirstCrossTime(&orbit1, pos, { 5, 0 }, ir, w, { 0, 0 });
+	t2 = GetFirstCrossTime(&orbit2, pos, { 5, 0 }, ir, w, { 0, 0 });
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit1.radius)) / w);
 }

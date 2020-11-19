@@ -1,7 +1,7 @@
 #include "src/scattering/escl/lifetime.h"
 #include "src/scattering/escl/constants.h"
 
-
+/*
 __kernel void quadrant_lifetime(__constant ScatteringParameters* sp, __global read_only double2* impurities, __global read_only int* cell_indices)
 {
 	int x = get_global_id(0);
@@ -63,15 +63,15 @@ __kernel void quadrant_lifetime(__constant ScatteringParameters* sp, __global re
 		lifetimes[index_base+i] = TraceOrbit(&particle, &orbit, sp, impurities, cell_indices);
 	}
 }
-
-__kernel void add_integral_weights_2d(__global double* A)
+*/
+__kernel void add_simpson_weights_2d(__global double* A)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
     int row_size = get_global_size(0);
 
     int i = y * row_size + x;
-    A[i] *= GetWeight2D(x, y, row_size-1);
+    A[i] *= SimpsonWeight2D(x, y, row_size-1);
 }
 
 __kernel void sum(__global double* A, __global double* B, __local double* local_sums)
@@ -94,7 +94,7 @@ __kernel void sum(__global double* A, __global double* B, __local double* local_
 	}
 }
 
-
+/*
 #ifndef NO_WINDOW
 __kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
 {
@@ -113,3 +113,4 @@ __kernel void to_texture(__global double* lifetimes, int mode, double scale, __w
     write_imagef(screen, (int2)(x, y), c);
 }
 #endif // NO_WINDOW
+*/

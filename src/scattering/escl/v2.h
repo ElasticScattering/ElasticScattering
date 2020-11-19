@@ -19,6 +19,11 @@ struct v2 {
         return *this;
     }
 
+    bool operator==(const v2& a) const
+    {
+        return a.x == x && a.y == y;
+    }
+
     v2 operator+(const v2& a) const
     {
         return v2(a.x + x, a.y + y);
@@ -86,7 +91,6 @@ struct v2i {
         return v2i(x * a, y * a);
     }
 };
-
 
 #define double2 v2
 #define double4 v4
