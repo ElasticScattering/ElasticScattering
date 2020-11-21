@@ -125,13 +125,6 @@ void MainLoop(ElasticScattering &es, ScatteringParameters& sp)
         last_result_time = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
     }
 
-    /*
-    std::vector<uint32_t> texs;
-    texs.push_back(es.GetTextureID());
-
-    textures_view.ShowView(texs);
-    */
-
     ImGui::End(); // Dockspace
 }
 

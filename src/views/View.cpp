@@ -4,7 +4,6 @@
 #include "src/scattering/escl/constants.h"
 
 #include <GL/glew.h>
-#include <GL/wglew.h>
 #include <GL/glfw3.h>
 
 #include "imgui/imgui.h"
@@ -128,7 +127,7 @@ void TexturesView::ShowView(const std::vector<uint32_t> & textures)
 
     auto textureId = textures[0];
     auto viewportSize = ImGui::GetContentRegionAvail();
-    float min_dim = min(viewportSize.x, viewportSize.y);
+    float min_dim = viewportSize.x < viewportSize.y ? viewportSize.x : viewportSize.y;
     ImGui::Image((void*)textureId, ImVec2(min_dim, min_dim));
 
     ImGui::PopStyleVar();

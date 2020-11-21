@@ -6,41 +6,7 @@
 #include "escl/v2.h"
 #include "src/SimulationResult.h"
 
-#include "src/utils/OpenGLUtils.h"
-//#include "src/rendering/Texture.h"
-//#include "src/rendering/Shader.h"
-
 #include <vector>
-
-enum ProgramMode {
-	Test,
-	Simulation,
-	Interactive
-};
-
-typedef struct
-{
-	ProgramMode mode;
-	bool use_gpu;
-	bool dont_show_info;
-	bool write_images;
-} InitParameters;
-
-/*
-typedef struct
-{
-	Texture2D textures[4];
-	GLuint vbo, vao;
-	GLuint shader_program;
-} OpenGLResources;
-
-
-class ES {
-public:
-	static SigmaResult ComputeResult(ScatteringParameters& p_sp);
-	static void GenerateTextures(ScatteringParameters& p_sp);
-};
-*/
 
 class ElasticScattering {
 protected:

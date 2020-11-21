@@ -1,15 +1,15 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
-#include "scattering/ElasticScattering.h"
+#include "SimulationConfiguration.h"
 #include "tests/test_main.h"
-//#include "app_main.h"
+#include "app_main.h"
 #include "sim_main.h"
 
 #include <string>
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->use_gpu = true;
-    //p_init->dont_show_info = false;
+    p_init->dont_show_info = false;
 
     if (argc < 2) {
         printf("|| EScl ||");
@@ -17,7 +17,7 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
         printf("\t escl [sim | app | test ]");
         exit(0);
     }
-        
+
     std::string w;
     w.assign(argv[1], strlen(argv[1]));
 
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     switch (init.mode) {
         case Test       : test_main();    break;
         case Simulation : sim_main(init); break;
-        //case Interactive: app_main(init); break;
+        case Interactive: app_main(init); break;
     }
     
     return 0;

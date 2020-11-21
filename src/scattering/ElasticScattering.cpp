@@ -64,6 +64,8 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& p_sp)
 		}
 	}
 
+	p_sp.default_max_lifetime = 15.0 * p_sp.tau;
+
 	particle_count = p_sp.dim * p_sp.dim;
 }
 

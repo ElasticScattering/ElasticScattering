@@ -1,6 +1,12 @@
 #include "ParametersFactory.h"
 #include "src/scattering/escl/constants.h"
 
+ScatteringParameters& ParametersFactory::FromFile(std::string file)
+{
+    //@Todo ?
+    return GenerateDefault();
+}
+
 ScatteringParameters& ParametersFactory::GenerateSimulation() {
     ScatteringParameters sp;
 

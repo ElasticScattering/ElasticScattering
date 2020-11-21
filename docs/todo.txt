@@ -1,23 +1,14 @@
-Bereken phi, BoundTime waardes vooraf?
+Code / Resultaten
+	Diagonale kruising?
+	Invloed van particles die in impurity starten?
+	(impurity randomness model per materiaal)
 
-clockwise vooraf bepalen?.
-
-impurity randomness model per materiaal?
-
-visualisatie.
-
-
- __kernel ...(__global uint *intersectCounter)
-#ifdef EFFICIENCY_METRICS
-	atomic_inc(intersectCounter);
-#endif // EFFICIENCY_METRICS
-
-    //max_lifetime = 15.0 * sp->tau;  Move to SP
-
-
-
-diagonale kruising.
-
+Visualisatie
+	Optie 1 (Permanent, eenvoudiger):
+		Lees configuratie in via bestand
+		Schrijf afbeeldingen naar schijf.
+	Optie 2 (Interactief):
+		Zelfde als voorheen maar dan met 4/6 textures.
 
 Tests
 	Af
@@ -30,8 +21,30 @@ Tests
 	Half
 		FindExitIntersect // mijn methode is anders...
 		Lifetime // test impurities...
-		GetAngle // heb zelf deze functie niet...
+		GetAngle // kan!
 		BoundaryIntersect // mijn methode returned maar één intersectie.
 
 	Moet deze?
 		Boxmotion
+
+Optimalisaties
+	Bereken phi, BoundTime waardes vooraf?
+
+	clockwise vooraf bepalen?.
+
+ __kernel ...(__global uint *intersectCounter)
+#ifdef EFFICIENCY_METRICS
+	atomic_inc(intersectCounter);
+#endif // EFFICIENCY_METRICS
+
+
+
+Nieuws van zijn kant.
+Tests herschrijven.
+Geen interactieve applicatie meer.
+
+
+geoptimaliseerde detail functes: tests?
+tellers
+	intersects
+	gebied uit

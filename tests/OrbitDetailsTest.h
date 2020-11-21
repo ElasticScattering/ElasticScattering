@@ -4,6 +4,37 @@
 #include "TestMacros.h"
 #include "src/scattering/escl/details.h"
 
+/*
+def test_angle():
+	""" Tests created before function implementation
+
+	Then adjusted to reflect velocity angle.
+	This now tests both get_angle as well as
+	the conversion between position and velocity.
+	These tests are an authority, they are correct.
+
+	As a starting point to see what is happening,
+	realise that vel_phi=0 (moving to positive x)
+	is at the bottom of an electron orbit where
+	pos_phi=3pi/2.
+	On the other hand, for holes vel_phi=0 happens
+	at the top or pos_phi=pi/2.
+	"""
+
+	assert(get_angle(1, 0, 0, 0, 1, True) == np.pi / 2)
+	assert(get_angle(-1, 0, 0, 0, 1, True) == 3 * np.pi / 2)
+	assert(get_angle(0, 1, 0, 0, 1, True) == np.pi)
+	assert(get_angle(0, -1, 0, 0, 1, True) == 0)
+	assert(get_angle(5, 5, 6, 6, np.sqrt(2), True) == 7 * np.pi / 4)
+
+	assert(get_angle(1, 0, 0, 0, 1, False) == 3 * np.pi / 2)
+	assert(get_angle(-1, 0, 0, 0, 1, False) == np.pi / 2)
+	assert(get_angle(0, 1, 0, 0, 1, False) == 0)
+	assert(get_angle(0, -1, 0, 0, 1, False) == np.pi)
+	assert(get_angle(5, 5, 6, 6, np.sqrt(2), False) == 3 * np.pi / 4)
+*/
+
+
 TEST_CASE("AngleInRange")
 {
 	SUBCASE("Direct inequality")

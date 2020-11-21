@@ -373,7 +373,6 @@
     <ClCompile Include="libs\implot\implot_demo.cpp" />
     <ClCompile Include="libs\implot\implot_items.cpp" />
     <ClCompile Include="src\app_main.cpp" />
-    <ClCompile Include="src\rendering\Shader.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
     <ClCompile Include="src\scattering\ElasticScattering.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
@@ -381,7 +380,6 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
-    <ClCompile Include="src\rendering\Texture.cpp" />
     <ClCompile Include="src\utils\OpenGLUtils.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
     <ClCompile Include="src\views\View.cpp" />
@@ -399,7 +397,6 @@
     <ClInclude Include="libs\implot\implot.h" />
     <ClInclude Include="libs\implot\implot_internal.h" />
     <ClInclude Include="src\app_main.h" />
-    <ClInclude Include="src\rendering\Shader.h" />
     <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
@@ -413,7 +410,6 @@
     <ClInclude Include="src\scattering\escl\util.h" />
     <ClInclude Include="src\scattering\ImpurityGrid.h" />
     <ClInclude Include="src\sim_main.h" />
-    <ClInclude Include="src\rendering\Texture.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\OpenGLUtils.h" />
