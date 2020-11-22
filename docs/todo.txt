@@ -39,9 +39,7 @@ Optimalisaties
 
 
 
-Nieuws van zijn kant.
-Tests herschrijven.
-Geen interactieve applicatie meer.
+ImpurityIndex: worden impurities goed geindexeerd?
 
 
 geoptimaliseerde detail functes: tests?

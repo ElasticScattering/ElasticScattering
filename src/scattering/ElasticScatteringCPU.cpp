@@ -2,7 +2,7 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-std::vector<double>& ElasticScatteringCPU::ComputeLifetimes(const ScatteringParameters& sp, const ImpurityGridIndex& grid)
+std::vector<double> ElasticScatteringCPU::ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid)
 {
 	// GPU kernel works only with even work size.
 	const int limit = sp.dim - 1;
@@ -11,12 +11,14 @@ std::vector<double>& ElasticScatteringCPU::ComputeLifetimes(const ScatteringPara
 	std::vector<double> lifetimes(limit * limit * values_per_particle);
 
 	for (int j = 0; j < limit; j++) {
+		printf("j: %d", j);
+		
 		for (int i = 0; i < limit; i++) {
 			v2 pos = v2(i, j) * (sp.region_size / (double)(sp.dim - 2));
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < sp.integrand_steps; p++) {
-					lifetimes[j * limit + i * values_per_particle + (q * sp.integrand_steps) + p] = lifetime(q, p, pos, &sp, grid.impurities, grid.imp_index);
+					lifetimes[j * limit + i * values_per_particle + (q * sp.integrand_steps) + p] = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex());
 				}
 			}
 		}
@@ -67,7 +69,7 @@ SigmaBuffer ElasticScatteringCPU::ComputeSigmas(const ScatteringParameters& sp, 
 	return buffer;
 }
 
-std::vector<double>& ElasticScatteringCPU::IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes)
+std::vector<double> ElasticScatteringCPU::IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes)
 {
 	const int limit = sp.dim - 1;
 	const int values_per_particle = sp.integrand_steps * 4;

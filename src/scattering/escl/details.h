@@ -155,8 +155,8 @@ inline double GetBoundTime(const double phi, const double alpha, const double w,
     const double remaining = smod(v, PI * 0.5);
 
     // Oud
-    //double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);
-    double dphi = (is_electron != is_future) ? remaining : (2.0 * alpha - remaining);
+    double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);
+    //double dphi = (is_electron != is_future) ? remaining : (2.0 * alpha - remaining);
     return dphi / w;
 }
 

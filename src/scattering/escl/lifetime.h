@@ -13,25 +13,6 @@
 #endif
 
 
-inline Orbit MakeOrbit(const Particle *p, const ScatteringParameters* sp)
-{
-    const bool clockwise = sp->is_clockwise == 1;
-    const bool incoherent = sp->is_incoherent == 1;
-    const bool diag_regions = sp->is_diag_regions == 1;
-
-    const double bound_time = GetBoundTime(p->phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
-    const double bound_angle = GetBoundAngle(p->phi, sp->alpha, clockwise);
-    const double bound_phi = sp->is_incoherent ? GetCrossAngle(p->phi, bound_angle, clockwise) : INF;
-
-    const v2 vel = (double2)(cos(p->phi), sin(p->phi)) * sp->particle_speed;
-    const double orbit_radius = sp->particle_speed / sp->angular_speed;
-    const double2 center = GetCyclotronOrbitCenter(p->starting_position, vel, orbit_radius, sp->particle_speed, clockwise);
-
-    Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
-
-    return orbit;
-}
-
 inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
 {
     double position_angle = GetPositionAngle(p->phi, orbit->clockwise); //@Todo, wat is dit...
@@ -80,9 +61,21 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
     Particle p;
     p.starting_position = pos;
     p.phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
-    p.cell_index = 0;// get_cell_index(pos, sp->impurity_spawn_range, sp->max_expected_impurities_in_cell);
+    p.cell_index = get_cell_index(pos, sp->impurity_spawn_range, sp->cells_per_row);
 
-    const Orbit orbit = MakeOrbit(&p, sp);
+    const bool clockwise = sp->is_clockwise == 1;
+    const bool incoherent = sp->is_incoherent == 1;
+    const bool diag_regions = sp->is_diag_regions == 1;
+
+    const double bound_time = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, diag_regions, clockwise, false);
+    const double bound_angle = GetBoundAngle(p.phi, sp->alpha, clockwise);
+    const double bound_phi = sp->is_incoherent ? GetCrossAngle(p.phi, bound_angle, clockwise) : INF;
+
+    const v2 vel = (double2)(cos(p.phi), sin(p.phi)) * sp->particle_speed;
+    const double orbit_radius = sp->particle_speed / sp->angular_speed;
+    const double2 center = GetCyclotronOrbitCenter(p.starting_position, vel, orbit_radius, sp->particle_speed, clockwise);
+
+    Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
 
     const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
 

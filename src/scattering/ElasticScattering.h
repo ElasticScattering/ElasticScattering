@@ -1,7 +1,7 @@
 #ifndef ELASTIC_SCATTERING_H
 #define ELASTIC_SCATTERING_H
 
-#include "ImpurityGridIndex.h"
+#include "ImpurityIndex.h"
 #include "escl/ScatteringParameters.h"
 #include "src/SimulationResult.h"
 
@@ -12,14 +12,15 @@ protected:
 	static double SigmaFactor(const ScatteringParameters& sp);
 
 public:
+	static void UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature);
 	static void CompleteSimulationParameters(ScatteringParameters& p_sp);
 };
 
 class ElasticScatteringCPU : public ElasticScattering {
 public:
-	static std::vector<double>& ComputeLifetimes(const ScatteringParameters& sp, const ImpurityGridIndex& grid);
+	static std::vector<double> ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid);
 	static SigmaBuffer ComputeSigmas(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
-	static std::vector<double>& IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
+	static std::vector<double> IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
 	static SigmaResult IntegrateResult(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
 };
 

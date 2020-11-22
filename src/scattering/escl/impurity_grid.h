@@ -168,8 +168,8 @@ inline bool GetNextCell(const Orbit* orbit,
 inline int2 to_grid(const double x, const double y, const double2 range, const int cells_per_row)
 {
 	return {
-		(int)((x - range.x) / (range.y - range.x) * (cells_per_row)),
-		(int)((y - range.x) / (range.y - range.x) * (cells_per_row))
+		(int)((x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
+		(int)((y - range.x) / (range.y - range.x) * (double)(cells_per_row))
 	};
 }
 

@@ -11,6 +11,18 @@ double ElasticScattering::SigmaFactor(const ScatteringParameters& sp) {
 	return outside;
 };
 
+void ElasticScattering::UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature) {
+	sp.magnetic_field = magnetic_field;
+	sp.temperature = temperature;
+
+	sp.angular_speed = E * sp.magnetic_field / M;
+
+	if (sp.is_incoherent == 1) {
+		sp.tau = HBAR / (KB * sp.temperature);
+		sp.default_max_lifetime = 15.0 * sp.tau;
+	}
+}
+
 void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& sp) {
 	sp.angular_speed = E * sp.magnetic_field / M;
 

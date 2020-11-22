@@ -35,14 +35,12 @@ typedef struct ScatteringParameters
     int max_expected_impurities_in_cell;
     double cell_size;
 
-    unsigned int impurity_seed;
     double2 impurity_spawn_range;
 
 #ifndef DEVICE_PROGRAM
     // @Fixme, outdated!
     friend bool operator==(const ScatteringParameters& lhs, const ScatteringParameters& rhs) {
-        return (lhs.impurity_seed == rhs.impurity_seed &&
-            lhs.region_size == rhs.region_size      && lhs.dim == rhs.dim &&
+        return (lhs.region_size == rhs.region_size      && lhs.dim == rhs.dim &&
             lhs.particle_speed == rhs.particle_speed &&
             lhs.impurity_count == rhs.impurity_count && lhs.impurity_radius == rhs.impurity_radius &&
             lhs.alpha == rhs.alpha                  && lhs.temperature == rhs.temperature &&

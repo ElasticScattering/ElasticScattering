@@ -68,6 +68,23 @@ TEST_CASE("GetFirstBoundaryIntersects Tests")
 	}
 }
 
+TEST_CASE("to_grid Tests")
+{
+	SUBCASE("Extends is empty, (0,0) should get the first cell") {
+		auto cell = to_grid(0, 0, { 0, 0.4 }, 6);
+		auto expected_cell = v2i(0, 0);
+		CHECK(cell == expected_cell);
+	}
+
+	SUBCASE("Extends is not empty, (0,0) should be offset") {
+		auto cell = to_grid(0, 0, { -0.1, 0.4 }, 6);
+		auto expected_cell = v2i(1, 1);
+		CHECK(cell == expected_cell);
+	}
+
+}
+
+
 /*
 TEST_CASE("GetNextCell Tests")
 {

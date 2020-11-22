@@ -22,7 +22,6 @@ ScatteringParameters& ParametersFactory::GenerateSimulation() {
     sp.impurity_density = 5.34e14;
     sp.impurity_radius = 1.11e-8;
     sp.impurity_count = 100;
-    sp.impurity_seed = 0;
     sp.region_extends = 1e-6;
     sp.region_size = 4e-6;
 
@@ -48,7 +47,6 @@ ScatteringParameters& ParametersFactory::GenerateDefault() {
 
     sp.impurity_count = 100;
     sp.impurity_radius = 2e-9;
-    sp.impurity_seed = 0;
     sp.region_size = 1e-5;
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
 
@@ -73,7 +71,6 @@ ScatteringParameters& ParametersFactory::GenerateNoImpurities() {
 
     sp.impurity_count = 1;
     sp.impurity_radius = 1e-16;
-    sp.impurity_seed = 0;
     sp.region_size = 1e-5;
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
     sp.impurity_density = 1e12;
@@ -99,7 +96,6 @@ ScatteringParameters& ParametersFactory::GenerateMinimal() {
 
     sp.impurity_count = 1;
     sp.impurity_radius = 2e-9;
-    sp.impurity_seed = 0;
     sp.region_size = 1e-5;
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
     sp.impurity_density = 1e1;

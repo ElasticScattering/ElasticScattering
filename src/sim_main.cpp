@@ -30,6 +30,8 @@ void sim_main(const InitParameters& init)
     QueryPerformanceFrequency(&clockFrequency);
 
     SimulationConfiguration cfg = ParseConfig("default.config"); // Naam via cmd?
+    printf("Writing to: %s\n", cfg.output_directory.c_str());
+
     const std::vector<double> temperatures { 15, 60 }; // @Todo, dit ook inlezen?
 
     for (int i = 0; i < temperatures.size(); i++) {
@@ -45,9 +47,9 @@ void sim_main(const InitParameters& init)
     }
 }
 
-SigmaResult RunIteration(const std::string output_dir, const int iteration, const ScatteringParameters& sp, const ImpurityGridIndex& grid)
+SigmaResult RunIteration(const std::string output_dir, const int iteration, const ScatteringParameters& sp, const ImpurityIndex& grid)
 {
-    std::string base_name = output_dir + " / " + std::to_string(iteration) + ". ";
+    std::string base_name = output_dir + "/" + std::to_string(iteration) + ". ";
     std::string coh = ((sp.is_incoherent == 1) ? "I" : "C");
     std::string parameters = "[" + coh + " MF " + std::to_string(sp.magnetic_field) + "]";
 
@@ -65,7 +67,7 @@ SigmaResult RunIteration(const std::string output_dir, const int iteration, cons
     return result;
 }
 
-SimulationResult& RunSimulation(SimulationConfiguration& cfg)
+SimulationResult RunSimulation(SimulationConfiguration& cfg)
 {
     ScatteringParameters sp = cfg.scattering_params;
     double coherent_tau = sp.tau; //@Refactor
@@ -78,22 +80,21 @@ SimulationResult& RunSimulation(SimulationConfiguration& cfg)
 
     double mf_step_size = (cfg.magnetic_field_max - cfg.magnetic_field_min) / cfg.number_of_runs;
     for (int i = 0; i < cfg.number_of_runs; i++) {
-        sp.magnetic_field = cfg.magnetic_field_min + mf_step_size * i;
+        ElasticScattering::UpdateSimulationParameters(sp, cfg.magnetic_field_min + mf_step_size * i, sp.temperature);
 
         {
             SigmaResult total_coherent, total_incoherent;
             double total_sigma_xx_sq = 0;
 
             for (int j = 0; j < cfg.samples_per_run; j++) {
-                sp.impurity_seed = random_device();
-                
-                ImpurityGridIndex grid = ImpurityGridIndex::Generate(sp.impurity_count, sp.impurity_seed, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
+                auto impurity_index = ImpurityIndex(sp.impurity_count, random_device(), sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
                 SigmaResult result_coherent, result_incoherent;
 
                 if (run_incoherent) {
                     sp.is_incoherent = 1;
-                    result_incoherent = RunIteration(cfg.output_directory, i, sp, grid);
+                    result_incoherent = RunIteration(cfg.output_directory, i, sp, impurity_index);
+                    
                     result_incoherent.xx /= 1e8;
                     result_incoherent.xy /= 1e8;
                 }
@@ -101,7 +102,8 @@ SimulationResult& RunSimulation(SimulationConfiguration& cfg)
                 if (run_coherent) {
                     sp.is_incoherent = 0;
                     sp.tau = coherent_tau;
-                    result_coherent = RunIteration(cfg.output_directory, i, sp, grid);
+                    result_coherent = RunIteration(cfg.output_directory, i, sp, impurity_index);
+
                     result_coherent.xx /= 1e8;
                     result_coherent.xy /= 1e8;
                 }
@@ -134,7 +136,7 @@ SimulationResult& RunSimulation(SimulationConfiguration& cfg)
     return sr;
 }
 
-SimulationConfiguration& ParseConfig(std::string file)
+SimulationConfiguration ParseConfig(std::string file)
 {
     std::unordered_map<std::string, std::string> values;
 
@@ -216,9 +218,7 @@ std::string GetAvailableDirectory(std::string base)
         if (!std::filesystem::exists(dir))
         {
             std::filesystem::create_directory(dir);
-
             return dir;
-            break;
         }
         
         n++;
@@ -292,5 +292,5 @@ void LogImage(const std::string file, const int dim, const double scale, const s
             pixels[pix_idx++] = k;
         }
 
-    stbi_write_png(file.c_str(), dim, dim, 8, pixels.data(), 1);
+    stbi_write_png(file.c_str(), dim, dim, 3, pixels.data(), 1);
 }
