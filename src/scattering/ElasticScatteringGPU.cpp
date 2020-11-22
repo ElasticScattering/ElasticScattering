@@ -3,7 +3,6 @@
 #include "ElasticScattering.h"
 #include "utils/OpenCLUtils.h"
 
-#include "utils/OpenGLUtils.h"
 #include "src/escl/constants.h"
 
 typedef struct

@@ -14,14 +14,6 @@
 #include <sstream>
 #include <algorithm>
 
-#include <CL/cl_gl.h>
-#include <GL/glew.h>
-#include <GL/wglew.h>
-#include <GL/glfw3.h>
-
-
-GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
-
 static std::string CLErrorString(int err) {
     switch (err) {
         case CL_SUCCESS:                            return "Success!";
@@ -126,25 +118,12 @@ static void InitializeOpenCL(bool prefer_gpu, cl_device_id *p_deviceID, cl_conte
         }
     }
 
-#ifndef NO_WINDOW
-    cl_context_properties props[] =
-    {
-        CL_CONTEXT_PLATFORM,
-        (cl_context_properties)selected_platform,
-        CL_GL_CONTEXT_KHR,
-        (cl_context_properties)wglGetCurrentContext(),
-        CL_WGL_HDC_KHR,
-        (cl_context_properties)wglGetCurrentDC(),
-        0
-    };
-#else
     cl_context_properties props[] =
     {
         CL_CONTEXT_PLATFORM,
         (cl_context_properties)selected_platform,
         0
     };
-#endif
 
     ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_FAIL_CONDITION(cl_status, "Couldn't create context.");

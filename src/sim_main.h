@@ -4,7 +4,10 @@
 #include "SimulationResult.h"
 #include "scattering/ElasticScattering.h"
 
+#include <string>
+
 int sim_main(const InitParameters& init);
 SimulationResult& RunSimulation(ElasticScattering& es, SimulationConfiguration& sp);
-void PrintInfo(const SimulationConfiguration& sp, int count);
+SimulationConfiguration& ParseConfig(const std::string file);
+
 void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr);

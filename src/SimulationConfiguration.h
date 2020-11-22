@@ -4,8 +4,7 @@
 
 enum ProgramMode {
     Test,
-    Simulation,
-    Interactive
+    Simulation
 };
 
 typedef struct

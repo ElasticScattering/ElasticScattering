@@ -15,39 +15,36 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <iomanip> 
 #include <ctime>
 
+#include <unordered_map>
+
 int sim_main(const InitParameters& init)
 {
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
 
-    ScatteringParameters sp = ParametersFactory::GenerateSimulation();
-    SimulationConfiguration sim_params;
-    sim_params.number_of_runs = 10;
-    sim_params.samples_per_run = 2;
-    sim_params.magnetic_field_min = 0.01;
-    sim_params.magnetic_field_max = 40;
-    sim_params.scattering_params = sp;
+    
+    SimulationConfiguration cfg = ParseConfig("default.config");
 
     const std::vector<double> temperatures { 15, 60 };
-    PrintInfo(sim_params, temperatures.size());
 
     ElasticScatteringCPU es;
 
     for (int i = 0; i < temperatures.size(); i++) {
-        sp.temperature = temperatures[i];
+        cfg.scattering_params.temperature = temperatures[i];
 
         QueryPerformanceCounter(&beginClock);
-        auto simulation_result = RunSimulation(es, sim_params);
+        auto simulation_result = RunSimulation(es, cfg);
         QueryPerformanceCounter(&endClock);
         simulation_result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
 
-        LogResult(sim_params, simulation_result);
+        LogResult(cfg, simulation_result);
         printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
     }
 
@@ -64,9 +61,10 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
 
     //printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
-    std::random_device random_device;
-
     SimulationResult sr(sp.number_of_runs);
+    
+    std::random_device random_device;
+    const int base_seed = random_device();
 
     for (int i = 0; i < sp.number_of_runs; i++) {
         sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
@@ -136,16 +134,71 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
     return sr;
 }
 
-void PrintInfo(const SimulationConfiguration& sp, int count)
+SimulationConfiguration& ParseConfig(std::string file)
 {
-    const int imp_count = sp.scattering_params.impurity_density * pow(sp.scattering_params.region_extends + sp.scattering_params.region_size, 2);
-    const long long intersects_each = sp.samples_per_run * imp_count * 2.0 * pow(sp.scattering_params.dim, 2) * sp.scattering_params.integrand_steps * 4.0;
-    const long long intersects = sp.number_of_runs * intersects_each;
-    printf("Simulation info:\n");
-    printf("Total intersections: %e\n", intersects * (long long)count);
-    printf("Time estimate per data point: %f minutes.\n", (float)intersects_each / 2e9 / 60);
-    printf("Time estimate per temperature: %f hours \n", (float)intersects / 2e9 / 3600.0);
-    printf("Time estimate total: %f hours \n\n", (float)intersects / 2e9 / 3600.0 * count);
+    std::unordered_map<std::string, std::string> values;
+
+    std::filebuf fb;
+    if (!fb.open(file, std::ios::in)) {
+        printf("Could not load config file.");
+        exit(-1);
+    }
+
+    std::istream is_file(&fb);
+
+    std::string line;
+    while (std::getline(is_file, line))
+    {
+        std::istringstream is_line(line);
+        std::string line;
+        if (std::getline(is_line, line))
+        {
+            if (line.size() == 0 || line[0] == '\n' || line[0] == '#' || (line.size() > 1 && line[0] == ':' && line[1] == '/'))
+                continue;
+
+
+            auto pos = line.find(' ', 0);
+            auto pos2 = line.rfind(' ', line.size());
+
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos2+1, line.size()-1);;
+
+            values.insert(std::unordered_map<std::string, std::string>::value_type(key, value));
+        }
+    }
+
+    fb.close();
+
+    SimulationConfiguration cfg;
+
+    cfg.magnetic_field_min = atof(values.at("magnetic_field_min").c_str());
+    cfg.magnetic_field_max = atof(values.at("magnetic_field_max").c_str());
+    cfg.number_of_runs = atoi(values.at("number_of_runs").c_str());
+    cfg.samples_per_run = atoi(values.at("samples_per_run").c_str());
+
+    ScatteringParameters sp;
+    sp.integrand_steps = atoi(values.at("integrand_steps").c_str());
+    sp.dim = atoi(values.at("dimension").c_str());;
+
+    //sp.temperature = atof(values.at("temperature").c_str());
+    sp.tau = atof(values.at("tau").c_str());
+    //sp.magnetic_field = atof(values.at("magnetic_field").c_str());
+    sp.alpha = atof(values.at("alpha").c_str());
+    sp.particle_speed = atof(values.at("particle_speed").c_str());
+
+    sp.impurity_density = atof(values.at("impurity_density").c_str());
+    sp.impurity_radius = atof(values.at("impurity_radius").c_str());
+    sp.region_extends = atof(values.at("region_extends").c_str());
+    sp.region_size = atof(values.at("region_size").c_str());
+    sp.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
+
+    sp.is_diag_regions = atoi(values.at("is_diag_regions").c_str());
+    sp.is_clockwise = atoi(values.at("is_clockwise").c_str());
+    //sp.is_incoherent = atoi(values.at("is_incoherent").c_str());
+
+    cfg.scattering_params = sp;
+
+    return cfg;
 }
 
 void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr)
