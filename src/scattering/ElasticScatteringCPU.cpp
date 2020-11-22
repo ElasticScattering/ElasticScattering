@@ -2,14 +2,14 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
+SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& sp, ImpurityGridIndex& grid)
 {
-    PrepareCompute(p_sp);
+    //CompleteSimulationParameters(sp);
 
     // GPU kernel works only with even work size.
     const int limit = sp.dim - 1;
-    
-    const int values_per_particle = p_sp.integrand_steps * 4;
+
+    const int values_per_particle = sp.integrand_steps * 4;
     double* matrix = new double[limit * limit * values_per_particle];
 
     for (int j = 0; j < limit; j++) {
@@ -18,15 +18,15 @@ SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
             pos = pos * (sp.region_size / (double)(sp.dim - 2));
 
             for (int q = 0; q < 4; q++) {
-                for (int p = 0; p < p_sp.integrand_steps; p++) {
-                    matrix[j * limit + i * values_per_particle + (q*p_sp.integrand_steps) + p] = lifetime(q, p, pos, &p_sp, grid.impurities, grid.imp_index);
+                for (int p = 0; p < sp.integrand_steps; p++) {
+                    matrix[j * limit + i * values_per_particle + (q * sp.integrand_steps) + p] = lifetime(q, p, pos, &sp, grid.impurities, grid.imp_index);
                 }
             }
         }
     }
 
     // Apply weights for integration.
-    const double w = (p_sp.is_clockwise == 1) ? -p_sp.angular_speed : p_sp.angular_speed;
+    const double w = (sp.is_clockwise == 1) ? -sp.angular_speed : sp.angular_speed;
 
     SigmaResult sr;
 
@@ -36,13 +36,13 @@ SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
         for (int i = 0; i < limit; i++) {
             double wx = SimpsonWeight(i, limit);
             for (int q = 0; q < 4; q++) {
-                for (int p = 0; p < p_sp.integrand_steps; p++) {
-                    double wp = SimpsonWeight(p, p_sp.integrand_steps);
+                for (int p = 0; p < sp.integrand_steps; p++) {
+                    double wp = SimpsonWeight(p, sp.integrand_steps);
 
-                    double lt = matrix[j * limit + i * values_per_particle + (q * p_sp.integrand_steps) + p];
-                    double phi = p_sp.integrand_start_angle + q * (PI * 0.5) + p * p_sp.integrand_step_size;
+                    double lt = matrix[j * limit + i * values_per_particle + (q * sp.integrand_steps) + p];
+                    double phi = sp.integrand_start_angle + q * (PI * 0.5) + p * sp.integrand_step_size;
 
-                    double sigma_base = GetSigma(lt, phi, p_sp.tau, w) * (wy * wx * wp);
+                    double sigma_base = GetSigma(lt, phi, sp.tau, w) * (wy * wx * wp);
                     sr.xx += sigma_base * cos(phi);
                     sr.xy += sigma_base * cos(phi);
                 }
@@ -50,35 +50,10 @@ SigmaResult ElasticScatteringCPU::ComputeResult(ScatteringParameters& p_sp)
         }
     }
 
-    double factor = p_sp.integrand_angle_area / (4 * (p_sp.integrand_steps - 1) * (limit * limit));
-    factor *= SigmaFactor();
+    double factor = sp.integrand_angle_area / (4 * (sp.integrand_steps - 1) * (limit * limit));
+    factor *= SigmaFactor(sp);
     sr.xx *= factor;
     sr.xy *= factor;
 
     return sr;
-}
-
-void ElasticScatteringCPU::GenerateTextures(ScatteringParameters& p_sp)
-{
-    // Run the base loop.
-    // Generate all textures.
-    // SigmaXX, SigmaXY, inc, coh
-}
-
-bool ElasticScatteringCPU::PrepareCompute(ScatteringParameters &p_sp) {
-    CompleteSimulationParameters(p_sp);
-    
-    bool impurities_changed = ImpuritySettingsChanged(p_sp);
-    bool work_size_changed  = (sp.dim != p_sp.dim);
-
-    if (!first_run && !impurities_changed && !work_size_changed) return false;
-
-    sp = p_sp;
-        
-    if (first_run || impurities_changed)
-        grid.Generate(sp);
-
-    first_run = false;
-
-    return true;
 }

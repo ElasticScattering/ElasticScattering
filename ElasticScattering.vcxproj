@@ -366,7 +366,7 @@
     <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
     <ClCompile Include="src\scattering\ElasticScattering.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
-    <ClCompile Include="src\scattering\ImpurityGrid.cpp" />
+    <ClCompile Include="src\scattering\ImpurityGridIndex.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
@@ -385,12 +385,13 @@
     <ClInclude Include="src\scattering\escl\impurity_grid.h" />
     <ClInclude Include="src\scattering\escl\lifetime.h" />
     <ClInclude Include="src\scattering\escl\util.h" />
-    <ClInclude Include="src\scattering\ImpurityGrid.h" />
+    <ClInclude Include="src\scattering\ImpurityGridIndex.h" />
     <ClInclude Include="src\sim_main.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
+    <ClInclude Include="tests\ImpurityGridIndexTests.h" />
     <ClInclude Include="tests\ImpurityGridTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />

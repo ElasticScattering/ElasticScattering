@@ -4,10 +4,9 @@
 #endif
 #include "sim_main.h"
 
-#include "SimulationConfiguration.h"
-#include "SimulationResult.h"
-#include "utils/ParametersFactory.h"
+#include "scattering/ElasticScattering.h"
 #include "scattering/escl/constants.h"
+#include "scattering/ImpurityGridIndex.h"
 
 //#include <stb_image_write/stb_image_write.h>
 #include <random>
@@ -24,50 +23,45 @@
 
 #include <unordered_map>
 
-int sim_main(const InitParameters& init)
+void sim_main(const InitParameters& init)
 {
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
-
     
     SimulationConfiguration cfg = ParseConfig("default.config");
-
-    const std::vector<double> temperatures { 15, 60 };
-
-    ElasticScatteringCPU es;
+    const std::vector<double> temperatures { 15, 60 }; // @Todo, dit ook inlezen?
 
     for (int i = 0; i < temperatures.size(); i++) {
         cfg.scattering_params.temperature = temperatures[i];
 
         QueryPerformanceCounter(&beginClock);
-        auto simulation_result = RunSimulation(es, cfg);
+        auto simulation_result = RunSimulation(cfg);
         QueryPerformanceCounter(&endClock);
         simulation_result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
 
         LogResult(cfg, simulation_result);
         printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
     }
-
-    return 0;
 }
 
-SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& sp)
+SimulationResult& RunSimulation(SimulationConfiguration& cfg)
 {
-    double coherent_tau = sp.scattering_params.tau; //@Refactor
-    bool run_incoherent = sp.scattering_params.alpha > 0.000001;
-    bool run_coherent = abs(sp.scattering_params.alpha - (PI / 4)) > 0.000001;
-    
-    double step_size = (sp.magnetic_field_max - sp.magnetic_field_min) / sp.number_of_runs;
+    ScatteringParameters sp = cfg.scattering_params;
+    double coherent_tau = sp.tau; //@Refactor
+    bool run_incoherent = sp.alpha > 0.000001;
+    bool run_coherent = abs(sp.alpha - (PI / 4)) > 0.000001;
 
     //printf("magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx\n");
 
-    SimulationResult sr(sp.number_of_runs);
+    SimulationResult sr(cfg.number_of_runs);
     
-    std::random_device random_device;
+    std::random_device random_device; //@Implement
     const int base_seed = random_device();
 
-    for (int i = 0; i < sp.number_of_runs; i++) {
-        sp.scattering_params.magnetic_field = sp.magnetic_field_min + step_size * i;
+    double mf_step_size = (cfg.magnetic_field_max - cfg.magnetic_field_min) / cfg.number_of_runs;
+
+    for (int i = 0; i < cfg.number_of_runs; i++) {
+        sp.magnetic_field = cfg.magnetic_field_min + mf_step_size * i;
 
         {
             double total_sigma_xx = 0;
@@ -78,19 +72,22 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
             double total_sigma_xyi = 0;
             double total_sigma_xy_sq = 0;
 
-            for (int j = 0; j < sp.samples_per_run; j++) {
-                sp.scattering_params.impurity_seed = random_device();
+            for (int j = 0; j < cfg.samples_per_run; j++) {
+                sp.impurity_seed = random_device();
+                
+                ImpurityGridIndex grid = ImpurityGridIndex::Generate(sp.impurity_count, sp.impurity_seed, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
+
                 SigmaResult result_coherent, result_incoherent;
 
                 if (run_incoherent) {
-                    sp.scattering_params.is_incoherent = 1;
-                    result_incoherent = es.ComputeResult(sp.scattering_params);
+                    sp.is_incoherent = 1;
+                    result_incoherent = ElasticScatteringCPU::ComputeResult(sp, grid);
                 }
 
                 if (run_coherent) {
-                    sp.scattering_params.is_incoherent = 0;
-                    sp.scattering_params.tau = coherent_tau;
-                    result_coherent = es.ComputeResult(sp.scattering_params);
+                    sp.is_incoherent = 0;
+                    sp.tau = coherent_tau;
+                    result_coherent = ElasticScatteringCPU::ComputeResult(sp, grid);
                 }
 
                 double sxx = result_coherent.xx / 1e8;
@@ -108,22 +105,22 @@ SimulationResult& RunSimulation(ElasticScattering &es, SimulationConfiguration& 
             }
 
             DataRow row;
-            row.temperature = sp.scattering_params.temperature;
-            row.magnetic_field = sp.scattering_params.magnetic_field;
+            row.temperature = sp.temperature;
+            row.magnetic_field = sp.magnetic_field;
 
             {
-                double sxx_sq_exp = total_sigma_xx_sq / (double)(sp.samples_per_run) + 1e-15;
-                double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(sp.samples_per_run);
+                double sxx_sq_exp = total_sigma_xx_sq / (double)(cfg.samples_per_run) + 1e-15;
+                double sxx_exp = (total_sigma_xx + total_sigma_xxi) / (double)(cfg.samples_per_run);
 
-                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(sp.samples_per_run - 1));
+                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(cfg.samples_per_run - 1));
                 
-                row.coherent.xx = total_sigma_xx / (double)(sp.samples_per_run);
-                row.incoherent.xx = total_sigma_xxi / (double)(sp.samples_per_run);
+                row.coherent.xx = total_sigma_xx / (double)(cfg.samples_per_run);
+                row.incoherent.xx = total_sigma_xxi / (double)(cfg.samples_per_run);
 
                 row.xxd = sxx_std / sxx_exp;
 
-                row.coherent.xy  = total_sigma_xy / (double)sp.samples_per_run;
-                row.incoherent.xy = total_sigma_xyi / (double)sp.samples_per_run;
+                row.coherent.xy  = total_sigma_xy / (double)cfg.samples_per_run;
+                row.incoherent.xy = total_sigma_xyi / (double)cfg.samples_per_run;
             }
 
             sr.results[i] = row;
@@ -195,8 +192,11 @@ SimulationConfiguration& ParseConfig(std::string file)
     sp.is_diag_regions = atoi(values.at("is_diag_regions").c_str());
     sp.is_clockwise = atoi(values.at("is_clockwise").c_str());
     //sp.is_incoherent = atoi(values.at("is_incoherent").c_str());
+    
+    ElasticScattering::CompleteSimulationParameters(sp);
 
     cfg.scattering_params = sp;
+
 
     return cfg;
 }

@@ -2,12 +2,11 @@
 
 #include "SimulationConfiguration.h"
 #include "SimulationResult.h"
-#include "scattering/ElasticScattering.h"
 
 #include <string>
 
-int sim_main(const InitParameters& init);
-SimulationResult& RunSimulation(ElasticScattering& es, SimulationConfiguration& sp);
+void sim_main(const InitParameters& init);
 SimulationConfiguration& ParseConfig(const std::string file);
+SimulationResult& RunSimulation(SimulationConfiguration& sp);
 
 void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr);

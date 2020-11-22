@@ -1,7 +1,7 @@
 #ifndef ELASTIC_SCATTERING_H
 #define ELASTIC_SCATTERING_H
 
-#include "ImpurityGrid.h"
+#include "ImpurityGridIndex.h"
 #include "escl/ScatteringParameters.h"
 #include "escl/v2.h"
 #include "src/SimulationResult.h"
@@ -10,34 +10,17 @@
 
 class ElasticScattering {
 protected:
-	ImpurityGrid grid;
 
-	ScatteringParameters sp;
-
-	int particle_count;
-	
-	bool first_run = true;
-
-	virtual bool PrepareCompute(ScatteringParameters& p_sp) = 0;
-	void CompleteSimulationParameters(ScatteringParameters& p_sp);
-	bool ImpuritySettingsChanged(const ScatteringParameters& p_sp);
-
-	double FinishSingle(std::vector<double> &buffer);
-	double SigmaFactor() const;
+	static double FinishSingle(ScatteringParameters& sp, std::vector<double> &buffer);
+	static double SigmaFactor(ScatteringParameters& sp);
 
 public:
-	virtual SigmaResult ComputeResult(ScatteringParameters& p_sp) = 0;
-	virtual void GenerateTextures(ScatteringParameters& p_sp) = 0;
-	ElasticScattering();
+	static void CompleteSimulationParameters(ScatteringParameters& p_sp);
 };
 
 class ElasticScatteringCPU : public ElasticScattering {
-	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
-
 public:
-
-	virtual SigmaResult ComputeResult(ScatteringParameters &p_sp) override;
-	virtual void GenerateTextures(ScatteringParameters& p_sp) override;
+	static SigmaResult ComputeResult(ScatteringParameters& p_sp, ImpurityGridIndex& grid);
 };
 
 /*

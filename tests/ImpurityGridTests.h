@@ -4,7 +4,6 @@
 #include "TestMacros.h"
 #include "src/scattering/escl/impurity_grid.h"
 
-
 TEST_CASE("GetFirstBoundaryIntersects Tests")
 {
 	SUBCASE("1")

@@ -2,6 +2,7 @@
 #include <doctest.h>
 
 #include "OrbitDetailsTest.h"
+#include "ImpurityGridIndexTests.h"
 #include "ImpurityGridTests.h"
 #include "SimpsonWeightsTest.h"
 
@@ -12,5 +13,6 @@ void test_main() {
     doctest::Context context;
     context.setOption("order-by", "file");
     context.setOption("no-breaks", true);
+    //context.setOption("success", true);
     int res = context.run();
 }

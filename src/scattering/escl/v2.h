@@ -24,6 +24,11 @@ struct v2 {
         return a.x == x && a.y == y;
     }
 
+    bool operator<(const v2& a)
+    {
+        return (x < a.x) || ((!(a.x < x)) && (y < a.y));
+    }
+
     v2 operator+(const v2& a) const
     {
         return v2(a.x + x, a.y + y);
@@ -70,6 +75,10 @@ struct v2i {
         return !(a == b);
     }
 
+    friend bool operator<(const v2i& a, const v2i& b)
+    {
+        return (a.x < b.x) || ((!(b.x < a.x)) && (a.y < b.y));
+    }
 
     v2i operator+(const v2i& a) const
     {
