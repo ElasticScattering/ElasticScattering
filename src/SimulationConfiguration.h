@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scattering/escl/ScatteringParameters.h"
+#include <string>
 
 enum ProgramMode {
     Test,
@@ -21,6 +22,7 @@ typedef struct SimulationConfiguration
     int samples_per_run;
     double magnetic_field_min;
     double magnetic_field_max;
+    std::string output_directory;
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;

@@ -19,6 +19,18 @@ struct DataRow {
     SigmaResult incoherent;
     SigmaResult coherent;
     double xxd;
+
+    DataRow() {}
+
+    DataRow(SigmaResult _coherent, SigmaResult _incoherent, int samples)
+    {
+        double s = (double)(samples);
+        coherent.xx = _coherent.xx / s;
+        coherent.xy = _coherent.xy / s;
+
+        incoherent.xx = _incoherent.xx / s;
+        incoherent.xy = _incoherent.xy / s;
+    }
 };
 
 struct SimulationResult {
@@ -31,3 +43,14 @@ struct SimulationResult {
         results.resize(size);
     }
 };
+
+
+struct SigmaBuffer {
+    std::vector<double> sigma_xx, sigma_xy;
+
+    SigmaBuffer(std::vector<double>& xx, std::vector<double>& xy) {
+        sigma_xx = xx;
+        sigma_xy = xy;
+    }
+};
+

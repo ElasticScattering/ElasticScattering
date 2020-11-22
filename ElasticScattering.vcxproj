@@ -363,8 +363,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
     <ClCompile Include="src\scattering\ElasticScattering.cpp" />
+    <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
     <ClCompile Include="src\scattering\ImpurityGridIndex.cpp" />
     <ClCompile Include="src\main.cpp" />

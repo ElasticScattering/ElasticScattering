@@ -2,31 +2,7 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-double ElasticScattering::FinishSingle(ScatteringParameters &sp, std::vector<double> &buffer) {
-	double result = 0;
-
-	for (int i = 0; i < buffer.size(); i++)
-		result += buffer[i];
-
-	double z = sp.region_size / (double)(sp.dim - 2);
-	result *= z * z / 9.0; // phi integraal, 27?
-	
-	result *= SigmaFactor(sp);
-
-	/*
-	if (ShouldComputeSigma(sp.mode)) {
-	}
-	else {
-		result /= (sp.region_size * sp.region_size);
-		result *= sp.particle_speed;
-		result /= PI2;
-	}
-	*/
-	
-	return result;
-};
-
-double ElasticScattering::SigmaFactor(ScatteringParameters& sp) {
+double ElasticScattering::SigmaFactor(const ScatteringParameters& sp) {
 	double kf      = M * sp.particle_speed / HBAR;
 	double outside = (E*E * kf*kf) / (2.0 * PI*PI * M * sp.region_size*sp.region_size * C1);
 	double wct     = sp.angular_speed * sp.tau;

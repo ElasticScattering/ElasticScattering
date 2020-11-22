@@ -6,8 +6,8 @@
 #else
 	#include "v2.h"
 
-	#define BUFFER_ARGS ScatteringParameters *sp, std::vector<v2> &impurities, std::vector<int> &cell_indices
-	#define BUFFER_ARGS3D ScatteringParameters *sp, std::vector<v2> &impurities, std::vector<double> phi_lt
+	#define BUFFER_ARGS const ScatteringParameters *sp, const std::vector<v2> &impurities, const std::vector<int> &cell_indices
+	#define BUFFER_ARGS3D const ScatteringParameters *sp, const std::vector<v2> &impurities, const std::vector<double> phi_lt
 
 	#define min(a, b) ((a) < (b)) ? (a) : (b)
 #endif

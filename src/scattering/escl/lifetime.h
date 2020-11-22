@@ -13,7 +13,7 @@
 #endif
 
 
-inline Orbit MakeOrbit(const Particle *p, ScatteringParameters* sp)
+inline Orbit MakeOrbit(const Particle *p, const ScatteringParameters* sp)
 {
     const bool clockwise = sp->is_clockwise == 1;
     const bool incoherent = sp->is_incoherent == 1;

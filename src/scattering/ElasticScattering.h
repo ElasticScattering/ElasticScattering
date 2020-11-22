@@ -3,16 +3,13 @@
 
 #include "ImpurityGridIndex.h"
 #include "escl/ScatteringParameters.h"
-#include "escl/v2.h"
 #include "src/SimulationResult.h"
 
 #include <vector>
 
 class ElasticScattering {
 protected:
-
-	static double FinishSingle(ScatteringParameters& sp, std::vector<double> &buffer);
-	static double SigmaFactor(ScatteringParameters& sp);
+	static double SigmaFactor(const ScatteringParameters& sp);
 
 public:
 	static void CompleteSimulationParameters(ScatteringParameters& p_sp);
@@ -20,7 +17,10 @@ public:
 
 class ElasticScatteringCPU : public ElasticScattering {
 public:
-	static SigmaResult ComputeResult(ScatteringParameters& p_sp, ImpurityGridIndex& grid);
+	static std::vector<double>& ComputeLifetimes(const ScatteringParameters& sp, const ImpurityGridIndex& grid);
+	static SigmaBuffer ComputeSigmas(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
+	static std::vector<double>& IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
+	static SigmaResult IntegrateResult(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
 };
 
 /*
