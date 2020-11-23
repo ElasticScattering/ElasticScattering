@@ -36,46 +36,45 @@ void sim_main(const InitParameters& init)
 
     for (int i = 0; i < temperatures.size(); i++) {
         cfg.scattering_params.temperature = temperatures[i];
+        
+        CreateLog(cfg);
 
         QueryPerformanceCounter(&beginClock);
-        auto simulation_result = RunSimulation(cfg);
+        RunSimulation(cfg);
         QueryPerformanceCounter(&endClock);
-        simulation_result.time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-
-        LogResult(cfg, simulation_result);
+        
+        double time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+        FinishLog(cfg.result_file, time_elapsed);
+       
         printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
     }
 }
 
-SigmaResult RunIteration(const std::string output_dir, const int iteration, const ScatteringParameters& sp, const ImpurityIndex& grid)
+IterationResult RunIteration(const ScatteringParameters& sp, const ImpurityIndex& grid)
 {
-    std::string base_name = output_dir + "/" + std::to_string(iteration) + ". ";
-    std::string coh = ((sp.is_incoherent == 1) ? "I" : "C");
-    std::string parameters = "[" + coh + " MF " + std::to_string(sp.magnetic_field) + "]";
-
-    auto lifetimes = ElasticScatteringCPU::ComputeLifetimes(sp, grid);
-    
+    auto lifetimes          = ElasticScatteringCPU::ComputeLifetimes(sp, grid);
     auto particle_lifetimes = ElasticScatteringCPU::IntegrateParticle(sp, lifetimes);
-    LogImage(base_name + "Lifetime " + parameters +  ".png", sp.dim - 1, sp.tau * 15.0, particle_lifetimes); //@Todo, hier dim-1 of dim?
+    auto particle_sigmas    = ElasticScatteringCPU::ComputeSigmas(sp, lifetimes);
 
-    auto particle_sigmas = ElasticScatteringCPU::ComputeSigmas(sp, lifetimes);
-    LogImage(base_name + "Sigma XX " + parameters + ".png", sp.dim - 1, 3.0, particle_sigmas.sigma_xx);
-    LogImage(base_name + "Sigma XY " + parameters + ".png", sp.dim - 1, 0.5, particle_sigmas.sigma_xy);
+    auto result             = ElasticScatteringCPU::IntegrateResult(sp, lifetimes);
+    result.xx /= 1e8;
+    result.xy /= 1e8;
 
-    auto result = ElasticScatteringCPU::IntegrateResult(sp, lifetimes);
-
-    return result;
+    IterationResult b;
+    b.result = result;
+    b.lifetimes = particle_lifetimes;
+    b.sigma = particle_sigmas;
+    
+    return b;
 }
 
-SimulationResult RunSimulation(SimulationConfiguration& cfg)
+void RunSimulation(SimulationConfiguration& cfg)
 {
     ScatteringParameters sp = cfg.scattering_params;
-    double coherent_tau = sp.tau; //@Refactor
+    double coherent_tau = sp.tau;
     bool run_incoherent = sp.alpha > 0.000001;
     bool run_coherent = abs(sp.alpha - (PI / 4)) > 0.000001;
 
-    SimulationResult sr(cfg.number_of_runs);
-    
     std::random_device random_device;
 
     double mf_step_size = (cfg.magnetic_field_max - cfg.magnetic_field_min) / cfg.number_of_runs;
@@ -89,31 +88,34 @@ SimulationResult RunSimulation(SimulationConfiguration& cfg)
             for (int j = 0; j < cfg.samples_per_run; j++) {
                 auto impurity_index = ImpurityIndex(sp.impurity_count, random_device(), sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
-                SigmaResult result_coherent, result_incoherent;
+                sp.is_incoherent = 1;
+                auto incoherent = RunIteration(sp, impurity_index);
+                
+                sp.is_incoherent = 0;
+                sp.tau = coherent_tau;
+                auto coherent = RunIteration(sp, impurity_index);
 
+                LogImages(cfg.output_directory + "/" + std::to_string(i) + ". Sample " + std::to_string(j) + ".png", sp.dim-1, sp.tau, coherent, incoherent);
+
+                /*
                 if (run_incoherent) {
                     sp.is_incoherent = 1;
-                    result_incoherent = RunIteration(cfg.output_directory, i, sp, impurity_index);
-                    
-                    result_incoherent.xx /= 1e8;
-                    result_incoherent.xy /= 1e8;
+                    incoherent = RunIteration(sp, impurity_index);
                 }
 
                 if (run_coherent) {
                     sp.is_incoherent = 0;
                     sp.tau = coherent_tau;
-                    result_coherent = RunIteration(cfg.output_directory, i, sp, impurity_index);
-
-                    result_coherent.xx /= 1e8;
-                    result_coherent.xy /= 1e8;
+                    coherent = RunIteration(sp, impurity_index);
                 }
+                */
 
-                total_coherent.xx += result_coherent.xx;
-                total_coherent.xy += result_coherent.xy;
-                total_incoherent.xx += result_incoherent.xx;
-                total_incoherent.xy += result_incoherent.xy;
+                total_coherent.xx += coherent.result.xx;
+                total_coherent.xy += coherent.result.xy;
+                total_incoherent.xx += incoherent.result.xx;
+                total_incoherent.xy += incoherent.result.xy;
 
-                total_sigma_xx_sq += (result_incoherent.xx + result_coherent.xx) * (result_incoherent.xx + result_coherent.xx);
+                total_sigma_xx_sq += (incoherent.result.xx + coherent.result.xx) * (incoherent.result.xx + coherent.result.xx);
             }
 
             DataRow row(total_coherent, total_incoherent, cfg.samples_per_run);
@@ -128,12 +130,10 @@ SimulationResult RunSimulation(SimulationConfiguration& cfg)
                 
                 row.xxd = sxx_std / sxx_exp;
             }
-
-            sr.results[i] = row;
+         
+            LogResult(cfg.result_file, row);
         }
     }
-
-    return sr;
 }
 
 SimulationConfiguration ParseConfig(std::string file)
@@ -178,6 +178,7 @@ SimulationConfiguration ParseConfig(std::string file)
     cfg.number_of_runs = atoi(values.at("number_of_runs").c_str());
     cfg.samples_per_run = atoi(values.at("samples_per_run").c_str());
     cfg.output_directory = GetAvailableDirectory(values.at("output_directory"));
+    cfg.result_file = cfg.output_directory + std::string("/_results.dat");
 
     ScatteringParameters sp;
     sp.integrand_steps = atoi(values.at("integrand_steps").c_str());
@@ -225,62 +226,111 @@ std::string GetAvailableDirectory(std::string base)
     }
 }
 
-void LogResult(const SimulationConfiguration& cfg, const SimulationResult& sr)
+void CreateLog(const SimulationConfiguration& cfg)
 {
-    auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    ScatteringParameters sp = cfg.scattering_params;
-
     std::ofstream file;
-    file.open(cfg.output_directory.c_str() + std::string("/results.dat"));
+    file.open(cfg.result_file);
 
     file << "# Elastic Scattering simulation results" << std::endl;
-    file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
-    file << "# Elapsed time: " << sr.time_elapsed << " seconds." << std::endl;
+    file << "# Number of runs: " << cfg.number_of_runs << std::endl;
     file << "# Samples per row: " << cfg.samples_per_run << std::endl;
     
+    ScatteringParameters sp = cfg.scattering_params;
+
     file << std::scientific << std::setprecision(3);
-    file << "# Scattering parameters:" << std::endl;
-    file << "#\t" << "Integrand steps:  " << sp.integrand_steps << std::endl;
+    file << "#" << std::endl;
+    file << "###########################" << std::endl;
+    file << "# Scattering parameters:  #" << std::endl;
+    file << "###########################" << std::endl;
     file << "#\t" << "Dimension:        " << sp.dim << std::endl;
+    file << "#\t" << "Integrand steps:  " << sp.integrand_steps << std::endl;
     file << "#\t" << "Diag. regions:    " << ((sp.is_diag_regions == 1) ? "True" : "False") << std::endl;
     file << "#\t" << "Clockwise:        " << ((sp.is_clockwise == 1) ? "True" : "False") << std::endl;
     file << "#" << std::endl;
-    file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
+    //file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
     file << "#\t" << "Tau:              " << sp.tau << std::endl;
-    file << "#\t" << "Magnetic field:   " << sp.magnetic_field << std::endl;
+    //file << "#\t" << "Magnetic field:   " << sp.magnetic_field << std::endl;
     file << "#\t" << "Alpha:            " << sp.alpha << std::endl;
     file << "#\t" << "Particle speed:   " << sp.particle_speed << std::endl;
-    file << "#\t" << "Angular speed:    " << sp.angular_speed << std::endl;
+    //file << "#\t" << "Angular speed:    " << sp.angular_speed << std::endl;
     file << "#\n# Impurities:" << std::endl;
+    file << "#\t" << "Count:            " << sp.impurity_count << std::endl;
     file << "#\t" << "Region size:      " << sp.region_size << std::endl;
     file << "#\t" << "Region extends:   " << sp.region_extends << std::endl;
     file << "#\t" << "Density:          " << sp.impurity_density << std::endl;
-    file << "#\t" << "Count:            " << sp.impurity_count << std::endl;
     file << "#\t" << "Radius:           " << sp.impurity_radius << std::endl;
 
     file << "#\n# Constants:" << std::endl;
-    file << "#\t" << "Particle mass: " << M << std::endl;
-    file << "#\t" << "E:             " << E << std::endl;
-    file << "#\t" << "HBAR:          " << HBAR << std::endl;
-    file << "#\t" << "C:             " << C1 << std::endl;
-    file << "#\t" << "KB:            " << KB << std::endl;
-
-    file << "#\n###########\n# Results:\n" << std::endl;
+    file << "#\t" << "Particle mass:    " << M << std::endl;
+    file << "#\t" << "E:                " << E << std::endl;
+    file << "#\t" << "HBAR:             " << HBAR << std::endl;
+    file << "#\t" << "C:                " << C1 << std::endl;
+    file << "#\t" << "KB:               " << KB << std::endl;
+    file << "#" << std::endl;
+    file << "###########################" << std::endl;
+    file << "# Results:                #" << std::endl;
+    file << "###########################" << std::endl;
     file << "magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
-    file << std::scientific << std::setprecision(10);
-
-    int n = sr.results.size();
-
-    int idx = 0;
-    for (int i = 0; i < n; i++) {
-        const auto row = sr.results[i];
-        file << row.temperature << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
-    }
-
-    file.flush();
-    file.close();
 }
 
+void LogResult(const std::string file_path, const DataRow& row)
+{
+    std::ofstream file;
+    file.open(file_path, std::ios_base::app);
+    
+    file << std::scientific << std::setprecision(10);
+    file << row.temperature << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
+}
+
+void FinishLog(const std::string file_path, const double time_elapsed)
+{
+    std::ofstream file;
+    file.open(file_path, std::ios_base::app);
+
+    auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    file << "\n\n\n###################################" << std::endl;
+    file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
+    file << "# Elapsed time: " << time_elapsed << " seconds." << std::endl;
+}
+
+void LogImages(const std::string file, const int dim, const double scale, const IterationResult coherent, const IterationResult incoherent)
+{
+    const int image_width  = dim * 3;
+    const int image_height = dim * 2;
+    const int dim2 = dim * 2;
+    
+    std::vector<unsigned char> pixels(dim * image_width * image_height);
+
+    int i, j = 0;
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[j * image_width + i] = (unsigned char)(coherent.lifetimes[j * dim + i] / scale * 255.0);
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[j * image_width + (i + dim)] = (unsigned char) (coherent.sigma.sigma_xx[j * dim + i] / 3.0 * 255.0);
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[j * image_width + (i + dim2)] = (unsigned char)(coherent.sigma.sigma_xy[j * dim + i] / 1.5 * 255.0);
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[(j + dim) * image_width + i] = (unsigned char)(205 - incoherent.lifetimes[j * dim + i] / scale);
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[(j + dim) * image_width + (i + dim)] = (unsigned char)(incoherent.sigma.sigma_xx[j * dim + i] * 3.0);
+
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+            pixels[(j + dim) * image_width + (i + dim2)] = (unsigned char)(incoherent.sigma.sigma_xy[j * dim + i] * 1.5);
+
+    stbi_write_png(file.c_str(), image_width, image_height, 1, pixels.data(), image_width);
+}
+
+/*
 void LogImage(const std::string file, const int dim, const double scale, const std::vector<double> data)
 {
     std::vector<unsigned char> pixels(dim * dim * 3);
@@ -293,4 +343,4 @@ void LogImage(const std::string file, const int dim, const double scale, const s
         }
 
     stbi_write_png(file.c_str(), dim, dim, 3, pixels.data(), 1);
-}
+}*/

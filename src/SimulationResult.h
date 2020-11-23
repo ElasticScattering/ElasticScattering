@@ -33,24 +33,20 @@ struct DataRow {
     }
 };
 
-struct SimulationResult {
-    double time_elapsed;
-    
-    std::vector<DataRow> results;
-    
-    SimulationResult(int size) {
-        time_elapsed = 0;
-        results.resize(size);
-    }
-};
-
-
 struct SigmaBuffer {
     std::vector<double> sigma_xx, sigma_xy;
 
+    SigmaBuffer() {}
     SigmaBuffer(std::vector<double>& xx, std::vector<double>& xy) {
         sigma_xx = xx;
         sigma_xy = xy;
     }
 };
 
+struct IterationResult {
+    SigmaBuffer sigma;
+    std::vector<double> lifetimes;
+    SigmaResult result;
+
+    IterationResult() {}
+};

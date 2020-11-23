@@ -104,6 +104,5 @@ ScatteringParameters& ParametersFactory::GenerateMinimal() {
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
-
     return sp;
 }

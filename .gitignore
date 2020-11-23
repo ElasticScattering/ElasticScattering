@@ -1,5 +1,6 @@
 bin/
 ES Logs/
+ESLogs/
 
 .vs/
 *.filters

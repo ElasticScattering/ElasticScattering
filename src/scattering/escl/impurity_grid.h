@@ -117,13 +117,14 @@ inline bool GetNextCell(const Orbit* orbit,
 	bool right_hit = GetFirstBoundaryIntersect(low_right, top_right, L, orbit, last_intersection.dphi, &right);
 	bool left_hit  = GetFirstBoundaryIntersect(low_left , top_left , L, orbit, last_intersection.dphi, &left);
 
-	*next_intersection = last_intersection;
-	if (up_hit)    WriteBestIntersect(last_intersection, int2(0, 1) , up.incident_angle,    orbit->clockwise, cells_per_row, next_intersection);
-	if (down_hit)  WriteBestIntersect(last_intersection, int2(0, -1), down.incident_angle,  orbit->clockwise, cells_per_row, next_intersection);
-	if (right_hit) WriteBestIntersect(last_intersection, int2(1, 0) , right.incident_angle, orbit->clockwise, cells_per_row, next_intersection);
-	if (left_hit)  WriteBestIntersect(last_intersection, int2(-1, 0), left.incident_angle,  orbit->clockwise, cells_per_row, next_intersection);
+	Intersection closest = last_intersection;
+	if (up_hit)    WriteBestIntersect(last_intersection, int2(0, 1) , up.incident_angle,    orbit->clockwise, cells_per_row, &closest);
+	if (down_hit)  WriteBestIntersect(last_intersection, int2(0, -1), down.incident_angle,  orbit->clockwise, cells_per_row, &closest);
+	if (right_hit) WriteBestIntersect(last_intersection, int2(1, 0) , right.incident_angle, orbit->clockwise, cells_per_row, &closest);
+	if (left_hit)  WriteBestIntersect(last_intersection, int2(-1, 0), left.incident_angle,  orbit->clockwise, cells_per_row, &closest);
 
 	// Return whether we moved to a new cell.
+	*next_intersection = closest;
 	return (next_intersection->entering_cell != last_intersection.entering_cell);
 }
 

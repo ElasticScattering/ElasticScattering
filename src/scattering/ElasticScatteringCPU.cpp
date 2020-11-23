@@ -8,10 +8,12 @@ std::vector<double> ElasticScatteringCPU::ComputeLifetimes(const ScatteringParam
 	const int limit = sp.dim - 1;
 	const int values_per_particle = sp.integrand_steps * 4;
 
-	std::vector<double> lifetimes(limit * limit * values_per_particle);
+	std::vector<double> lifetimes(limit * limit * values_per_particle, 1);
+
+	return lifetimes; 
 
 	for (int j = 0; j < limit; j++) {
-		printf("j: %d", j);
+		printf("j: %d\n", j);
 		
 		for (int i = 0; i < limit; i++) {
 			v2 pos = v2(i, j) * (sp.region_size / (double)(sp.dim - 2));

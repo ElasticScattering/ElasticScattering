@@ -23,6 +23,7 @@ typedef struct SimulationConfiguration
     double magnetic_field_min;
     double magnetic_field_max;
     std::string output_directory;
+    std::string result_file;
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;

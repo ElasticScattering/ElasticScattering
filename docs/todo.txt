@@ -39,8 +39,7 @@ Optimalisaties
 
 
 
-ImpurityIndex: worden impurities goed geindexeerd?
-
+Verwijder diag_regions.
 
 geoptimaliseerde detail functes: tests?
 tellers

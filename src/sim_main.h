@@ -10,8 +10,13 @@ void sim_main(const InitParameters& init);
 SimulationConfiguration ParseConfig(const std::string file);
 std::string GetAvailableDirectory(std::string base);
 
-SigmaResult RunIteration(const std::string output_dir, const int iteration, const ScatteringParameters& sp, const ImpurityIndex& grid);
-SimulationResult RunSimulation(SimulationConfiguration& sp);
+IterationResult RunIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
+void RunSimulation(SimulationConfiguration& sp);
 
-void LogResult(const SimulationConfiguration& sim_params, const SimulationResult& sr);
-void LogImage(const std::string file, const int dim, const double scale, const std::vector<double> data);
+void CreateLog(const SimulationConfiguration& cfg);
+void LogResult(const std::string file_path, const DataRow& row);
+void FinishLog(const std::string file_path, const double time_elapsed);
+
+void LogImages(const std::string file, const int dim, const double scale, const IterationResult coherent, const IterationResult incoherent);
+
+//void LogImage(const std::string file, const int dim, const double scale, const std::vector<double> data);
