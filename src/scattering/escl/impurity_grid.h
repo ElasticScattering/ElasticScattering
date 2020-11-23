@@ -12,7 +12,7 @@ typedef struct Intersection {
 	double2 position;
 	double incident_angle;
 	double dphi;
-	int entering_cell;
+	int2 entering_cell;
 } Intersection;
 
 struct CellRange {
@@ -20,10 +20,10 @@ struct CellRange {
 };
 
 
-inline int2 to_grid_index(const int index, const int cells_per_row);
-inline int to_index(const int2 p, const int cells_per_row);
+inline int2 get_cell(const int index, const int cells_per_row);
+inline int get_index(const int2 p, const int cells_per_row);
 inline bool within_bounds(int2 p, const int cells_per_row);
-inline bool within_bounds(int cell, const int cells_per_row);
+inline double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range);
 
 inline double GetAngle(double2 pos, const Orbit* orbit) {
 	if (abs(pos.y - orbit->center.y) > EPSILON) {
@@ -38,7 +38,7 @@ inline double GetAngle(double2 pos, const Orbit* orbit) {
 
 inline bool PointInSegment(double point, double l0, double l1)
 {
-	return (point > l0 && point < l1) || (point < l0&& point > l1);
+	return (point > l0 && point < l1) || (point < l0 && point > l1);
 }
 
 inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const double L, const Orbit* orbit, const double start_phi, Intersection* intersection) {
@@ -49,6 +49,7 @@ inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const 
 
 	// Test if line enters circle.
 	if (proj_circle_distance_sq >= orbit->radius_squared) {
+		intersection->dphi = INF; // Om te checken.
 		return false;
 	}
 
@@ -87,85 +88,46 @@ inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const 
 	return true;
 }
 
+inline void WriteBestIntersect(const Intersection last_intersection, int2 offset, double incident_angle, bool clockwise, int cells_per_row, Intersection *closest_intersection)
+{
+	int2 next_cell_candidate = last_intersection.entering_cell + offset;
+
+	double dphi = GetCrossAngle(last_intersection.incident_angle, incident_angle, clockwise);
+	if (dphi < closest_intersection->dphi && within_bounds(next_cell_candidate, cells_per_row)) {
+		closest_intersection->dphi = dphi;
+		closest_intersection->entering_cell = next_cell_candidate;
+	}
+}
+
 inline bool GetNextCell(const Orbit* orbit,
-	const double2 current_cell_lowleft,
 	const Intersection last_intersection,
 	const double L,
 	const int cells_per_row,
+	const double2 spawn_range,
 	Intersection* next_intersection)
 {
-	double2 low_left = current_cell_lowleft;
+	double2 low_left  = to_world(last_intersection.entering_cell, cells_per_row, spawn_range);
 	double2 low_right = low_left + double2(L, 0);
 	double2 top_right = low_left + double2(L, L);
-	double2 top_left = low_left + double2(0, L);
+	double2 top_left  = low_left + double2(0, L);
 
 	Intersection left, right, up, down;
+	bool up_hit    = GetFirstBoundaryIntersect(top_left , top_right, L, orbit, last_intersection.dphi, &up);
+	bool down_hit  = GetFirstBoundaryIntersect(low_left , low_right, L, orbit, last_intersection.dphi, &down);
+	bool right_hit = GetFirstBoundaryIntersect(low_right, top_right, L, orbit, last_intersection.dphi, &right);
+	bool left_hit  = GetFirstBoundaryIntersect(low_left , top_left , L, orbit, last_intersection.dphi, &left);
 
-	double last_phi = last_intersection.dphi;
-	bool up_hit = GetFirstBoundaryIntersect(top_left, top_right, L, orbit, last_phi, &up);
-	bool down_hit = GetFirstBoundaryIntersect(low_left, low_right, L, orbit, last_phi, &down);
-	bool right_hit = GetFirstBoundaryIntersect(low_right, top_right, L, orbit, last_phi, &right);
-	bool left_hit = GetFirstBoundaryIntersect(low_left, top_left, L, orbit, last_phi, &left);
+	*next_intersection = last_intersection;
+	if (up_hit)    WriteBestIntersect(last_intersection, int2(0, 1) , up.incident_angle,    orbit->clockwise, cells_per_row, next_intersection);
+	if (down_hit)  WriteBestIntersect(last_intersection, int2(0, -1), down.incident_angle,  orbit->clockwise, cells_per_row, next_intersection);
+	if (right_hit) WriteBestIntersect(last_intersection, int2(1, 0) , right.incident_angle, orbit->clockwise, cells_per_row, next_intersection);
+	if (left_hit)  WriteBestIntersect(last_intersection, int2(-1, 0), left.incident_angle,  orbit->clockwise, cells_per_row, next_intersection);
 
-	if (!up_hit && !down_hit && !right_hit && !left_hit)
-		return false;
-
-	// Select one valid intersect.
-	int2 current_cell_grid_index = to_grid_index(last_intersection.entering_cell, cells_per_row);
-	
-	Intersection closest_intersection = last_intersection;
-
-	if (up_hit) {
-		double dphi = GetCrossAngle(last_intersection.incident_angle, up.incident_angle, orbit->clockwise);
-		int2 next_cell_candidate = current_cell_grid_index;
-		next_cell_candidate.y += 1;
-		if (dphi < closest_intersection.dphi && within_bounds(next_cell_candidate, cells_per_row)) {
-			closest_intersection.dphi = dphi;
-			closest_intersection.entering_cell = last_intersection.entering_cell + cells_per_row;
-		}
-	}
-
-	if (down_hit) {
-		// Test if this intersection is closer than what we have
-		double dphi = GetCrossAngle(last_intersection.incident_angle, down.incident_angle, orbit->clockwise);
-		int2 next_cell_candidate = current_cell_grid_index;
-		next_cell_candidate.y -= 1;
-		if (dphi < closest_intersection.dphi && within_bounds(next_cell_candidate, cells_per_row)) {
-			closest_intersection.dphi = dphi;
-			closest_intersection.entering_cell = last_intersection.entering_cell - cells_per_row; // ....
-		}
-	}
-
-	if (right_hit) {
-		double dphi = GetCrossAngle(last_intersection.incident_angle, right.incident_angle, orbit->clockwise);
-		int2 next_cell_candidate = current_cell_grid_index;
-		next_cell_candidate.x += 1;
-		if (dphi < closest_intersection.dphi && within_bounds(next_cell_candidate, cells_per_row)) {
-			closest_intersection.dphi = dphi;
-			closest_intersection.entering_cell = last_intersection.entering_cell + 1;
-		}
-	}
-
-	if (left_hit) {
-		// Test if this intersection is closer than what we have
-		double dphi = GetCrossAngle(last_intersection.incident_angle, left.incident_angle, orbit->clockwise);
-		int2 next_cell_candidate = current_cell_grid_index;
-		next_cell_candidate.x -= 1;
-		if (dphi < closest_intersection.dphi && within_bounds(next_cell_candidate, cells_per_row)) {
-			closest_intersection.dphi = dphi;
-			closest_intersection.entering_cell = last_intersection.entering_cell - 1;
-		}
-	}
-
-	if (closest_intersection.entering_cell == last_intersection.entering_cell) {
-		return false;
-	}
-
-	*next_intersection = closest_intersection;
-	return true;
+	// Return whether we moved to a new cell.
+	return (next_intersection->entering_cell != last_intersection.entering_cell);
 }
 
-inline int2 to_grid(const double x, const double y, const double2 range, const int cells_per_row)
+inline int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
 {
 	return {
 		(int)((x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
@@ -173,52 +135,32 @@ inline int2 to_grid(const double x, const double y, const double2 range, const i
 	};
 }
 
-inline v2 to_world(const int cell_index, const int cells_per_row, const double2 spawn_range)
+inline int2 get_cell(const int index, const int cells_per_row)
 {
-	double x = cell_index % cells_per_row;
-	double y = floor(cell_index / cells_per_row);
-	double2 low_left = (double2)(x, y) * (spawn_range.y - spawn_range.x) + spawn_range.x;
-
-	return low_left;
+	return (int2)(index % cells_per_row, index / cells_per_row);
 }
 
-inline int2 to_grid_index(const int index, const int cells_per_row)
-{
-	return (int2)((int)(index % cells_per_row), (int)(index / cells_per_row));
-}
-
-inline int to_index(const int2 p, const int cells_per_row) {
+inline int get_index(const int2 p, const int cells_per_row) {
 	return p.y * cells_per_row + p.x;
+}
+
+inline int get_cell_index(const double2 pos, const double2 range, const int cells_per_row)
+{
+	return get_index(get_cell(pos.x, pos.y, range, cells_per_row), cells_per_row);
+}
+
+inline double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
+{
+	return (double2)(current_cell.x, current_cell.y) * (spawn_range.y - spawn_range.x) + (double2)(spawn_range.x, spawn_range.x);
 }
 
 inline bool within_bounds(int2 p, const int cells_per_row) {
 	return (p.x >= 0 && p.x < cells_per_row) && (p.y >= 0 && p.y < cells_per_row);
 }
 
-inline bool within_bounds(int cell, const int cells_per_row) {
-	return within_bounds(to_grid_index(cell, cells_per_row), cells_per_row);
-}
-
-////////////////////////////
-
-inline int get_cell_index(const v2 pos, const v2 range, const int cells_per_row)
-{
-	return to_index(to_grid(pos.x, pos.y, range, cells_per_row), cells_per_row);
-}
-
-inline CellRange get_cell_id(const v2 pos, const v2 range, const int cells_per_row)
-{
-	CellRange cell_range;
-
-	cell_range.start = to_index(to_grid(pos.x, pos.y, range, cells_per_row), cells_per_row);
-	cell_range.end = cell_range.start + 1;
-
-	return cell_range;
-}
-
-////////////////////////
-
+/*
 inline double remap(double x, double s0, double s1, double t0, double t1)
 {
 	return t0 + (x - s0) / (s1 - s0) * (t1 - t0);
 }
+*/

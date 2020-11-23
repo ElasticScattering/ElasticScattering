@@ -30,9 +30,9 @@ typedef struct Orbit {
 } Orbit;
 
 typedef struct Particle {
-	int cell_index;
 	double phi;
 	double2 starting_position;
+    int2 current_cell;
 } Particle;
 
 
@@ -62,8 +62,6 @@ inline bool CirclesCross(const Orbit* orbit, const double2 p2, const double r2)
     const double r_add = orbit->radius + r2;
     const double r_min = orbit->radius - r2;
 
-    //Oud
-    //return (dist_squared >= r_add * r_add || dist_squared <= r_min * r_min) ? false : true;
     return (dist_squared < r_add * r_add) && (dist_squared > r_min * r_min);
 }
 
@@ -155,8 +153,8 @@ inline double GetBoundTime(const double phi, const double alpha, const double w,
     const double remaining = smod(v, PI * 0.5);
 
     // Oud
-    double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);
-    //double dphi = (is_electron != is_future) ? remaining : (2.0 * alpha - remaining);
+    //double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);
+    double dphi = (is_electron != is_future) ? remaining : (2.0 * alpha - remaining);
     return dphi / w;
 }
 

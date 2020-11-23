@@ -12,7 +12,9 @@
     #include "windows.h"
 #endif
 
-
+/// <summary>
+/// Returns the time at which the orbit collides with the first impurity, or INF if no collision happened. 
+/// </summary>
 inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
 {
     double position_angle = GetPositionAngle(p->phi, orbit->clockwise); //@Todo, wat is dit...
@@ -20,26 +22,30 @@ inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
     double lifetime = INF;
     Intersection next_intersection;
     next_intersection.position = p->starting_position;
-    next_intersection.entering_cell = p->cell_index;
+    next_intersection.entering_cell = p->current_cell;
     
     while (1) {
         // Move to the next cell.
         Intersection entry_point = next_intersection;
 
-        // Find the next intersection point. If this orbit crosses the current
-        // cell twice, we should limit valid intersections to those that happen before
-        // leaving this cell for the next cell.
-        double2 cell_pos = to_world(entry_point.entering_cell, sp->cells_per_row, sp->impurity_spawn_range);
-        bool next_box_available = GetNextCell(orbit, cell_pos, entry_point, sp->cell_size, sp->cells_per_row, &next_intersection);
+        // Find the next intersection point. 
+        bool next_box_available = GetNextCell(orbit, entry_point, sp->cell_size, sp->cells_per_row, sp->impurity_spawn_range, &next_intersection);
+        
+        // Not all impurites in a cell should be tested, because an orbit can 
+        // leave this cell and then come back in later. Only the impurities 
+        // that the current orbit segment can intersect with should be tested.
         double2 valid_phi_range = (double2)(entry_point.dphi, next_box_available ? next_intersection.dphi : position_angle); // ??
 
-        // Try to find an intersection in the current cell.
-        int impurity_start = (entry_point.entering_cell > 0) ? cell_indices[entry_point.entering_cell-1] : 0;
-        int impurity_end = cell_indices[entry_point.entering_cell];
+        // Get the impurities in this cell from the index.
+        int cell_idx = get_index(entry_point.entering_cell, sp->cells_per_row);
+        int impurity_start = (cell_idx > 0) ? cell_indices[cell_idx -1] : 0;
+        int impurity_end   = cell_indices[cell_idx];
 
+        // Test each impurity.
         for (int i = impurity_start; i < impurity_end; i++) {
             double2 impurity = impurities[i];
             if (CirclesCross(orbit, impurity, sp->impurity_radius)) {
+                // @Todo, hoort starting_position hier? Voelt vreemd.
                 double t = GetFirstCrossTime(orbit, p->starting_position, impurity, sp->impurity_radius, sp->angular_speed, valid_phi_range);
                 lifetime = (t < lifetime) ? t : lifetime;
             }
@@ -61,7 +67,7 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
     Particle p;
     p.starting_position = pos;
     p.phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
-    p.cell_index = get_cell_index(pos, sp->impurity_spawn_range, sp->cells_per_row);
+    p.current_cell = get_cell(pos.x, pos.y, sp->impurity_spawn_range, sp->cells_per_row);
 
     const bool clockwise = sp->is_clockwise == 1;
     const bool incoherent = sp->is_incoherent == 1;
@@ -79,8 +85,9 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
 
     const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
 
-    int impurity_start = (p.cell_index - 1 < 0) ? 0 : cell_indices[p.cell_index - 1];
-    int impurity_end = cell_indices[p.cell_index];
+    int particle_cell_index = get_index(p.current_cell, sp->cells_per_row);
+    int impurity_start = (p.current_cell - 1 < 0) ? 0 : cell_indices[particle_cell_index - 1];
+    int impurity_end = cell_indices[particle_cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {
         if (InsideImpurity(pos, impurities[i], sp->impurity_radius))

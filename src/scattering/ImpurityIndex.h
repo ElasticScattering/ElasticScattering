@@ -34,7 +34,7 @@ private:
 	v2 spawn_range;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
-	v2i to_grid(const double x, double y);
+	v2i get_cell(const double x, double y);
 	bool within_bounds(const v2i p);
 
 	void GenerateImpurityCells(int count, int seed, double impurity_radius);

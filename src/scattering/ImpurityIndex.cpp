@@ -65,18 +65,18 @@ int ImpurityIndex::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 p
 	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
 
 	std::vector<v2i> possible_overlapping_positions = {
-		to_grid(pos.x + impurity_radius, pos.y	  ),
-		to_grid(pos.x - impurity_radius, pos.y	  ),
-		to_grid(pos.x, pos.y + impurity_radius	  ),
-		to_grid(pos.x, pos.y - impurity_radius	  ),
-		to_grid(pos.x + offset.x, pos.y + offset.y),
-		to_grid(pos.x - offset.x, pos.y + offset.y),
-		to_grid(pos.x + offset.x, pos.y - offset.y),
-		to_grid(pos.x - offset.x, pos.y - offset.y)
+		get_cell(pos.x + impurity_radius, pos.y	  ),
+		get_cell(pos.x - impurity_radius, pos.y	  ),
+		get_cell(pos.x, pos.y + impurity_radius	  ),
+		get_cell(pos.x, pos.y - impurity_radius	  ),
+		get_cell(pos.x + offset.x, pos.y + offset.y),
+		get_cell(pos.x - offset.x, pos.y + offset.y),
+		get_cell(pos.x + offset.x, pos.y - offset.y),
+		get_cell(pos.x - offset.x, pos.y - offset.y)
 	};
 
 	// Add main cell.
-	v2i cell = to_grid(pos.x, pos.y);
+	v2i cell = get_cell(pos.x, pos.y);
 	cells[cell.y * cells_per_row + cell.x].impurities.push_back(pos);
 
 	std::set<v2i> added_cells = { cell };
@@ -93,7 +93,7 @@ int ImpurityIndex::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 p
 	return added_cells.size();
 }
 
-v2i ImpurityIndex::to_grid(const double x, const double y)
+v2i ImpurityIndex::get_cell(const double x, const double y)
 {
 	return {
 		(int)((x - spawn_range.x) / (spawn_range.y - spawn_range.x) * (cells_per_row)),
