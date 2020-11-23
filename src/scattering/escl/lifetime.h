@@ -86,7 +86,7 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
     const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
 
     int particle_cell_index = get_index(p.current_cell, sp->cells_per_row);
-    int impurity_start = (p.current_cell - 1 < 0) ? 0 : cell_indices[particle_cell_index - 1];
+    int impurity_start = (p.current_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
     int impurity_end = cell_indices[particle_cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {

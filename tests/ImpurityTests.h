@@ -129,6 +129,15 @@ TEST_CASE("get_cell_index Tests")
 }
 
 
+TEST_CASE("to_index Tests")
+{
+	CHECK(get_index({ 0, 0 }, 30) ==  0);
+	CHECK(get_index({ 3, 2 }, 30) == 63);
+	CHECK(get_index({ 2, 3 }, 30) == 92);
+	CHECK(get_index({ 4, 3 }, 10) == 34);
+}
+
+
 TEST_CASE("within_bounds Tests")
 {
 	SUBCASE("Negative position X should be false.")

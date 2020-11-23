@@ -30,7 +30,7 @@ private:
 	std::vector<int> imp_index;
 
 	int total_indexed_impurities;
-	int cells_per_row;
+	double cells_per_row;
 	v2 spawn_range;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);

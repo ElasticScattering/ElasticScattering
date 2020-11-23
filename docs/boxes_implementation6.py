@@ -655,28 +655,22 @@ def test_exit():
     assert(result[1][2] == 6)
 
     # Follow this particle around
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == 2)
 
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == 4)
 
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == 3)
 
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == 1)
 
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == 0)
 
-    result = find_exit_intersect(
-        points_on_circle, 0, 0, 1, phi, result[1], True)
+    result = find_exit_intersect(points_on_circle, 0, 0, 1, phi, result[1], True)
     assert(result[0] == -1)
     assert(result[1][2] == 0)
 
@@ -743,7 +737,7 @@ def next_box(boxID, entry_intersect, xc, yc, rc, phi, isEl, region, extends, nr1
         for the next iteration.
         NOTICE: PHI is at all times the velocity angle, not the position angle.
             See also: angle_position
-            
+
             @Vraag, wat betekend dit voor mij?
 
     In case there is no box to move towards,
@@ -1196,8 +1190,7 @@ def box_intersect(particle, xc, yc, rc, wc, isEl, imp3D, boxID, imp_rad, anglera
     return T
 
 
-def lifetime(particle, xc, yc, rc, wc, region, extends, nr1D,
-             imp3d, imp_rad, alpha, isEl, iscoh):
+def lifetime(particle, xc, yc, rc, wc, region, extends, nr1D, imp3d, imp_rad, alpha, isEl, iscoh):
     """ For one particle at one angle, compute the lifetime.
     particle: 3-array of [x, y, velocity angle]
     """
