@@ -10,7 +10,6 @@ void sim_main(const InitParameters& init);
 SimulationConfiguration ParseConfig(const std::string file);
 std::string GetAvailableDirectory(std::string base);
 
-IterationResult RunIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
 void RunSimulation(SimulationConfiguration& sp);
 
 void CreateLog(const SimulationConfiguration& cfg);

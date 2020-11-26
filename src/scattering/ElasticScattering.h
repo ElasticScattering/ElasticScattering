@@ -12,46 +12,32 @@ protected:
 	static double SigmaFactor(const ScatteringParameters& sp);
 
 public:
-	static void UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature);
-	static void CompleteSimulationParameters(ScatteringParameters& p_sp);
+	void UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature);
+	void CompleteSimulationParameters(ScatteringParameters& p_sp);
+
+	virtual IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid) = 0;
 };
 
 class ElasticScatteringCPU : public ElasticScattering {
-public:
-	static std::vector<double> ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid);
-	static SigmaBuffer ComputeSigmas(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
-	static std::vector<double> IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
-	static SigmaResult IntegrateResult(const ScatteringParameters& sp, const std::vector<double>& lifetimes);
-};
-
-/*
-class GPUElasticScattering : public ElasticScattering {
-	OpenGLResources ogl;
-
-	virtual bool PrepareCompute(ScatteringParameters &p_sp) override;
-	void PrepareTexKernel(int pixels);
+private:
+	std::vector<double> ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid);
+	SigmaResult ComputeSigmas(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
+	std::vector<double> IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
+	Sigma IntegrateResult(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
 
 public:
-	virtual bool Compute(ScatteringParameters &p_sp, IntegralResult& result) override;
-
-	GPUElasticScattering();
-	GPUElasticScattering(const InitParameters &init);
-	~GPUElasticScattering();
-	
-	uint32_t GetTextureID() const;
+	IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
 };
 
-class SimulationElasticScattering : public ElasticScattering {
-	virtual bool PrepareCompute(ScatteringParameters& p_sp) override;
+class ElasticScatteringCL : public ElasticScattering {
+	void PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup);
 
 public:
-	bool Compute(ScatteringParameters& p_sp, v2& result);
-	virtual bool Compute(ScatteringParameters& p_sp, IntegralResult& result) override;
+	void UploadImpurities(const ImpurityIndex& grid);
+	IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
 
-	SimulationElasticScattering();
-	SimulationElasticScattering(bool use_gpu, bool show_info);
-	SimulationElasticScattering(const InitParameters& init);
-	~SimulationElasticScattering();
+	ElasticScatteringCL(bool use_gpu, bool show_info, int particle_count);
+	~ElasticScatteringCL();
 };
-*/
+
 #endif // ELASTIC_SCATTERING_H

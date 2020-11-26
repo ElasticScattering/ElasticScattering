@@ -20,12 +20,12 @@ struct CellRange {
 };
 
 
-inline int2 get_cell(const int index, const int cells_per_row);
-inline int get_index(const int2 p, const int cells_per_row);
-inline bool within_bounds(int2 p, const int cells_per_row);
-inline double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range);
+ESCL_INLINE int2 get_cell(const int index, const int cells_per_row);
+ESCL_INLINE int get_index(const int2 p, const int cells_per_row);
+ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row);
+ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range);
 
-inline double GetAngle(double2 pos, const Orbit* orbit) {
+ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
 	if (abs(pos.y - orbit->center.y) > EPSILON) {
 		double sign = (pos.x < orbit->center.x) ? -1.0 : 1.0;
 		double angle = sign * asin((pos.y - orbit->center.y) / orbit->radius);
@@ -36,12 +36,12 @@ inline double GetAngle(double2 pos, const Orbit* orbit) {
 	}
 }
 
-inline bool PointInSegment(double point, double l0, double l1)
+ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 {
 	return (point > l0 && point < l1) || (point < l0 && point > l1);
 }
 
-inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const double L, const Orbit* orbit, const double start_phi, Intersection* intersection) {
+ESCL_INLINE bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const double L, const Orbit* orbit, const double start_phi, Intersection* intersection) {
 	double2 u = (p2 - p1) / L;
 	double projection_distance = u.x * (orbit->center.x - p1.x) + u.y * (orbit->center.y - p1.y);
 	double2 proj = p1 + (u * projection_distance);
@@ -88,7 +88,7 @@ inline bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const 
 	return true;
 }
 
-inline void WriteBestIntersect(const Intersection last_intersection, int2 offset, double incident_angle, bool clockwise, int cells_per_row, Intersection *closest_intersection)
+ESCL_INLINE void WriteBestIntersect(const Intersection last_intersection, int2 offset, double incident_angle, bool clockwise, int cells_per_row, Intersection *closest_intersection)
 {
 	int2 next_cell_candidate = last_intersection.entering_cell + offset;
 
@@ -99,7 +99,7 @@ inline void WriteBestIntersect(const Intersection last_intersection, int2 offset
 	}
 }
 
-inline bool GetNextCell(const Orbit* orbit,
+ESCL_INLINE bool GetNextCell(const Orbit* orbit,
 	const Intersection last_intersection,
 	const double L,
 	const int cells_per_row,
@@ -128,7 +128,7 @@ inline bool GetNextCell(const Orbit* orbit,
 	return (next_intersection->entering_cell != last_intersection.entering_cell);
 }
 
-inline int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
+ESCL_INLINE int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
 {
 	return {
 		(int)((x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
@@ -136,31 +136,31 @@ inline int2 get_cell(const double x, const double y, const double2 range, const 
 	};
 }
 
-inline int2 get_cell(const int index, const int cells_per_row)
+ESCL_INLINE int2 get_cell(const int index, const int cells_per_row)
 {
 	return (int2)(index % cells_per_row, index / cells_per_row);
 }
 
-inline int get_index(const int2 p, const int cells_per_row) {
+ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
 	return p.y * cells_per_row + p.x;
 }
 
-inline int get_cell_index(const double2 pos, const double2 range, const int cells_per_row)
+ESCL_INLINE int get_cell_index(const double2 pos, const double2 range, const int cells_per_row)
 {
 	return get_index(get_cell(pos.x, pos.y, range, cells_per_row), cells_per_row);
 }
 
-inline double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
+ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
 {
 	return (double2)(current_cell.x, current_cell.y) * (spawn_range.y - spawn_range.x) + (double2)(spawn_range.x, spawn_range.x);
 }
 
-inline bool within_bounds(int2 p, const int cells_per_row) {
+ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row) {
 	return (p.x >= 0 && p.x < cells_per_row) && (p.y >= 0 && p.y < cells_per_row);
 }
 
 /*
-inline double remap(double x, double s0, double s1, double t0, double t1)
+ESCL_INLINE double remap(double x, double s0, double s1, double t0, double t1)
 {
 	return t0 + (x - s0) / (s1 - s0) * (t1 - t0);
 }

@@ -22,6 +22,8 @@ typedef struct SimulationConfiguration
     int samples_per_run;
     double magnetic_field_min;
     double magnetic_field_max;
+    double magnetic_field_step_size;
+
     std::string output_directory;
     std::string result_file;
 

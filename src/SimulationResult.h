@@ -3,26 +3,26 @@
 #include <vector>
 
 struct SigmaResult {
-    double xx;
-    double xy;
+    std::vector<double> xx_buffer, xy_buffer;
+};
 
-    SigmaResult() {
-        xx = 0;
-        xy = 0;
-    }
+struct Sigma {
+    double xx, xy;
+
+    Sigma() { xx = 0; xy = 0; }
 };
 
 struct DataRow {
     double temperature;
     double magnetic_field;
     
-    SigmaResult incoherent;
-    SigmaResult coherent;
+    Sigma incoherent;
+    Sigma coherent;
     double xxd;
 
     DataRow() {}
 
-    DataRow(SigmaResult _coherent, SigmaResult _incoherent, int samples)
+    DataRow(Sigma _coherent, Sigma _incoherent, int samples)
     {
         double s = (double)(samples);
         coherent.xx = _coherent.xx / s;
@@ -33,20 +33,10 @@ struct DataRow {
     }
 };
 
-struct SigmaBuffer {
-    std::vector<double> sigma_xx, sigma_xy;
-
-    SigmaBuffer() {}
-    SigmaBuffer(std::vector<double>& xx, std::vector<double>& xy) {
-        sigma_xx = xx;
-        sigma_xy = xy;
-    }
-};
-
 struct IterationResult {
-    SigmaBuffer sigma;
-    std::vector<double> lifetimes;
-    SigmaResult result;
+    std::vector<double> particle_lifetimes;
+    SigmaResult sigmas;
+    Sigma result;
 
     IterationResult() {}
 };

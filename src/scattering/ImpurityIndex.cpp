@@ -10,6 +10,7 @@ ImpurityIndex::ImpurityIndex(int count, int seed, v2 _spawn_range, double impuri
 {
 	spawn_range = _spawn_range;
 	cells_per_row = _cells_per_row;
+	impurity_count = count;
 
 	GenerateImpurityCells(count, seed, impurity_radius);
 	ConvertToIndex();

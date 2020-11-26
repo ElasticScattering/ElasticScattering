@@ -1,80 +1,145 @@
 #include "src/scattering/escl/lifetime.h"
-#include "src/scattering/escl/constants.h"
+//#include "src/scattering/escl/constants.h"
 
-/*
-__kernel void quadrant_lifetime(__constant ScatteringParameters* sp, __global read_only double2* impurities, __global read_only int* cell_indices)
+kernel void quadrant_lifetimes(
+	constant ScatteringParameters* sp,
+	global read_only double2* impurities,
+	global read_only int* imp_index,
+	global write_only double* lifetimes)
 {
-	int x = get_global_id(0);
-    int y = get_global_id(1);
+	int i = get_global_id(0);
+    int j = get_global_id(1);
 	int q = get_global_id(2);
-
 	int row_size = get_global_size(0);
-    int limit = row_size-1;
-	if (x >= limit || y >= limit) {
+    
+	int limit = row_size-1;
+	if (i >= limit || y >= limit) {
 		return;
 	}
 
 	const double s = sp->region_size / (row_size - 2);
-    const double2 pos = (double2)(x*s, y*s);
+    const double2 pos = (double2)(i, y) * s;
 
-	double quadrant_start = q * (PI * 0.5);
-	unsigned int index_base = y * limit + x * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
-
-	Particle particle;
-	particle.starting_position = pos;
-	
-	int starting_cell = get_cell_index(pos, sp->impurity_spawn_range, sp->max_expected_impurities_in_cell);
-	particle.cell_index = starting_cell;
-
+	unsigned int base_idx = y * limit + i * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
+	for (int p = 0; p < sp->integrand_steps; p++)
 	{
-		// See if the particle starts inside an impurity.
-		// If this is the case, we can skip all phi angles.
-		int impurity_start = (p.cell_index - 1 < 0) ? 0 : cell_indices[p.cell_index - 1];
-		int impurity_end = cell_indices[p.cell_index];
-
-		bool starts_inside_impurity = false;
-		for (int i = impurity_start; i < impurity_end; i++)
-		{
-			if (InsideImpurity(pos, impurities[i], sp->impurity_radius)) {
-				starts_inside_impurity = true;
-				break;
-			}
-		}
-
-		if (starts_inside_impurity) {
-			for (int i = 0; i < sp->integrand_steps; i++) {
-				lifetimes[index_base+i] = 0;
-			}
-
-			return;
-		}
-	}
-
-	// Trace the orbit for this quadrant.
-	for (int i = 0; i < sp->integrand_steps; i++)
-	{
-		const double phi = sp->integrand_start_angle + quadrant_start + step * sp->integrand_step_size;
-		const Orbit orbit = MakeOrbit(pos, phi, sp);
-   
-		particle.cell_index = starting_cell;
-		particle.phi = phi;
-
-		const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
-		lifetimes[index_base+i] = TraceOrbit(&particle, &orbit, sp, impurities, cell_indices);
+		lifetimes[base_idx+p] = lifetime(q, p, pos, sp, impurities, imp_index);
 	}
 }
-*/
-__kernel void add_simpson_weights_2d(__global double* A)
+
+// ! Deprecated
+kernel void quadrant_sigma(
+	global read_only double* lifetimes, 
+	constant ScatteringParameters* sp,
+	global write_only double* sigma_xx, 
+	global write_only double* sigma_xy)
+{
+	int i = get_global_id(0);
+    int j = get_global_id(1);
+	int row_size = get_global_size(0);
+    
+	int limit = row_size-1;
+	if (i >= limit || j >= limit) {
+		return;
+	}
+
+	double2 total;
+	for (int q = 0; q < 4; q++)
+	{
+		unsigned int base_idx = j * limit + i * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
+		
+		for (int p = 0; p < sp->integrand_steps; p++)
+		{
+			double lt = lifetimes[base_idx+p];
+
+			double phi = sp->integrand_start_angle + q * (PI * 0.5) + p * sp->integrand_step_size;
+			double sigma_base = GetSigma(lt, phi, sp->tau, w) * SimpsonWeight(p, sp->integrand_steps);
+
+			totals.x += sigma_base * cos(phi);
+			totals.y += sigma_base * sin(phi);
+		}
+	}
+	
+	const int particle_idx = j * limit + i;
+	const double integrand_factor = sp->integrand_angle_area / ((sp->integrand_steps - 1) * 3.0);
+	sigma_xx[particle_idx] = totals.x * integrand_factor;
+	sigma_xy[particle_idx] = totals.y * integrand_factor;
+}
+
+kernel void quadrant_sigma_lifetimes(
+	global read_only double* lifetimes, 
+	constant ScatteringParameters* sp,
+	global write_only double* sigma_xx, 
+	global write_only double* sigma_xy)
+{
+	int i = get_global_id(0);
+    int j = get_global_id(1);
+	int q = get_global_id(2);
+	int row_size = get_global_size(0);
+    
+	int limit = row_size-1;
+	if (i >= limit || j >= limit) {
+		return;
+	}
+
+	unsigned int base_idx = j * limit + i * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
+		
+	for (int p = 0; p < sp->integrand_steps; p++)
+	{
+		double lt = lifetimes[base_idx+p];
+
+		double phi = sp->integrand_start_angle + q * (PI * 0.5) + p * sp->integrand_step_size;
+		double sigma_base = GetSigma(lt, phi, sp->tau, w);
+
+		sigma_xx[particle_idx] = sigma_base * cos(phi);
+		sigma_xy[particle_idx] = sigma_base * sin(phi);
+	}
+}
+
+kernel void integrate_particles(
+	global read_only double* lifetimes,
+	constant ScatteringParameters* sp, 
+	global write_only double* particle_lifetimes)
+{
+	int i = get_global_id(0);
+    int j = get_global_id(1);
+
+	int row_size = get_global_size(0);
+    
+	int limit = row_size-1;
+	if (i >= limit || y >= limit) {
+		return;
+	}
+
+	double total;
+	for (int q = 0; q < 4; q++)
+	{
+		unsigned int base_idx = j * limit + i * (sp->integrand_steps * 4) + (q*sp->integrand_steps);
+		
+		for (int p = 0; p < sp->integrand_steps; p++)
+		{
+			total += lifetimes[base_idx+p] * SimpsonWeight(p, sp->integrand_steps);
+		}
+	}
+	
+	const double integrand_factor = sp->integrand_angle_area / ((sp->integrand_steps - 1) * 3.0);
+	particle_lifetimes[j * limit + i] = totals.x * integrand_factor;
+}
+
+
+kernel void add_simpson_weights_particle(global read_only double* A, global write_only double* B)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+	int q = get_global_id(2);
     int row_size = get_global_size(0);
 
-    int i = y * row_size + x;
+    int i = y * row_size + x; 
     A[i] *= SimpsonWeight2D(x, y, row_size-1);
 }
 
-__kernel void sum(__global double* A, __global double* B, __local double* local_sums)
+
+kernel void sum(global read_only double* A, global write_only double* B, local double* local_sums)
 {
 	uint id = get_global_id(0);
 	uint local_id = get_local_id(0);
@@ -93,24 +158,3 @@ __kernel void sum(__global double* A, __global double* B, __local double* local_
 		B[get_group_id(0)] = local_sums[0] + local_sums[1];
 	}
 }
-
-/*
-#ifndef NO_WINDOW
-__kernel void to_texture(__global double* lifetimes, int mode, double scale, __write_only image2d_t screen)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    int row_size = get_global_size(0);
-
-    float k = lifetimes[y * row_size + x] / scale;
-    float4 c = (float4)(k, k, k, 1.0f);
-
-    if (mode == MODE_SIGMA_XY) {
-        if (k < 0.0) c = (float4)(0, 0, -k, 1.0f);
-        else 		 c = (float4)(k, 0, 0, 1.0f);
-    }
-
-    write_imagef(screen, (int2)(x, y), c);
-}
-#endif // NO_WINDOW
-*/

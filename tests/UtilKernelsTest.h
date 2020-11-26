@@ -30,7 +30,7 @@ TEST_CASE("Sum kernel")
 	CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
 	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size / local_work_size, nullptr, &clStatus);
-	CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+	CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
 
 	cl_kernel main_kernel = clCreateKernel(program, "sum", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");

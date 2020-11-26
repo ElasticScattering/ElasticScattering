@@ -32,17 +32,17 @@ typedef struct Orbit {
 typedef struct Particle {
 	double phi;
 	double2 starting_position;
-    int2 current_cell;
+    int2 starting_cell;
 } Particle;
 
 
-inline double smod(const double a, const double b)
+ESCL_INLINE double smod(const double a, const double b)
 {
     return a - b * floor(a / b);
 }
 
 // @Optimize
-inline bool AngleInRange(const double phi, const double2 phi_range, bool clockwise)
+ESCL_INLINE bool AngleInRange(const double phi, const double2 phi_range, bool clockwise)
 {
     if (abs(phi_range.x - phi_range.y) < 1e-10) return true;
 
@@ -54,7 +54,7 @@ inline bool AngleInRange(const double phi, const double2 phi_range, bool clockwi
     return (low < phi && phi < high ) || (low < (phi + PI2) && (phi + PI2) < high);
 }
 
-inline bool CirclesCross(const Orbit* orbit, const double2 p2, const double r2)
+ESCL_INLINE bool CirclesCross(const Orbit* orbit, const double2 p2, const double r2)
 {
     const double2 q = orbit->center - p2;
     const double dist_squared = q.x * q.x + q.y * q.y;
@@ -65,7 +65,7 @@ inline bool CirclesCross(const Orbit* orbit, const double2 p2, const double r2)
     return (dist_squared < r_add * r_add) && (dist_squared > r_min * r_min);
 }
 
-inline double4 GetCrossPoints(const Orbit* orbit, const double2 p2, const double r2)
+ESCL_INLINE double4 GetCrossPoints(const Orbit* orbit, const double2 p2, const double r2)
 {
     const double2 q = orbit->center - p2;
 
@@ -87,7 +87,7 @@ inline double4 GetCrossPoints(const Orbit* orbit, const double2 p2, const double
     return points;
 }
 
-inline double GetPhi(const double2 pos, const Orbit* orbit)
+ESCL_INLINE double GetPhi(const double2 pos, const Orbit* orbit)
 {
     double p = (pos.x - orbit->center.x) / orbit->radius;
 
@@ -100,14 +100,14 @@ inline double GetPhi(const double2 pos, const Orbit* orbit)
     return phi;
 }
 
-inline double GetPositionAngle(const double angle_velocity, const bool clockwise)
+ESCL_INLINE double GetPositionAngle(const double angle_velocity, const bool clockwise)
 {
     double offset = clockwise ? -PI / 2 : PI / 2;
 
     return fmod(angle_velocity + offset, PI2);
 }
 
-inline double GetCrossAngle(const double p, const double q, const bool clockwise)
+ESCL_INLINE double GetCrossAngle(const double p, const double q, const bool clockwise)
 {
     const double g = clockwise ? (p - q) : (q - p);
     return smod(g, PI2);
@@ -119,7 +119,7 @@ inline double GetCrossAngle(const double p, const double q, const bool clockwise
  * the orbit's trajectory than parts of other cells, and thus it should be ignored until we have found 
  * no intersection in those cells.
  */
-inline double GetFirstCrossTime(const Orbit* orbit, const double2 pos, const double2 ip, const double ir, const double w, const double2 valid_range)
+ESCL_INLINE double GetFirstCrossTime(const Orbit* orbit, const double2 pos, const double2 ip, const double ir, const double w, const double2 valid_range)
 {
     const double4 cross_points = GetCrossPoints(orbit, ip, ir);
 
@@ -145,7 +145,7 @@ inline double GetFirstCrossTime(const Orbit* orbit, const double2 pos, const dou
     return traversal_time;
 }
 
-inline double GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_diag_region, const bool is_electron, const bool is_future)
+ESCL_INLINE double GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_diag_region, const bool is_electron, const bool is_future)
 {
     if (!is_incoherent) return INF;
 
@@ -158,7 +158,7 @@ inline double GetBoundTime(const double phi, const double alpha, const double w,
     return dphi / w;
 }
 
-inline double GetBoundAngle(const double phi, const double alpha, const bool clockwise)
+ESCL_INLINE double GetBoundAngle(const double phi, const double alpha, const bool clockwise)
 {
     const int multiple = (int)(phi + alpha / (PI / 2.0));
     const double bound1 = multiple * PI / 2.0 - alpha;
@@ -170,7 +170,7 @@ inline double GetBoundAngle(const double phi, const double alpha, const bool clo
     return (dangle1 < dangle2) ? bound1 : bound2;
 }
 
-inline double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, const double radius, const double vf, const bool is_electron)
+ESCL_INLINE double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, const double radius, const double vf, const bool is_electron)
 {
     double2 shift = { velocity.y, -velocity.x };
     shift = shift * radius / vf;
@@ -178,7 +178,7 @@ inline double2 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, 
     return is_electron ? (p - shift) : (p + shift);
 }
 
-inline bool InsideImpurity(double2 pos, double2 impurity, double impurity_radius)
+ESCL_INLINE bool InsideImpurity(double2 pos, double2 impurity, double impurity_radius)
 {
     double2 d = pos - impurity;
     return (impurity_radius * impurity_radius) > dot(d, d);

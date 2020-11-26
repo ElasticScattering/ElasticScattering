@@ -365,10 +365,9 @@
   <ItemGroup>
     <ClCompile Include="src\scattering\ElasticScattering.cpp" />
     <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
-    <ClCompile Include="src\scattering\ElasticScatteringGPU.cpp" />
+    <ClCompile Include="src\scattering\ElasticScatteringCL.cpp" />
     <ClCompile Include="src\scattering\ImpurityIndex.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\scattering\SimulationElasticScattering.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
     <ClCompile Include="tests\kernels\test_cpp.cpp" />

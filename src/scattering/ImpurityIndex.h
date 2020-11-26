@@ -41,6 +41,7 @@ private:
 	void ConvertToIndex();
 
 public:
+	int impurity_count;
 	const std::vector<v2>& GetImpurities() const { return impurities; };
 	const std::vector<int>& GetIndex() const { return imp_index; };
 

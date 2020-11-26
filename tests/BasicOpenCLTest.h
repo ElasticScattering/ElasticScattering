@@ -40,7 +40,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
 	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
-	CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+	CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
 
 	cl_kernel main_kernel = clCreateKernel(program, "many_sqrt", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
@@ -154,7 +154,7 @@ TEST_CASE("Test if cpp can be compiled and executed by opencl")
 
 	cl_int clStatus;
 	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * buffer_size, nullptr, &clStatus);
-	CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+	CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
 
 	cl_kernel main_kernel = clCreateKernel(program, "test_cpp", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");

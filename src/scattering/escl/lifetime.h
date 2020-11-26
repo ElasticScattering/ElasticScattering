@@ -15,14 +15,14 @@
 /// <summary>
 /// Returns the time at which the orbit collides with the first impurity, or INF if no collision happened. 
 /// </summary>
-inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
+ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit, BUFFER_ARGS)
 {
     double position_angle = GetPositionAngle(p->phi, orbit->clockwise); //@Todo, wat is dit...
 
-    double lifetime = INF;
+    double lifetime = min(sp->default_max_lifetime, orbit->bound_time);
     Intersection next_intersection;
     next_intersection.position = p->starting_position;
-    next_intersection.entering_cell = p->current_cell;
+    next_intersection.entering_cell = p->starting_cell;
     
     while (1) {
         // Move to the next cell.
@@ -62,12 +62,21 @@ inline double TraceOrbit(Particle* p, const Orbit* orbit, BUFFER_ARGS)
     return lifetime;
 }
 
-inline double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)
+ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)
 {
     Particle p;
     p.starting_position = pos;
     p.phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
-    p.current_cell = get_cell(pos.x, pos.y, sp->impurity_spawn_range, sp->cells_per_row);
+    p.starting_cell = get_cell(pos.x, pos.y, sp->impurity_spawn_range, sp->cells_per_row);
+
+    int particle_cell_index = get_index(p.starting_cell, sp->cells_per_row);
+    int impurity_start = (p.starting_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
+    int impurity_end = cell_indices[particle_cell_index];
+    for (int i = impurity_start; i < impurity_end; i++)
+    {
+        if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
+            return 0;
+    }
 
     const bool clockwise = sp->is_clockwise == 1;
     const bool incoherent = sp->is_incoherent == 1;
@@ -82,17 +91,6 @@ inline double lifetime(const int quadrant, const int step, const double2 pos, BU
     const double2 center = GetCyclotronOrbitCenter(p.starting_position, vel, orbit_radius, sp->particle_speed, clockwise);
 
     Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
-
-    const double max_lifetime = min(sp->default_max_lifetime, orbit.bound_time);
-
-    int particle_cell_index = get_index(p.current_cell, sp->cells_per_row);
-    int impurity_start = (p.current_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
-    int impurity_end = cell_indices[particle_cell_index];
-    for (int i = impurity_start; i < impurity_end; i++)
-    {
-        if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
-            return 0;
-    }
 
     double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices);
     return lt;
