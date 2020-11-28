@@ -1,3 +1,8 @@
+
+- Verwijder diag_regions.
+
+
+
 Code / Resultaten
 	Diagonale kruising?
 	Invloed van particles die in impurity starten?
@@ -17,6 +22,8 @@ Tests
 		x CrossAngle
 		x IsCrossed
 		x CrossPoints
+		x to_cell / to_index / ...
+		x within_bounds
 	
 	Half
 		FindExitIntersect // mijn methode is anders...
@@ -32,16 +39,10 @@ Optimalisaties
 
 	clockwise vooraf bepalen?.
 
- __kernel ...(__global uint *intersectCounter)
-#ifdef EFFICIENCY_METRICS
-	atomic_inc(intersectCounter);
-#endif // EFFICIENCY_METRICS
-
-
-
-Verwijder diag_regions.
-
-geoptimaliseerde detail functes: tests?
-tellers
+Tellers
 	intersects
 	gebied uit
+	 __kernel ...(__global uint *intersectCounter)
+	#ifdef EFFICIENCY_METRICS
+		atomic_inc(intersectCounter);
+	#endif // EFFICIENCY_METRICS

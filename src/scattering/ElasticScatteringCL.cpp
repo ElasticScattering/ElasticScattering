@@ -36,6 +36,7 @@ IterationResult ElasticScatteringCL::ComputeIteration(const ScatteringParameters
 {
     const size_t items_in_work_group = min(sp.dim, 256);
 
+    UploadImpurities(grid);
     PrepareKernels(sp, items_in_work_group);
 
     cl_int clStatus;
@@ -63,27 +64,27 @@ IterationResult ElasticScatteringCL::ComputeIteration(const ScatteringParameters
     std::vector<double> sigma_xx(particles_work_size);
     std::vector<double> sigma_xy(particles_work_size);
     {
-        // Sigma
+        // Sigma lifetimes
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_sigmas_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
-
+        // Sigma xx per particle
         clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 0, sizeof(cl_mem), (void*)&ocl.sigma_xx);
         clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 2, sizeof(cl_mem), (void*)&ocl.sigma_xx_particle);
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.integrate_particle_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start integration kernel execution.");
 
-
+        // Sigma xy per particle
         clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 0, sizeof(cl_mem), (void*)&ocl.sigma_xy);
         clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 2, sizeof(cl_mem), (void*)&ocl.sigma_xy_particle);
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.integrate_particle_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start integration kernel execution.");
 
         clEnqueueReadBuffer(ocl.queue, ocl.sigma_xx_particle, CL_TRUE, 0, sizeof(double) * total_work_size, sigma_xx.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+        CL_FAIL_CONDITION(clStatus, "Failed to read back sigma xx.");
 
         clEnqueueReadBuffer(ocl.queue, ocl.sigma_xy_particle, CL_TRUE, 0, sizeof(double) * total_work_size, sigma_xy.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+        CL_FAIL_CONDITION(clStatus, "Failed to read back sigma xy.");
     }
 
     Sigma sigma;

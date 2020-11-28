@@ -14,18 +14,26 @@ typedef struct
     bool use_gpu;
     bool dont_show_info;
     bool write_images;
+    std::string config_file;
 } InitParameters;
+
+typedef struct Range
+{
+    double min, max;
+    int n;
+    int step_size;
+} Range;
 
 typedef struct SimulationConfiguration
 {
-    int number_of_runs;
     int samples_per_run;
-    double magnetic_field_min;
-    double magnetic_field_max;
-    double magnetic_field_step_size;
+    Range mangnetic_field_range;
+    Range temperature_range;
 
     std::string output_directory;
+    std::string intermediates_directory;
     std::string result_file;
+
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;

@@ -8,30 +8,32 @@
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->use_gpu = true;
-    p_init->dont_show_info = false;
+    p_init->dont_show_info = false; // True?
 
-    /*
     if (argc < 2) {
-        printf("|| EScl ||");
-        printf("Usage:");
-        printf("\t escl\tRun a simulation from");
-        printf("\t escl [sim | test ]");
-        exit(0);
+        p_init->config_file = "default.config";
+        p_init->mode = ProgramMode::Simulation;
+        return;
     }
-    */
 
     std::string w;
     w.assign(argv[1], strlen(argv[1]));
 
+    if (w == "help") {
+        printf("Elastic Scattering utility - Usage:\n\n");
+        printf("Running a simulation:\n");
+        printf("\tescl              \t--Run a simulation with default.config as configuration");
+        printf("\tescl [config_file]\t--Use custom config file.");
+
+        printf("\nRunning tests:\n");
+        printf("\tescl test");
+        exit(0);
+    }
     if (w == "test") {
         p_init->mode = ProgramMode::Test;
     } else {
+        p_init->config_file = w;
         p_init->mode = ProgramMode::Simulation;
-    }
-
-    if (argc >= 3) {
-        w.assign(argv[2], strlen(argv[2]));
-        p_init->dont_show_info = (w == "silent");
     }
 }
 

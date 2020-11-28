@@ -26,20 +26,33 @@
 
 void sim_main(const InitParameters& init)
 {
-    SimulationConfiguration cfg = ParseConfig("default.config"); // Naam via cmd?
-    printf("Writing to: %s\n", cfg.output_directory.c_str());
-
-    RunSimulation(cfg);
-}
-
-void RunSimulation(SimulationConfiguration& cfg)
-{
     LARGE_INTEGER beginClock, endClock, clockFrequency;
     QueryPerformanceFrequency(&clockFrequency);
+    
+    SimulationConfiguration cfg = ParseConfig(init.config_file);
+    printf("Writing to: %s\n", cfg.output_directory.c_str());
 
     ElasticScatteringCPU es;
+    for (int i = 0; i < cfg.temperature_range.n; i++) {
+        cfg.scattering_params.temperature = cfg.temperature_range.min + cfg.temperature_range.step_size * i;
 
+        cfg.result_file             = cfg.output_directory + "/_results_" + std::to_string(i) + ".dat";
+        cfg.intermediates_directory = cfg.output_directory + "/" + std::to_string(i) + ". Intermediates";
+        std::filesystem::create_directory(cfg.intermediates_directory);
+        CreateLog(cfg);
 
+        QueryPerformanceCounter(&beginClock);
+        RunSimulation(cfg, es);
+        QueryPerformanceCounter(&endClock);
+        double time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
+
+        FinishLog(cfg.result_file, time_elapsed);
+        printf("Simulation completed (%d/%d)\n", i + 1, cfg.temperature_range.n);
+    }
+}
+
+void RunSimulation(const SimulationConfiguration& cfg, ElasticScattering& es)
+{
     ScatteringParameters sp = cfg.scattering_params;
     double coherent_tau = sp.tau;
 
@@ -47,70 +60,48 @@ void RunSimulation(SimulationConfiguration& cfg)
 
     std::random_device random_device;
 
-    const std::vector<double> temperatures{ 15, 60 }; // @Todo, dit ook inlezen?
+    for (int i = 0; i < cfg.mangnetic_field_range.n; i++) {
+        es.UpdateSimulationParameters(sp, cfg.mangnetic_field_range.min + cfg.mangnetic_field_range.step_size * i, sp.temperature);
 
-    for (int i = 0; i < temperatures.size(); i++) {
-        cfg.scattering_params.temperature = temperatures[i];
+        Sigma total_coherent, total_incoherent;
+        double total_sigma_xx_sq = 0;
 
-        CreateLog(cfg);
+        for (int j = 0; j < cfg.samples_per_run; j++) {
+            auto impurity_index = ImpurityIndex(sp.impurity_count, random_device(), sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
-        QueryPerformanceCounter(&beginClock);
+            sp.is_incoherent = 1;
+            es.UpdateSimulationParameters(sp, sp.magnetic_field, sp.temperature);
+            auto incoherent = es.ComputeIteration(sp, impurity_index);
 
-        for (int i = 0; i < cfg.number_of_runs; i++) {
-            es.UpdateSimulationParameters(sp, cfg.magnetic_field_min + cfg.magnetic_field_step_size * i, sp.temperature);
+            sp.is_incoherent = 0;
+            sp.tau = coherent_tau;
+            auto coherent = es.ComputeIteration(sp, impurity_index);
 
-            {
-                Sigma total_coherent, total_incoherent;
-                double total_sigma_xx_sq = 0;
+            LogImages(cfg.intermediates_directory + "/" + std::to_string(i) + ". Sample " + std::to_string(j) + ".png", sp.dim - 1, sp.tau, coherent, incoherent);
 
-                for (int j = 0; j < cfg.samples_per_run; j++) {
-                    auto impurity_index = ImpurityIndex(sp.impurity_count, random_device(), sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
+            total_coherent.xx += coherent.result.xx;
+            total_coherent.xy += coherent.result.xy;
+            total_incoherent.xx += incoherent.result.xx;
+            total_incoherent.xy += incoherent.result.xy;
 
-                    sp.is_incoherent = 1;
-                    es.UpdateSimulationParameters(sp, sp.magnetic_field, sp.temperature);
-                    auto incoherent = es.ComputeIteration(sp, impurity_index);
-
-                    sp.is_incoherent = 0;
-                    sp.tau = coherent_tau;
-                    auto coherent = es.ComputeIteration(sp, impurity_index);
-
-                    LogImages(cfg.output_directory + "/" + std::to_string(i) + ". Sample " + std::to_string(j) + ".png", sp.dim - 1, sp.tau, coherent, incoherent);
-
-                    total_coherent.xx += coherent.result.xx;
-                    total_coherent.xy += coherent.result.xy;
-                    total_incoherent.xx += incoherent.result.xx;
-                    total_incoherent.xy += incoherent.result.xy;
-
-                    total_sigma_xx_sq += (incoherent.result.xx + coherent.result.xx) * (incoherent.result.xx + coherent.result.xx);
-                }
-
-                DataRow row(total_coherent, total_incoherent, cfg.samples_per_run);
-                row.temperature = sp.temperature;
-                row.magnetic_field = sp.magnetic_field;
-
-                {
-                    double sxx_sq_exp = total_sigma_xx_sq / (double)(cfg.samples_per_run) + 1e-15;
-                    double sxx_exp = (total_coherent.xx + total_incoherent.xx) / (double)(cfg.samples_per_run);
-
-                    double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(cfg.samples_per_run - 1));
-
-                    row.xxd = sxx_std / sxx_exp;
-                }
-
-                LogResult(cfg.result_file, row);
-            }
+            total_sigma_xx_sq += (incoherent.result.xx + coherent.result.xx) * (incoherent.result.xx + coherent.result.xx);
         }
 
+        DataRow row(total_coherent, total_incoherent, cfg.samples_per_run);
+        row.temperature = sp.temperature;
+        row.magnetic_field = sp.magnetic_field;
 
-        QueryPerformanceCounter(&endClock);
+        {
+            double sxx_sq_exp = total_sigma_xx_sq / (double)(cfg.samples_per_run) + 1e-15;
+            double sxx_exp = (total_coherent.xx + total_incoherent.xx) / (double)(cfg.samples_per_run);
 
-        double time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
-        FinishLog(cfg.result_file, time_elapsed);
+            double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(cfg.samples_per_run - 1));
 
-        printf("Simulation completed (%d/%d)\n", i + 1, temperatures.size());
+            row.xxd = sxx_std / sxx_exp;
+        }
+
+        LogResult(cfg.result_file, row);
     }
-
-    
 }
 
 SimulationConfiguration ParseConfig(std::string file)
@@ -150,23 +141,29 @@ SimulationConfiguration ParseConfig(std::string file)
 
     SimulationConfiguration cfg;
 
-    cfg.magnetic_field_min = atof(values.at("magnetic_field_min").c_str());
-    cfg.magnetic_field_max = atof(values.at("magnetic_field_max").c_str());
-    
-    cfg.number_of_runs = atoi(values.at("number_of_runs").c_str());
+    Range magnetic_field;
+    magnetic_field.min = atof(values.at("magnetic_field_min").c_str());
+    magnetic_field.max = atof(values.at("magnetic_field_max").c_str());
+    magnetic_field.n = atoi(values.at("magnetic_field_n").c_str());
+    magnetic_field.step_size = (magnetic_field.max - magnetic_field.min) / (double)(magnetic_field.n - 1);
+    cfg.mangnetic_field_range = magnetic_field;
+
+    Range temperature;
+    temperature.min = atof(values.at("temperature_min").c_str());
+    temperature.max = atof(values.at("temperature_max").c_str());
+    temperature.n = atoi(values.at("temperature_n").c_str());
+    temperature.step_size = (temperature.max - temperature.min) / (double)(temperature.n-1);
+    cfg.temperature_range = temperature;
+
     cfg.samples_per_run = atoi(values.at("samples_per_run").c_str());
     cfg.output_directory = GetAvailableDirectory(values.at("output_directory"));
-    cfg.result_file = cfg.output_directory + std::string("/_results.dat");
-    cfg.magnetic_field_step_size = (cfg.magnetic_field_max - cfg.magnetic_field_min) / (double)cfg.number_of_runs;
 
     ScatteringParameters sp;
     sp.integrand_steps = atoi(values.at("integrand_steps").c_str());
     sp.dim = atoi(values.at("dimension").c_str());;
     sp.values_per_particle = 4 * sp.integrand_steps;
 
-    //sp.temperature = atof(values.at("temperature").c_str());
     sp.tau = atof(values.at("tau").c_str());
-    //sp.magnetic_field = atof(values.at("magnetic_field").c_str());
     sp.alpha = atof(values.at("alpha").c_str());
     sp.particle_speed = atof(values.at("particle_speed").c_str());
 
@@ -210,7 +207,7 @@ void CreateLog(const SimulationConfiguration& cfg)
     file.open(cfg.result_file);
 
     file << "# Elastic Scattering simulation results" << std::endl;
-    file << "# Number of runs: " << cfg.number_of_runs << std::endl;
+    file << "# Number of runs: " << cfg.mangnetic_field_range.n << std::endl;
     file << "# Samples per row: " << cfg.samples_per_run << std::endl;
     
     ScatteringParameters sp = cfg.scattering_params;
@@ -225,12 +222,10 @@ void CreateLog(const SimulationConfiguration& cfg)
     file << "#\t" << "Diag. regions:    " << ((sp.is_diag_regions == 1) ? "True" : "False") << std::endl;
     file << "#\t" << "Clockwise:        " << ((sp.is_clockwise == 1) ? "True" : "False") << std::endl;
     file << "#" << std::endl;
-    //file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
+    file << "#\t" << "Temperature:      " << sp.temperature << std::endl;
     file << "#\t" << "Tau:              " << sp.tau << std::endl;
-    //file << "#\t" << "Magnetic field:   " << sp.magnetic_field << std::endl;
     file << "#\t" << "Alpha:            " << sp.alpha << std::endl;
     file << "#\t" << "Particle speed:   " << sp.particle_speed << std::endl;
-    //file << "#\t" << "Angular speed:    " << sp.angular_speed << std::endl;
     file << "#\n# Impurities:" << std::endl;
     file << "#\t" << "Count:            " << sp.impurity_count << std::endl;
     file << "#\t" << "Region size:      " << sp.region_size << std::endl;
@@ -257,7 +252,7 @@ void LogResult(const std::string file_path, const DataRow& row)
     file.open(file_path, std::ios_base::app);
     
     file << std::scientific << std::setprecision(10);
-    file << row.temperature << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
+    file << row.magnetic_field << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
 }
 
 void FinishLog(const std::string file_path, const double time_elapsed)
