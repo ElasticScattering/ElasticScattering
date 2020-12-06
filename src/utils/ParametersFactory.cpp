@@ -25,7 +25,6 @@ ScatteringParameters& ParametersFactory::GenerateSimulation() {
     sp.region_extends = 1e-6;
     sp.region_size = 4e-6;
 
-    sp.is_diag_regions = 0;
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
@@ -50,7 +49,6 @@ ScatteringParameters& ParametersFactory::GenerateDefault() {
     sp.region_size = 1e-5;
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
 
-    sp.is_diag_regions = 0;
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
@@ -75,7 +73,6 @@ ScatteringParameters& ParametersFactory::GenerateNoImpurities() {
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
     sp.impurity_density = 1e12;
 
-    sp.is_diag_regions = 0;
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 
@@ -100,7 +97,6 @@ ScatteringParameters& ParametersFactory::GenerateMinimal() {
     sp.region_extends = sp.particle_speed * sp.tau * 15.0;
     sp.impurity_density = 1e1;
 
-    sp.is_diag_regions = 0;
     sp.is_clockwise = 0;
     sp.is_incoherent = 1;
 

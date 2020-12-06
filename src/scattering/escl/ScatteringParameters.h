@@ -21,8 +21,6 @@ typedef struct ScatteringParameters
 
     int is_clockwise;
     int is_incoherent;
-    int is_diag_regions;
-    
     
     double integrand_step_size;
     double integrand_start_angle;

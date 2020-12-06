@@ -11,11 +11,8 @@ double ElasticScattering::SigmaFactor(const ScatteringParameters& sp) {
 	return outside;
 };
 
-void ElasticScattering::UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature) {
-	sp.magnetic_field = magnetic_field;
+void ElasticScattering::UpdateSimulationParameters(ScatteringParameters& sp, double temperature) {
 	sp.temperature = temperature;
-
-	sp.angular_speed = E * sp.magnetic_field / M;
 
 	if (sp.is_incoherent == 1) {
 		sp.tau = HBAR / (KB * sp.temperature);
@@ -39,7 +36,6 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& sp) {
 	}
 	
 	{
-		bool diag_regions = (sp.is_diag_regions == 1);
 		bool incoherent = (sp.is_incoherent == 1);
 
 		const double incoherent_area = sp.alpha * 2.0;
@@ -47,9 +43,6 @@ void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& sp) {
 		sp.integrand_step_size = sp.integrand_angle_area / (sp.integrand_steps - 1);
 		
 		sp.integrand_start_angle = (incoherent ? -sp.alpha : sp.alpha);
-		if (diag_regions) {
-			sp.integrand_start_angle += (incoherent ? (PI / 4.0) : -(PI / 4.0));
-		}
 	}
 
 	sp.default_max_lifetime = 15.0 * sp.tau;

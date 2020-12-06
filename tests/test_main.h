@@ -2,8 +2,8 @@
 #include <doctest.h>
 
 #include "OrbitDetailsTest.h"
-#include "ImpurityIndexTests.h"
-#include "ImpurityTests.h"
+#include "ImpurityIndexGenerationTests.h"
+#include "CellTests.h"
 #include "SimpsonWeightsTest.h"
 
 //#include "BasicOpenCLTest.h"

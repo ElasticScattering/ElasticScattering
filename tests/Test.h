@@ -61,7 +61,6 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.integrand_steps = 9;
 	sp.is_clockwise    = 1;
 	sp.region_extends  = sp.particle_speed * sp.tau;
-	sp.is_diag_regions = false;
 	sp.is_incoherent = true;
 
 	sp.mode            = MODE_DIR_LIFETIME;

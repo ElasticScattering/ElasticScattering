@@ -32,7 +32,14 @@ typedef struct
 
 OCLSimResources ocl;
 
-IterationResult ElasticScatteringCL::ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid)
+IterationResult ElasticScatteringCL::DeriveTemperature(const double temperature)
+{
+    IterationResult ir;
+
+    return ir;
+}
+
+void ElasticScatteringCL::ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid)
 {
     const size_t items_in_work_group = min(sp.dim, 256);
 
@@ -131,6 +138,7 @@ IterationResult ElasticScatteringCL::ComputeIteration(const ScatteringParameters
             sigma.xy += incomplete_sum[i];
     }
 
+    /*
     IterationResult ir;
     ir.particle_lifetimes = particle_lifetimes;
     ir.sigmas.xx_buffer = sigma_xx;
@@ -138,6 +146,7 @@ IterationResult ElasticScatteringCL::ComputeIteration(const ScatteringParameters
     ir.result = sigma;
 
     return ir;
+    */
 }
 
 void ElasticScatteringCL::UploadImpurities(const ImpurityIndex& grid)

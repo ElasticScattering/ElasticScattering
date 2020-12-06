@@ -27,18 +27,35 @@ ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, c
 
 ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
 	if (abs(pos.y - orbit->center.y) > EPSILON) {
-		double sign = (pos.x < orbit->center.x) ? -1.0 : 1.0;
-		double angle = sign * asin((pos.y - orbit->center.y) / orbit->radius);
-		return fmod(angle, PI2);
+		double angle = asin((pos.y - orbit->center.y) / orbit->radius);
+		angle = (pos.x < orbit->center.x) ? PI - angle : angle;
+		return AngleVelocity(fmod(angle, PI2), orbit->clockwise);
 	}
 	else {
-		return (pos.x > orbit->center.x) ? 0 : PI;
+		double r = (pos.x > orbit->center.x) ? 0 : PI;
+		return AngleVelocity(r, orbit->clockwise);
 	}
 }
 
 ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 {
 	return (point > l0 && point < l1) || (point < l0 && point > l1);
+}
+
+ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
+{
+	return abs(p1.x - p2.x) > 1e-6 * L || abs(p1.y - p2.y) > 1e-6 * L;
+}
+
+
+ESCL_INLINE void UpdateBestIntersect(const Intersection last_intersection, Intersection candidate, int2 offset, bool clockwise, int cells_per_row, double L, Intersection* closest_intersection)
+{
+	candidate.entering_cell = last_intersection.entering_cell + offset;
+	candidate.dphi = GetCrossAngle(last_intersection.incident_angle, candidate.incident_angle, clockwise);
+
+	if (candidate.dphi < closest_intersection->dphi && within_bounds(candidate.entering_cell, cells_per_row) && DifferentPoint(candidate.position, last_intersection.position, L)) {
+		*closest_intersection = candidate;
+	}
 }
 
 ESCL_INLINE bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const double L, const Orbit* orbit, const double start_phi, Intersection* intersection) {
@@ -56,47 +73,33 @@ ESCL_INLINE bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, c
 	// Calculate segment to the edge of the circle.
 	double2 to_edge = u * sqrt(orbit->radius_squared - proj_circle_distance_sq);
 
-	double2 i1 = proj + to_edge;
-	double2 i2 = proj - to_edge;
+	// A circle can intersect a line segment twice. Determine which 
+	// intersects happened and return the earliest.
+	Intersection i1;
+	i1.position = proj + to_edge;
+	i1.incident_angle = GetAngle(i1.position, orbit);
+	i1.dphi = GetCrossAngle(start_phi, i1.incident_angle, orbit->clockwise);
 
-	// Determine if the intersection happen on the line segment.
+	Intersection i2;
+	i2.position = proj - to_edge;
+	i2.incident_angle = GetAngle(i2.position, orbit);
+	i2.dphi = GetCrossAngle(start_phi, i2.incident_angle, orbit->clockwise);
+
 	bool horizontal_line = abs(u.x) > abs(u.y);
-
-	Intersection in1;
-	in1.position = i1;
-	in1.incident_angle = GetAngle(i1, orbit);
-	in1.dphi = GetCrossAngle(start_phi, in1.incident_angle, orbit->clockwise);
-
-	Intersection in2;
-	in2.position = i2;
-	in2.incident_angle = GetAngle(i2, orbit);
-	in2.dphi = GetCrossAngle(start_phi, in2.incident_angle, orbit->clockwise);
-
-	bool i1_valid = horizontal_line ? PointInSegment(i1.x, p1.x, p2.x) : PointInSegment(i1.y, p1.y, p2.y);
-	bool i2_valid = horizontal_line ? PointInSegment(i2.x, p1.x, p2.x) : PointInSegment(i2.y, p1.y, p2.y);
+	bool i1_valid = horizontal_line ? PointInSegment(i1.position.x, p1.x, p2.x) : PointInSegment(i1.position.y, p1.y, p2.y);
+	bool i2_valid = horizontal_line ? PointInSegment(i2.position.x, p1.x, p2.x) : PointInSegment(i2.position.y, p1.y, p2.y);
 
 	//@Refactor, kan dit simpeler omdat clockwise al in GetCrossAngle zit?
 	if (i1_valid && i2_valid)
 	{
-		bool phi1_lower = in1.dphi < in2.dphi;
-		if (orbit->clockwise) intersection = (phi1_lower) ? &in1 : &in2;
-		else             intersection = (phi1_lower) ? &in2 : &in1;
+		bool phi1_lower = i1.dphi < i2.dphi;
+		if (orbit->clockwise) *intersection = (phi1_lower) ? i1 : i2;
+		else				  *intersection = (phi1_lower) ? i2 : i1;
 	}
-	else if (i1_valid) intersection = &in1;
-	else               intersection = &in2;
+	else if (i1_valid) *intersection = i1;
+	else if (i2_valid) *intersection = i2;
 
-	return true;
-}
-
-ESCL_INLINE void WriteBestIntersect(const Intersection last_intersection, int2 offset, double incident_angle, bool clockwise, int cells_per_row, Intersection *closest_intersection)
-{
-	int2 next_cell_candidate = last_intersection.entering_cell + offset;
-
-	double dphi = GetCrossAngle(last_intersection.incident_angle, incident_angle, clockwise);
-	if (dphi < closest_intersection->dphi && within_bounds(next_cell_candidate, cells_per_row)) {
-		closest_intersection->dphi = dphi;
-		closest_intersection->entering_cell = next_cell_candidate;
-	}
+	return i1_valid || i2_valid;
 }
 
 ESCL_INLINE bool GetNextCell(const Orbit* orbit,
@@ -118,10 +121,10 @@ ESCL_INLINE bool GetNextCell(const Orbit* orbit,
 	bool left_hit  = GetFirstBoundaryIntersect(low_left , top_left , L, orbit, last_intersection.dphi, &left);
 
 	Intersection closest = last_intersection;
-	if (up_hit)    WriteBestIntersect(last_intersection, int2(0, 1) , up.incident_angle,    orbit->clockwise, cells_per_row, &closest);
-	if (down_hit)  WriteBestIntersect(last_intersection, int2(0, -1), down.incident_angle,  orbit->clockwise, cells_per_row, &closest);
-	if (right_hit) WriteBestIntersect(last_intersection, int2(1, 0) , right.incident_angle, orbit->clockwise, cells_per_row, &closest);
-	if (left_hit)  WriteBestIntersect(last_intersection, int2(-1, 0), left.incident_angle,  orbit->clockwise, cells_per_row, &closest);
+	if (up_hit)    UpdateBestIntersect(last_intersection, up,    int2(0,  1), orbit->clockwise, cells_per_row, L, &closest);
+	if (down_hit)  UpdateBestIntersect(last_intersection, down,  int2(0, -1), orbit->clockwise, cells_per_row, L, &closest);
+	if (right_hit) UpdateBestIntersect(last_intersection, right, int2(1,  0), orbit->clockwise, cells_per_row, L, &closest);
+	if (left_hit)  UpdateBestIntersect(last_intersection, left,  int2(-1, 0), orbit->clockwise, cells_per_row, L, &closest);
 
 	// Return whether we moved to a new cell.
 	*next_intersection = closest;
@@ -152,7 +155,7 @@ ESCL_INLINE int get_cell_index(const double2 pos, const double2 range, const int
 
 ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
 {
-	return (double2)(current_cell.x, current_cell.y) * (spawn_range.y - spawn_range.x) + (double2)(spawn_range.x, spawn_range.x);
+	return ((double2)(current_cell.x, current_cell.y) / cells_per_row * (spawn_range.y - spawn_range.x)) + (double2)(spawn_range.x, spawn_range.x);
 }
 
 ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row) {

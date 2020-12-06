@@ -41,6 +41,17 @@ ESCL_INLINE double smod(const double a, const double b)
     return a - b * floor(a / b);
 }
 
+ESCL_INLINE double AngleVelocity(const double pos_angle, bool clockwise)
+{
+    double half_pi = PI / 2;
+    if (clockwise) {
+        return fmod(pos_angle + half_pi, PI2);
+    }
+    else {
+        return fmod(pos_angle - half_pi, PI2);
+    }
+}
+
 // @Optimize
 ESCL_INLINE bool AngleInRange(const double phi, const double2 phi_range, bool clockwise)
 {
@@ -145,12 +156,11 @@ ESCL_INLINE double GetFirstCrossTime(const Orbit* orbit, const double2 pos, cons
     return traversal_time;
 }
 
-ESCL_INLINE double GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_diag_region, const bool is_electron, const bool is_future)
+ESCL_INLINE double GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_electron, const bool is_future)
 {
     if (!is_incoherent) return INF;
 
-    const double v = is_diag_region ? (phi + alpha - PI / 4.0) : (phi + alpha);
-    const double remaining = smod(v, PI * 0.5);
+    const double remaining = smod(phi + alpha, PI * 0.5);
 
     // Oud
     //double dphi = ((!is_electron && is_future) || (is_electron && !is_future)) ? remaining : (2.0 * alpha - remaining);

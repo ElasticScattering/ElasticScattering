@@ -2,6 +2,7 @@
 
 #include "scattering/escl/ScatteringParameters.h"
 #include <string>
+#include <vector>
 
 enum ProgramMode {
     Test,
@@ -27,8 +28,8 @@ typedef struct Range
 typedef struct SimulationConfiguration
 {
     int samples_per_run;
-    Range mangnetic_field_range;
-    Range temperature_range;
+    Range magnetic_field_range;
+    std::vector<double> temperatures;
 
     std::string output_directory;
     std::string intermediates_directory;

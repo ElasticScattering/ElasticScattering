@@ -63,7 +63,6 @@ void ImpurityIndex::ConvertToIndex()
 
 int ImpurityIndex::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius)
 {
-	//@Todo: check of dit idd diagonale cellen is.
 	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
 
 	std::vector<v2i> possible_overlapping_positions = {

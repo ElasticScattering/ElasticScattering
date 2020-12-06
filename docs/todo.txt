@@ -1,4 +1,37 @@
 
+
+
+ - temperatuur inlezen met lijst van vooraf gedefinieerde waardes.
+ - magnetisch veld temperatuur omdraaien
+		zodat we iteration lifetime lijst kunnen hergebruiken voor volgende temperatuur daarop kan werken.
+ - FIX: impurity count negatief in resultaat log
+ - implementeer nieuwe tests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 - Verwijder diag_regions.
 
 

@@ -9,32 +9,40 @@
 
 class ElasticScattering {
 protected:
+	std::vector<double> raw_lifetimes;
+	ScatteringParameters sp;
+	
 	static double SigmaFactor(const ScatteringParameters& sp);
 
 public:
-	void UpdateSimulationParameters(ScatteringParameters& sp, double magnetic_field, double temperature);
+	void UpdateSimulationParameters(ScatteringParameters& sp, double temperature);
 	void CompleteSimulationParameters(ScatteringParameters& p_sp);
 
-	virtual IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid) = 0;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) = 0;
+	virtual IterationResult DeriveTemperature(const double temperature) = 0;
 };
+
 
 class ElasticScatteringCPU : public ElasticScattering {
 private:
-	std::vector<double> ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid);
-	SigmaResult ComputeSigmas(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
-	std::vector<double> IntegrateParticle(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
-	Sigma IntegrateResult(const ScatteringParameters& sp, const std::vector<double>& particle_lifetimes);
+	SigmaResult ComputeSigmas(const std::vector<double>& current_lifetimes);
+	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes);
+	Sigma IntegrateResult(const std::vector<double>& current_lifetimes);
 
 public:
-	IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) override;
+	virtual IterationResult DeriveTemperature(const double temperature) override;
 };
+
+
 
 class ElasticScatteringCL : public ElasticScattering {
 	void PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup);
 
 public:
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) override;
 	void UploadImpurities(const ImpurityIndex& grid);
-	IterationResult ComputeIteration(const ScatteringParameters& sp, const ImpurityIndex& grid);
+	virtual IterationResult DeriveTemperature(const double temperature) override;
 
 	ElasticScatteringCL(bool use_gpu, bool show_info, int particle_count);
 	~ElasticScatteringCL();

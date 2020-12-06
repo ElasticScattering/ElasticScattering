@@ -13,7 +13,7 @@ void RunSimulation(const SimulationConfiguration& sp, ElasticScattering& es);
 
 SimulationConfiguration ParseConfig(const std::string file);
 std::string GetAvailableDirectory(std::string base);
-void CreateLog(const SimulationConfiguration& cfg);
-void LogResult(const std::string file_path, const DataRow& row);
+void CreateLog(const SimulationConfiguration& cfg, double temperature);
+void LogResult(const std::string file_path, const DataRow row);
 void FinishLog(const std::string file_path, const double time_elapsed);
-void LogImages(const std::string file, const int dim, const double scale, const IterationResult coherent, const IterationResult incoherent);
+void LogImages(const std::string file, const int dim, const double scale, const IterationResult iteration);
