@@ -2,70 +2,94 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/escl/impurity_grid.h"
+#include "src/scattering/escl/cell_grid.h"
 
+TEST_CASE("GetNextCell")
+{
+	Orbit o({ 1.5, 1.5 }, sqrt(2.5), true);
+	Intersection entry;
+	entry.position = v2(1, 0);
+	entry.dphi = GetAngle({ 1, 0 }, &o);
+	entry.entering_cell = { 0, 0 };
 
+	Intersection exit;
+
+	//xlow, ylow, L, xc, yc, rc, isEl, entry):
+	bool cell_available = GetNextCell(&o, entry, 3, 10, { 0, 30 }, &exit);
+
+}
+
+TEST_CASE("UpdateBestIntersect Tests")
+{
+	Orbit o({ 1.5, 1.5 }, sqrt(2.5), true);
+	Intersection entry;
+	entry.position = v2(1, 0);
+	entry.dphi = GetAngle({ 1, 0 }, &o);
+
+	Intersection candidate;
+	Intersection closest;
+
+	UpdateBestIntersect(candidate, { 0,1 }, entry, true, 20, 1e-2, &closest);
+}
+
+/* Todo: check alle waardes van de intersectie? */
 TEST_CASE("GetFirstBoundaryIntersects Tests")
 {
-	SUBCASE("1")
+	SUBCASE("Hit 1")
 	{
-		Orbit orbit({ 0,0 }, 2, false, 0, 0);
-		double L = 6;
+		Orbit orbit({ 0, 0 }, 2, false, 0, 0);
 		Intersection i;
-		v2 expected_intersection = { 0, 2 };
 
-		bool hit = GetFirstBoundaryIntersect({ 0, -3 }, { 0, 3 }, L, &orbit, 0, &i);
+		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, -3 }, { 0, 3 }, 6, 0, &i);
 
-		CHECK(hit == true);
-		CHECK((expected_intersection == i.position));
+		v2 expected_intersection = { 0, -2 };
+		CHECK(hit);
+		CHECK(expected_intersection == i.position);
 	}
 
-	SUBCASE("2")
+	SUBCASE("Hit 2")
 	{
 		Orbit orbit({ 0.7, 0 }, .5, false, 0, 0);
-		double L = 6;
 		Intersection i;
+
+		bool hit = GetFirstBoundaryIntersect(&orbit, { 1, 0 }, { 1, 6 }, 6, 0, &i);
+
 		v2 expected_intersection = { 1, 0.4 };
-
-		bool hit = GetFirstBoundaryIntersect({ 1, 0 }, { 1, 6 }, L, &orbit, 0, &i);
-
-		CHECK(hit == true);
-		CHECK((expected_intersection == i.position));
+		CHECK(hit);
+		CHECK_APPROX(expected_intersection.x, i.position.x, "");
+		CHECK_APPROX(expected_intersection.y, i.position.y, "");
 	}
 
-	SUBCASE("3")
+	SUBCASE("Hit 3")
 	{
 		Orbit orbit({ 1, 1 }, 1.1, false, 0, 0);
-		double L = 2;
 		Intersection i;
-		v2 expected_intersection = { 0, (1 - sqrt(1.1*1.1 -1)) };
 
-		bool hit = GetFirstBoundaryIntersect({ 0, 0 }, { 0, 2 }, L, &orbit, 0, &i);
+		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, 0 }, { 0, 2 }, 2, 0, &i);
 
-		CHECK(hit == true);
+		v2 expected_intersection = { 0, (1 - sqrt(1.1 * 1.1 - 1)) };
+		CHECK(hit);
 		CHECK((expected_intersection == i.position));
 	}
 
 	SUBCASE("Orbit that encircles line segment should return no intersection")
 	{
 		Orbit orbit({ 0.2 , 0.2 }, 20, false, 0, 0);
-		double L = 6;
 
 		Intersection i;
-		bool hit = GetFirstBoundaryIntersect({ 0, -3 }, { 0, 3 }, L, &orbit, 0, &i);
+		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, -3 }, { 0, 3 }, 6, 0, &i);
 
-		CHECK(hit == false);
+		CHECK(!hit);
 	}
 
 	SUBCASE("Orbit that misses the line segment should return no intersection")
 	{
 		Orbit orbit({ 0, 0 }, 1, false, 0, 0);
-		double L = 110;
 
 		Intersection i;
-		bool hit = GetFirstBoundaryIntersect({ 5, -50 }, { 5, 60 }, L, &orbit, 0, &i);
+		bool hit = GetFirstBoundaryIntersect(&orbit, { 5, -50 }, { 5, 60 }, 110, 0, &i);
 
-		CHECK(hit == false);
+		CHECK(!hit);
 	}
 }
 

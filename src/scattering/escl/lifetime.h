@@ -5,7 +5,7 @@
 #include "device_macros.h"
 #include "details.h"
 #include "constants.h"
-#include "impurity_grid.h"
+#include "cell_grid.h"
 
 #ifndef DEVICE_PROGRAM
     #include <vector>

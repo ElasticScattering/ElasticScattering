@@ -4,85 +4,6 @@
 #include "TestMacros.h"
 #include "src/scattering/escl/details.h"
 
-/*
-def test_angle():
-	""" Tests created before function implementation
-
-	Then adjusted to reflect velocity angle.
-	This now tests both get_angle as well as
-	the conversion between position and velocity.
-	These tests are an authority, they are correct.
-
-	As a starting point to see what is happening,
-	realise that vel_phi=0 (moving to positive x)
-	is at the bottom of an electron orbit where
-	pos_phi=3pi/2.
-	On the other hand, for holes vel_phi=0 happens
-	at the top or pos_phi=pi/2.
-	"""
-
-	assert(get_angle(1, 0, 0, 0, 1, True) == np.pi / 2)
-	assert(get_angle(-1, 0, 0, 0, 1, True) == 3 * np.pi / 2)
-	assert(get_angle(0, 1, 0, 0, 1, True) == np.pi)
-	assert(get_angle(0, -1, 0, 0, 1, True) == 0)
-	assert(get_angle(5, 5, 6, 6, np.sqrt(2), True) == 7 * np.pi / 4)
-
-	assert(get_angle(1, 0, 0, 0, 1, False) == 3 * np.pi / 2)
-	assert(get_angle(-1, 0, 0, 0, 1, False) == np.pi / 2)
-	assert(get_angle(0, 1, 0, 0, 1, False) == 0)
-	assert(get_angle(0, -1, 0, 0, 1, False) == np.pi)
-	assert(get_angle(5, 5, 6, 6, np.sqrt(2), False) == 3 * np.pi / 4)
-*/
-
-
-TEST_CASE("AngleInRange")
-{
-	SUBCASE("Direct inequality")
-	{
-		bool result = AngleInRange(1, { 0.5, 1.5 }, false);
-		CHECK(result == true);
-	}
-
-	SUBCASE("")
-	{
-		bool result = AngleInRange(1, { 0.5, 1.5 }, true);
-		CHECK(result == false);
-	}
-	
-	SUBCASE("")
-	{
-		bool result = AngleInRange(2, { 0.5, 1.5 }, true);
-		CHECK(result == true);
-	}
-
-	SUBCASE("")
-	{
-		bool result = AngleInRange(0.1, { 0.5, 1.5 }, true);
-		CHECK(result == true);
-	}
-
-	SUBCASE("Go up from 1.5 through 2pi to 0.5")
-	{
-		bool result = AngleInRange(1, { 1.5, 0.5 }, false);
-		CHECK(result == false);
-	}
-
-	SUBCASE("Go down from 1.to 0.5, direct inequality.")
-	{
-		bool result = AngleInRange(1, { 1.5, 0.5 }, true);
-		CHECK(result == true);
-	}
-
-	SUBCASE("Full circle.")
-	{
-		bool result = AngleInRange(1, { 1, 1 }, true);
-		CHECK(result == true);
-
-		result = AngleInRange(2, { 1, 1 }, true);
-		CHECK(result == true);
-	}
-}
-
 TEST_CASE("InsideImpurity")
 {
 	SUBCASE("returns true")
@@ -197,12 +118,13 @@ TEST_CASE("BoundTime Corners")
 TEST_CASE("Circles Cross")
 {
 	Orbit orbit1({ 1, 2 }, 1, true, 0, 0);
-	Orbit orbit2({ 0, 0 }, 1, true, 0, 0);
-	Orbit orbit3({ 0, 0 }, 1000, true, 0, 0);
-
 	CHECK(!CirclesCross(&orbit1, { 5, 5 }, 1));
 	CHECK(!CirclesCross(&orbit1, { 1, 3 }, 5));
+	
+	Orbit orbit2({ 0, 0 }, 1, true, 0, 0);
 	CHECK(CirclesCross(&orbit2, { 0, 0.5 }, 0.6));
+	
+	Orbit orbit3({ 0, 0 }, 1000, true, 0, 0);
 	CHECK(CirclesCross(&orbit3, { 2, 0 }, 1001));
 }
 
@@ -281,19 +203,10 @@ TEST_CASE("Phi")
 	CHECK(phi == PI);
 
 	phi = GetPhi({ 0, -1 }, &orbit1);
-	CHECK(phi == 3 * PI / 2);
+	CHECK(phi == (3 * PI / 2));
 
 	phi = GetPhi({ 0.99999, -0.0045 }, &orbit1);
 	CHECK_APPROX_LOW(phi, PI2);
-}
-
-TEST_CASE("Cross Angle")
-{
-	double a = GetCrossAngle(6.1, 0.1, true);
-	CHECK(a == 6);
-
-	a = GetCrossAngle(6.1, 0.1, false);
-	CHECK_APPROX(a, PI2 - 6.0);
 }
 
 TEST_CASE("Cross Time")

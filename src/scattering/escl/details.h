@@ -27,6 +27,16 @@ typedef struct Orbit {
 
 		radius_squared = radius * radius;
 	}
+
+    Orbit(double2 _center, double _radius, bool _clockwise) {
+        center = _center;
+        radius = _radius;
+        clockwise = _clockwise;
+        bound_time = 0;
+        bound_phi = 0;
+
+        radius_squared = radius * radius;
+    }
 } Orbit;
 
 typedef struct Particle {
@@ -49,6 +59,18 @@ ESCL_INLINE double AngleVelocity(const double pos_angle, bool clockwise)
     }
     else {
         return fmod(pos_angle - half_pi, PI2);
+    }
+}
+
+ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
+    if (abs(pos.y - orbit->center.y) > EPSILON) {
+        double angle = asin((pos.y - orbit->center.y) / orbit->radius);
+        angle = (pos.x < orbit->center.x) ? PI - angle : angle;
+        return AngleVelocity(fmod(angle, PI2), orbit->clockwise);
+    }
+    else {
+        double r = (pos.x > orbit->center.x) ? 0 : PI;
+        return AngleVelocity(r, orbit->clockwise);
     }
 }
 

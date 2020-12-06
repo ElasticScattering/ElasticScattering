@@ -370,6 +370,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
+    <ClCompile Include="tests\AngleTests.h" />
     <ClCompile Include="tests\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -381,7 +382,7 @@
     <ClInclude Include="src\scattering\escl\constants.h" />
     <ClInclude Include="src\scattering\escl\details.h" />
     <ClInclude Include="src\scattering\escl\device_macros.h" />
-    <ClInclude Include="src\scattering\escl\impurity_grid.h" />
+    <ClInclude Include="src\scattering\escl\cell_grid.h" />
     <ClInclude Include="src\scattering\escl\lifetime.h" />
     <ClInclude Include="src\scattering\escl\util.h" />
     <ClInclude Include="src\scattering\ImpurityIndex.h" />
@@ -390,8 +391,8 @@
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
-    <ClInclude Include="tests\ImpurityIndexTests.h" />
-    <ClInclude Include="tests\ImpurityTests.h" />
+    <ClInclude Include="tests\ImpurityIndexGenerationTests.h" />
+    <ClInclude Include="tests\CellGridTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
     <ClInclude Include="tests\kernels\test_cpp.h" />

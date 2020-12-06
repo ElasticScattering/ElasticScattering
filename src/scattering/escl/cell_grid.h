@@ -25,18 +25,6 @@ ESCL_INLINE int get_index(const int2 p, const int cells_per_row);
 ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row);
 ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range);
 
-ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
-	if (abs(pos.y - orbit->center.y) > EPSILON) {
-		double angle = asin((pos.y - orbit->center.y) / orbit->radius);
-		angle = (pos.x < orbit->center.x) ? PI - angle : angle;
-		return AngleVelocity(fmod(angle, PI2), orbit->clockwise);
-	}
-	else {
-		double r = (pos.x > orbit->center.x) ? 0 : PI;
-		return AngleVelocity(r, orbit->clockwise);
-	}
-}
-
 ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 {
 	return (point > l0 && point < l1) || (point < l0 && point > l1);
@@ -47,8 +35,7 @@ ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 	return abs(p1.x - p2.x) > 1e-6 * L || abs(p1.y - p2.y) > 1e-6 * L;
 }
 
-
-ESCL_INLINE void UpdateBestIntersect(const Intersection last_intersection, Intersection candidate, int2 offset, bool clockwise, int cells_per_row, double L, Intersection* closest_intersection)
+ESCL_INLINE void UpdateBestIntersect(Intersection candidate, int2 offset, const Intersection last_intersection, bool clockwise, int cells_per_row, double L, Intersection* closest_intersection)
 {
 	candidate.entering_cell = last_intersection.entering_cell + offset;
 	candidate.dphi = GetCrossAngle(last_intersection.incident_angle, candidate.incident_angle, clockwise);
@@ -58,7 +45,7 @@ ESCL_INLINE void UpdateBestIntersect(const Intersection last_intersection, Inter
 	}
 }
 
-ESCL_INLINE bool GetFirstBoundaryIntersect(const double2 p1, const double2 p2, const double L, const Orbit* orbit, const double start_phi, Intersection* intersection) {
+ESCL_INLINE bool GetFirstBoundaryIntersect(const Orbit* orbit, const double2 p1, const double2 p2, const double L, const double start_phi, Intersection* intersection) {
 	double2 u = (p2 - p1) / L;
 	double projection_distance = u.x * (orbit->center.x - p1.x) + u.y * (orbit->center.y - p1.y);
 	double2 proj = p1 + (u * projection_distance);
@@ -114,20 +101,20 @@ ESCL_INLINE bool GetNextCell(const Orbit* orbit,
 	double2 top_right = low_left + double2(L, L);
 	double2 top_left  = low_left + double2(0, L);
 
-	Intersection left, right, up, down;
-	bool up_hit    = GetFirstBoundaryIntersect(top_left , top_right, L, orbit, last_intersection.dphi, &up);
-	bool down_hit  = GetFirstBoundaryIntersect(low_left , low_right, L, orbit, last_intersection.dphi, &down);
-	bool right_hit = GetFirstBoundaryIntersect(low_right, top_right, L, orbit, last_intersection.dphi, &right);
-	bool left_hit  = GetFirstBoundaryIntersect(low_left , top_left , L, orbit, last_intersection.dphi, &left);
+	Intersection i_left, i_right, i_up, i_down;
+	bool hit_up    = GetFirstBoundaryIntersect(orbit, top_left,  top_right, L, last_intersection.dphi, &i_up);
+	bool hit_down  = GetFirstBoundaryIntersect(orbit, low_left,  low_right, L, last_intersection.dphi, &i_down);
+	bool hit_right = GetFirstBoundaryIntersect(orbit, low_right, top_right, L, last_intersection.dphi, &i_right);
+	bool hit_left  = GetFirstBoundaryIntersect(orbit, low_left,  top_left,  L, last_intersection.dphi, &i_left);
 
-	Intersection closest = last_intersection;
-	if (up_hit)    UpdateBestIntersect(last_intersection, up,    int2(0,  1), orbit->clockwise, cells_per_row, L, &closest);
-	if (down_hit)  UpdateBestIntersect(last_intersection, down,  int2(0, -1), orbit->clockwise, cells_per_row, L, &closest);
-	if (right_hit) UpdateBestIntersect(last_intersection, right, int2(1,  0), orbit->clockwise, cells_per_row, L, &closest);
-	if (left_hit)  UpdateBestIntersect(last_intersection, left,  int2(-1, 0), orbit->clockwise, cells_per_row, L, &closest);
+	//Intersection closest = last_intersection;
+	*next_intersection = last_intersection;
+	if (hit_up)    UpdateBestIntersect(i_up,    int2(0,  1), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
+	if (hit_down)  UpdateBestIntersect(i_down,  int2(0, -1), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
+	if (hit_right) UpdateBestIntersect(i_right, int2(1, 0),  last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
+	if (hit_left)  UpdateBestIntersect(i_left,  int2(-1, 0), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 
 	// Return whether we moved to a new cell.
-	*next_intersection = closest;
 	return (next_intersection->entering_cell != last_intersection.entering_cell);
 }
 

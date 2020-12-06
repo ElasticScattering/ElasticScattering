@@ -2,7 +2,7 @@
 #include <doctest.h>
 #include "TestMacros.h"
 #include "src/scattering/ImpurityIndex.h"
-#include "src/scattering/escl/impurity_grid.h"
+#include "src/scattering/escl/cell_grid.h"
 
 bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, double2 range, int cells_per_row)
 {
@@ -23,10 +23,10 @@ bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, doub
 		auto new_cell = get_cell_index(possible_overlapping_positions[i], range, cells_per_row);
 
 		if (correct_cell == new_cell) {
-			printf("(%f,%f) was %d and should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
+			//printf("(%f,%f) was %d and should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
 			return true;
 		}
-		printf("(%f,%f) was %d but should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
+		//printf("(%f,%f) was %d but should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
 	}
 
 	return false;
