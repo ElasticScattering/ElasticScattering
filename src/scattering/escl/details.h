@@ -55,10 +55,10 @@ ESCL_INLINE double AngleVelocity(const double pos_angle, bool clockwise)
 {
     double half_pi = PI / 2;
     if (clockwise) {
-        return fmod(pos_angle + half_pi, PI2);
+        return smod(pos_angle + half_pi, PI2);
     }
     else {
-        return fmod(pos_angle - half_pi, PI2);
+        return smod(pos_angle - half_pi, PI2);
     }
 }
 
@@ -66,7 +66,7 @@ ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
     if (abs(pos.y - orbit->center.y) > EPSILON) {
         double angle = asin((pos.y - orbit->center.y) / orbit->radius);
         angle = (pos.x < orbit->center.x) ? PI - angle : angle;
-        return AngleVelocity(fmod(angle, PI2), orbit->clockwise);
+        return AngleVelocity(angle, orbit->clockwise);
     }
     else {
         double r = (pos.x > orbit->center.x) ? 0 : PI;

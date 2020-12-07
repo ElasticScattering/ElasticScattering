@@ -3,7 +3,8 @@
 #define EPSILON 0.000001
 #define EPSILON_LOW_PRECISION 0.01
 #define EPSILON_HIGH 1e-18
-#define CHECK_ALMOST(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON_HIGH, p_msg); }
+#define CHECK_ALMOST(a, b)  { CHECK(abs((a)-(b)) < EPSILON_HIGH); }
+#define CHECK_ALMOST_MSG(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON_HIGH, p_msg); }
 #define CHECK_APPROX(a, b)  { CHECK(abs((a)-(b)) < EPSILON); }
 #define CHECK_APPROX_MSG(a, b, p_msg)  { CHECK_MESSAGE(abs((a)-(b)) < EPSILON, p_msg); }
 #define CHECK_APPROX_LOW(a, b)  { CHECK(abs((a)-(b)) < EPSILON_LOW_PRECISION); }

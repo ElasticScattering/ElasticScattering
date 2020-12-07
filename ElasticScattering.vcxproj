@@ -392,7 +392,7 @@
     <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
     <ClInclude Include="tests\ImpurityIndexGenerationTests.h" />
-    <ClInclude Include="tests\CellGridTests.h" />
+    <ClInclude Include="tests\IndexTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
     <ClInclude Include="tests\kernels\test_cpp.h" />

@@ -1,10 +1,10 @@
 #pragma once
 #include <doctest.h>
 
-#include "AngleTests.h"
 #include "OrbitDetailsTest.h"
 #include "ImpurityIndexGenerationTests.h"
-#include "CellGridTests.h"
+#include "IndexTests.h"
+#include "AngleTests.h"
 #include "SimpsonWeightsTest.h"
 
 //#include "BasicOpenCLTest.h"

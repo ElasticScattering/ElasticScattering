@@ -4,24 +4,6 @@
 #include <stdio.h>
 
 
-/*
-angle = GetAngle({ 1, 0 }, &o);
-	//assert(get_angle(1, 0, 0, 0, 1, False) == 3 * np.pi / 2)
-	// Actual: -HALF_PI
-	printf("Angle %e\n", angle);
-	printf("Angle %e\n", (3 * HALF_PI));
-	CHECK_APPROX(angle, (3 * HALF_PI));
-*/
-
-/*
-angle = GetAngle({ 0, -1 }, &o);
-	//assert(get_angle(0, -1, 0, 0, 1, False) == np.pi)
-	// Actual: -PI
-	printf("Angle %e\n", angle);
-	printf("Angle %e\n", PI);
-	//CHECK_APPROX(angle, PI);
-*/
-
 TEST_CASE("GetAngle / AngleVelocity")
 {
 	double angle;
@@ -47,12 +29,17 @@ TEST_CASE("GetAngle / AngleVelocity")
 	{
 		Orbit o({ 0, 0 }, 1, false);
 
-
 		angle = GetAngle({ -1, 0 }, &o);
 		CHECK_APPROX(angle, HALF_PI);
 
 		angle = GetAngle({ 0, 1 }, &o);
 		CHECK_APPROX(angle, 0);
+
+		angle = GetAngle({ 1, 0 }, &o);
+		CHECK_APPROX(angle, (3 * HALF_PI));
+
+		angle = GetAngle({ 0, -1 }, &o);
+		CHECK_APPROX(angle, PI);
 	}
 
 	SUBCASE("Clockwise #2")

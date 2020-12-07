@@ -40,6 +40,8 @@ ESCL_INLINE void UpdateBestIntersect(Intersection candidate, int2 offset, const 
 	candidate.entering_cell = last_intersection.entering_cell + offset;
 	candidate.dphi = GetCrossAngle(last_intersection.incident_angle, candidate.incident_angle, clockwise);
 
+	printf("Comparing Intersection: (%f, %f)\n", candidate.position.x, candidate.position.y);
+
 	if (candidate.dphi < closest_intersection->dphi && within_bounds(candidate.entering_cell, cells_per_row) && DifferentPoint(candidate.position, last_intersection.position, L)) {
 		*closest_intersection = candidate;
 	}
@@ -97,9 +99,11 @@ ESCL_INLINE bool GetNextCell(const Orbit* orbit,
 	Intersection* next_intersection)
 {
 	double2 low_left  = to_world(last_intersection.entering_cell, cells_per_row, spawn_range);
-	double2 low_right = low_left + double2(L, 0);
-	double2 top_right = low_left + double2(L, L);
-	double2 top_left  = low_left + double2(0, L);
+	double2 low_right = low_left + v2(L, 0);
+	double2 top_right = low_left + v2(L, L);
+	double2 top_left  = low_left + v2(0, L);
+
+	printf("Cell: (%f, %f)\n", low_left.x, low_left.y);
 
 	Intersection i_left, i_right, i_up, i_down;
 	bool hit_up    = GetFirstBoundaryIntersect(orbit, top_left,  top_right, L, last_intersection.dphi, &i_up);
@@ -114,21 +118,23 @@ ESCL_INLINE bool GetNextCell(const Orbit* orbit,
 	if (hit_right) UpdateBestIntersect(i_right, int2(1, 0),  last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 	if (hit_left)  UpdateBestIntersect(i_left,  int2(-1, 0), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 
+	printf("Closest Intersection: (%f, %f)\n", next_intersection->position.x, next_intersection->position.y);
+
 	// Return whether we moved to a new cell.
 	return (next_intersection->entering_cell != last_intersection.entering_cell);
 }
 
 ESCL_INLINE int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
 {
-	return {
+	return v2i(
 		(int)((x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
 		(int)((y - range.x) / (range.y - range.x) * (double)(cells_per_row))
-	};
+	);
 }
 
 ESCL_INLINE int2 get_cell(const int index, const int cells_per_row)
 {
-	return (int2)(index % cells_per_row, index / cells_per_row);
+	return v2i(index % cells_per_row, index / cells_per_row);
 }
 
 ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
@@ -142,7 +148,8 @@ ESCL_INLINE int get_cell_index(const double2 pos, const double2 range, const int
 
 ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
 {
-	return ((double2)(current_cell.x, current_cell.y) / cells_per_row * (spawn_range.y - spawn_range.x)) + (double2)(spawn_range.x, spawn_range.x);
+	double factor = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+	return v2(spawn_range.x + current_cell.x * factor, spawn_range.x + current_cell.y * factor);
 }
 
 ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row) {

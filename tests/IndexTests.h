@@ -4,21 +4,41 @@
 #include "TestMacros.h"
 #include "src/scattering/escl/cell_grid.h"
 
+#include <vector>
+#include <stdio.h>
+
 TEST_CASE("GetNextCell")
 {
-	Orbit o({ 1.5, 1.5 }, sqrt(2.5), true);
-	Intersection entry;
-	entry.position = v2(1, 0);
-	entry.dphi = GetAngle({ 1, 0 }, &o);
-	entry.entering_cell = { 0, 0 };
+	Orbit o({ 7e-07, 2.6858643180165056e-06 }, sqrt(2.3878643180165057e-06), true);
 
-	Intersection exit;
+	Intersection entry, exit;
+	entry.position = v2(7e-7, 2.98e-7);
+	entry.dphi = 0;
+	entry.entering_cell = { 4, 5 };
 
-	//xlow, ylow, L, xc, yc, rc, isEl, entry):
-	bool cell_available = GetNextCell(&o, entry, 3, 10, { 0, 30 }, &exit);
+	std::vector<v2> cell_path;
 
+	int cells_per_row = 10;
+	v2 spawn_range = { -1e-6, 2e-6 };
+	double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+
+	while (1)
+	{
+		entry = exit;
+		bool cell_available = GetNextCell(&o, entry, cell_size, cells_per_row, spawn_range, &exit);
+
+		if (!cell_available)
+		{
+			printf("Cell path ended.\n");
+			break;
+		}
+
+		printf("Cell: (%i, %i)\n", exit.entering_cell.x, exit.entering_cell.y);
+		cell_path.push_back(exit.position);
+	}
 }
 
+/*
 TEST_CASE("UpdateBestIntersect Tests")
 {
 	Orbit o({ 1.5, 1.5 }, sqrt(2.5), true);
@@ -31,6 +51,7 @@ TEST_CASE("UpdateBestIntersect Tests")
 
 	UpdateBestIntersect(candidate, { 0,1 }, entry, true, 20, 1e-2, &closest);
 }
+*/
 
 /* Todo: check alle waardes van de intersectie? */
 TEST_CASE("GetFirstBoundaryIntersects Tests")
@@ -56,8 +77,8 @@ TEST_CASE("GetFirstBoundaryIntersects Tests")
 
 		v2 expected_intersection = { 1, 0.4 };
 		CHECK(hit);
-		CHECK_APPROX(expected_intersection.x, i.position.x, "");
-		CHECK_APPROX(expected_intersection.y, i.position.y, "");
+		CHECK_APPROX(expected_intersection.x, i.position.x);
+		CHECK_APPROX(expected_intersection.y, i.position.y);
 	}
 
 	SUBCASE("Hit 3")
@@ -94,18 +115,68 @@ TEST_CASE("GetFirstBoundaryIntersects Tests")
 }
 
 
+TEST_CASE("to_world Tests")
+{
+	SUBCASE("Setup from GetNextCell test.")
+	{
+		int cells_per_row = 10;
+		v2 spawn_range = { -1e-6, 2e-6 };
+		double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+
+		v2 pos = to_world({ 5, 4 }, cells_per_row, spawn_range);
+
+		v2 expected_pos = {
+			spawn_range.x + 5 / (double)cells_per_row * (spawn_range.y - spawn_range.x),
+			spawn_range.x + 4 / (double)cells_per_row * (spawn_range.y - spawn_range.x)
+		};
+
+		CHECK(pos.x == expected_pos.x);
+		CHECK_ALMOST(pos.y, expected_pos.y);
+	}
+
+	SUBCASE("Rounded numbers.")
+	{
+		int cells_per_row = 10;
+		v2 spawn_range = { -10, 20 };
+		double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+
+		v2 pos = to_world({ 2, 3 }, cells_per_row, spawn_range);
+
+		v2 expected_pos = v2(spawn_range.x + 2 * cell_size,
+			spawn_range.x + 3 * cell_size);
+
+		CHECK(pos.x == expected_pos.x);
+		CHECK(pos.y == expected_pos.y);
+	}
+
+	SUBCASE("Rounded numbers at origin.")
+	{
+		int cells_per_row = 10;
+		v2 spawn_range = { -10, 20 };
+		double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+
+		v2 pos = to_world({ 0, 0 }, cells_per_row, spawn_range);
+
+		v2 expected_pos = { spawn_range.x, spawn_range.x };
+
+		CHECK(pos.x == expected_pos.x);
+		CHECK(pos.y == expected_pos.y);
+	}
+}
+
+
 TEST_CASE("get_cell Tests")
 {
 	SUBCASE("Extends is empty, (0,0) should get the first cell") {
 		auto cell = get_cell(0, 0, { 0, 0.4 }, 6);
-		
+
 		auto expected_cell = v2i(0, 0);
 		CHECK(cell == expected_cell);
 	}
 
 	SUBCASE("Extends is not empty, (0,0) should be offset") {
 		auto cell = get_cell(0, 0, { -0.1, 0.4 }, 6);
-		
+
 		auto expected_cell = v2i(1, 1);
 		CHECK(cell == expected_cell);
 	}
@@ -124,8 +195,8 @@ TEST_CASE("get_cell Tests")
 	SUBCASE("Position at the bottom right corner should be in the last cell.") {
 		int cells_per_row = 9;
 		auto cell = get_cell(0.399, 0.399, { -0.1, 0.4 }, cells_per_row);
-		
-		v2i expected_cell = { cells_per_row-1, cells_per_row-1 };
+
+		v2i expected_cell = { cells_per_row - 1, cells_per_row - 1 };
 		CHECK(cell == expected_cell);
 	}
 }
@@ -146,7 +217,7 @@ TEST_CASE("get_cell_index Tests")
 	SUBCASE("Position at the bottom right corner should be in the last cell.") {
 		int cells_per_row = 9;
 		auto cell = get_cell_index({ 0.399, 0.399 }, { -0.1, 0.4 }, cells_per_row);
-		
+
 		int last_cell = (cells_per_row * cells_per_row) - 1;
 		CHECK(cell == last_cell);
 	}
@@ -155,7 +226,7 @@ TEST_CASE("get_cell_index Tests")
 
 TEST_CASE("to_index Tests")
 {
-	CHECK(get_index({ 0, 0 }, 30) ==  0);
+	CHECK(get_index({ 0, 0 }, 30) == 0);
 	CHECK(get_index({ 3, 2 }, 30) == 63);
 	CHECK(get_index({ 2, 3 }, 30) == 92);
 	CHECK(get_index({ 4, 3 }, 10) == 34);
@@ -206,22 +277,3 @@ TEST_CASE("within_bounds Tests")
 		CHECK(result == true);
 	}
 }
-
-/*
-TEST_CASE("GetNextCell Tests")
-{
-	Orbit orbit({ 0, 0 }, 1, false, 0, 0);
-
-	Intersection start_intersect;
-	start_intersect.position = { cos(0), sin(0) };
-	start_intersect.dphi = 0;
-
-	Intersection i;
-
-	// GetNextCell is wat groter dan de corresponderende python test (find_exit_intersect)
-	// Iig setup zorgen die tot dezelfde celzijde intersecties leiden.
-	//auto result = GetNextCell(orbit, , start_intersect, 0.8, 30, &i);
-}
-*/
-
-//boxmotion, weet niet of dit hoeft voor mij.
