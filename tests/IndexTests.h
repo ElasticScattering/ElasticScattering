@@ -7,36 +7,6 @@
 #include <vector>
 #include <stdio.h>
 
-TEST_CASE("GetNextCell")
-{
-	Orbit o({ 7e-07, 2.6858643180165056e-06 }, sqrt(2.3878643180165057e-06), true);
-
-	Intersection entry, exit;
-	entry.position = v2(7e-7, 2.98e-7);
-	entry.dphi = 0;
-	entry.entering_cell = { 4, 5 };
-
-	std::vector<v2> cell_path;
-
-	int cells_per_row = 10;
-	v2 spawn_range = { -1e-6, 2e-6 };
-	double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-
-	while (1)
-	{
-		entry = exit;
-		bool cell_available = GetNextCell(&o, entry, cell_size, cells_per_row, spawn_range, &exit);
-
-		if (!cell_available)
-		{
-			printf("Cell path ended.\n");
-			break;
-		}
-
-		printf("Cell: (%i, %i)\n", exit.entering_cell.x, exit.entering_cell.y);
-		cell_path.push_back(exit.position);
-	}
-}
 
 /*
 TEST_CASE("UpdateBestIntersect Tests")

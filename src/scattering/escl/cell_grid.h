@@ -32,17 +32,19 @@ ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 
 ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 {
-	return abs(p1.x - p2.x) > 1e-6 * L || abs(p1.y - p2.y) > 1e-6 * L;
+	return abs(p1.x - p2.x) > 1e-6 * L && abs(p1.y - p2.y) > 1e-6 * L;
 }
 
-ESCL_INLINE void UpdateBestIntersect(Intersection candidate, int2 offset, const Intersection last_intersection, bool clockwise, int cells_per_row, double L, Intersection* closest_intersection)
+ESCL_INLINE void UpdateBestIntersect(Intersection candidate, int2 offset, const Intersection *last_intersection, bool clockwise, int cells_per_row, double L, Intersection* closest_intersection)
 {
-	candidate.entering_cell = last_intersection.entering_cell + offset;
-	candidate.dphi = GetCrossAngle(last_intersection.incident_angle, candidate.incident_angle, clockwise);
+	candidate.entering_cell = last_intersection->entering_cell + offset;
+	candidate.dphi = GetCrossAngle(last_intersection->incident_angle, candidate.incident_angle, clockwise);
 
-	printf("Comparing Intersection: (%f, %f)\n", candidate.position.x, candidate.position.y);
+	//printf("\tComparing Intersection: (%e, %e, %e)\n", candidate.position.x, candidate.position.y, candidate.dphi);
+	//printf("\tComparing to: (%e, %e, %e)\n", closest_intersection->position.x, closest_intersection->position.y, closest_intersection->dphi);
 
-	if (candidate.dphi < closest_intersection->dphi && within_bounds(candidate.entering_cell, cells_per_row) && DifferentPoint(candidate.position, last_intersection.position, L)) {
+	if (candidate.dphi < closest_intersection->dphi && 
+		DifferentPoint(candidate.position, last_intersection->position, L)) {
 		*closest_intersection = candidate;
 	}
 }
@@ -92,37 +94,41 @@ ESCL_INLINE bool GetFirstBoundaryIntersect(const Orbit* orbit, const double2 p1,
 }
 
 ESCL_INLINE bool GetNextCell(const Orbit* orbit,
-	const Intersection last_intersection,
+	Intersection * const last_intersection,
 	const double L,
 	const int cells_per_row,
 	const double2 spawn_range,
 	Intersection* next_intersection)
 {
-	double2 low_left  = to_world(last_intersection.entering_cell, cells_per_row, spawn_range);
+	double2 low_left  = to_world(last_intersection->entering_cell, cells_per_row, spawn_range);
 	double2 low_right = low_left + v2(L, 0);
 	double2 top_right = low_left + v2(L, L);
 	double2 top_left  = low_left + v2(0, L);
 
-	printf("Cell: (%f, %f)\n", low_left.x, low_left.y);
+	//printf("Cell: (%i, %i) -> Low left: (%e, %e)\n", last_intersection->entering_cell.x, last_intersection->entering_cell.y, low_left.x, low_left.y);
+
+	last_intersection->dphi = PI2;
 
 	Intersection i_left, i_right, i_up, i_down;
-	bool hit_up    = GetFirstBoundaryIntersect(orbit, top_left,  top_right, L, last_intersection.dphi, &i_up);
-	bool hit_down  = GetFirstBoundaryIntersect(orbit, low_left,  low_right, L, last_intersection.dphi, &i_down);
-	bool hit_right = GetFirstBoundaryIntersect(orbit, low_right, top_right, L, last_intersection.dphi, &i_right);
-	bool hit_left  = GetFirstBoundaryIntersect(orbit, low_left,  top_left,  L, last_intersection.dphi, &i_left);
+	bool hit_up    = GetFirstBoundaryIntersect(orbit, top_left,  top_right, L, last_intersection->dphi, &i_up);
+	bool hit_down  = GetFirstBoundaryIntersect(orbit, low_left,  low_right, L, last_intersection->dphi, &i_down);
+	bool hit_right = GetFirstBoundaryIntersect(orbit, low_right, top_right, L, last_intersection->dphi, &i_right);
+	bool hit_left  = GetFirstBoundaryIntersect(orbit, low_left,  top_left,  L, last_intersection->dphi, &i_left);
 
-	//Intersection closest = last_intersection;
-	*next_intersection = last_intersection;
+	*next_intersection = *last_intersection;
 	if (hit_up)    UpdateBestIntersect(i_up,    int2(0,  1), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 	if (hit_down)  UpdateBestIntersect(i_down,  int2(0, -1), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 	if (hit_right) UpdateBestIntersect(i_right, int2(1, 0),  last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 	if (hit_left)  UpdateBestIntersect(i_left,  int2(-1, 0), last_intersection, orbit->clockwise, cells_per_row, L, next_intersection);
 
-	printf("Closest Intersection: (%f, %f)\n", next_intersection->position.x, next_intersection->position.y);
+	//printf("Closest Intersection: (%e, %e)\n", next_intersection->position.x, next_intersection->position.y);
+	//printf("\t In bounds: " + ((within_bounds(candidate.entering_cell, cells_per_row)) ? "True" : "False") + "\n");
 
-	// Return whether we moved to a new cell.
-	return (next_intersection->entering_cell != last_intersection.entering_cell);
+	// Return whether we moved to a new valid cell.
+	// If we didn't move or to a cell that is out of bounds the search stops.
+	return (next_intersection->entering_cell != last_intersection->entering_cell) && within_bounds(next_intersection->entering_cell, cells_per_row);
 }
+
 
 ESCL_INLINE int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
 {
