@@ -6,6 +6,7 @@
 #ifndef DEVICE_PROGRAM
     #include <cmath>
     #include <cfloat>
+    #include<cstdio>
 #endif
 
 typedef struct Orbit {
@@ -63,7 +64,7 @@ ESCL_INLINE double AngleVelocity(const double pos_angle, bool clockwise)
 }
 
 ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
-    if (abs(pos.y - orbit->center.y) > EPSILON) {
+    if (abs(pos.y - orbit->center.y) > (1e-10 * orbit->radius)) {
         double angle = asin((pos.y - orbit->center.y) / orbit->radius);
         angle = (pos.x < orbit->center.x) ? PI - angle : angle;
         return AngleVelocity(angle, orbit->clockwise);
@@ -74,16 +75,30 @@ ESCL_INLINE double GetAngle(double2 pos, const Orbit* orbit) {
     }
 }
 
-// @Optimize
+// @Optimize heel veel.
 ESCL_INLINE bool AngleInRange(const double phi, const double2 phi_range, bool clockwise)
 {
     if (abs(phi_range.x - phi_range.y) < 1e-10) return true;
 
     double low = (clockwise) ? phi_range.y : phi_range.x;
     double high = (clockwise) ? phi_range.x : phi_range.y;
+    
+    const double D = 1e-10;
+    low  += D;
+    high -= D;
 
     high = (high < low) ? (high + PI2) : high;
 
+    /*
+    printf("\t\tAngleInRange:  :  %e < %e < %e \n", low, phi, high);
+    bool in_range = (low < phi && phi < high) || (low < (phi + PI2) && (phi + PI2) < high);
+    if (in_range) {
+        printf("\t\t\t True \n");
+    }
+    else 
+        printf("\t\t\t False \n");
+    */
+    
     return (low < phi && phi < high ) || (low < (phi + PI2) && (phi + PI2) < high);
 }
 

@@ -24,6 +24,7 @@ TEST_CASE("UpdateBestIntersect Tests")
 */
 
 /* Todo: check alle waardes van de intersectie? */
+/*
 TEST_CASE("GetFirstBoundaryIntersects Tests")
 {
 	SUBCASE("Hit 1")
@@ -83,7 +84,7 @@ TEST_CASE("GetFirstBoundaryIntersects Tests")
 		CHECK(!hit);
 	}
 }
-
+*/
 
 TEST_CASE("to_world Tests")
 {

@@ -31,7 +31,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         Intersection entry_point = next_intersection;
 
         // Find the next intersection point. 
-        bool next_box_available = GetNextCell(orbit, &entry_point, sp->cell_size, sp->cells_per_row, sp->impurity_spawn_range, &next_intersection);
+        bool next_box_available = GetNextCell(orbit, p->phi, &entry_point, sp->cell_size, sp->cells_per_row, sp->impurity_spawn_range, &next_intersection);
         
         // Not all impurites in a cell should be tested, because an orbit can 
         // leave this cell and then come back in later. Only the impurities 
