@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/ElasticScattering.h"
+#include "src/scattering/Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 #include <vector>
 

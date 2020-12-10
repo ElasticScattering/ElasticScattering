@@ -1,7 +1,7 @@
 #pragma once
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/ImpurityIndex.h"
+#include "src/scattering/Grid.h"
 #include "src/scattering/escl/cell_grid.h"
 
 bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, double2 range, int cells_per_row)
@@ -23,10 +23,8 @@ bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, doub
 		auto new_cell = get_cell_index(possible_overlapping_positions[i], range, cells_per_row);
 
 		if (correct_cell == new_cell) {
-			//printf("(%f,%f) was %d and should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
 			return true;
 		}
-		//printf("(%f,%f) was %d but should be %d.\n", possible_overlapping_positions[i].x, possible_overlapping_positions[i].y, new_cell, correct_cell);
 	}
 
 	return false;
@@ -36,7 +34,7 @@ TEST_CASE("Index should be strictly increasing.")
 {
 	v2 range = { 0.0, 1.0 };
 	int cells_per_row = 4;
-	auto grid = ImpurityIndex(100, 0, range, 1e-2, cells_per_row);
+	auto grid = Grid(100, 0, range, 1e-2, cells_per_row);
 	auto index = grid.GetIndex();
 
 	bool in_order = true;
@@ -57,7 +55,7 @@ TEST_CASE("Impurities should be indexed in order.")
 	v2 range = { 0.0, 1.0 };
 	int cells_per_row = 4;
 	double impurity_radius = 1e-3;
-	auto grid = ImpurityIndex(100, 0, range, impurity_radius, cells_per_row);
+	auto grid = Grid(100, 0, range, impurity_radius, cells_per_row);
 	auto impurities = grid.GetImpurities();
 	
 	bool in_order = true;
@@ -95,7 +93,7 @@ TEST_CASE("Index should contain all cells.")
 	SUBCASE("Regular number of cells per row should get squared amount.")
 	{
 		int cells_per_row = 5;
-		auto grid = ImpurityIndex(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
+		auto grid = Grid(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
 
 		CHECK(grid.GetIndex().size() == 25);
 	}
@@ -103,7 +101,7 @@ TEST_CASE("Index should contain all cells.")
 	SUBCASE("One cell should get all impurities.")
 	{
 		int cells_per_row = 1;
-		auto grid = ImpurityIndex(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
+		auto grid = Grid(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
 		auto index = grid.GetIndex();
 
 		CHECK(index.size() == 1);
@@ -116,7 +114,7 @@ TEST_CASE("Impurities should be indexed correctly.")
 	v2 range = { 0.0, 1.0 };
 	int cells_per_row = 5;
 	double impurity_radius = 1e-3;
-	auto grid = ImpurityIndex(100, 0, range, impurity_radius, cells_per_row);
+	auto grid = Grid(100, 0, range, impurity_radius, cells_per_row);
 	auto impurities = grid.GetImpurities();
 	auto index = grid.GetIndex();
 

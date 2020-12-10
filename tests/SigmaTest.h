@@ -2,7 +2,7 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
-#include "src/scattering/ElasticScattering.h"
+#include "src/scattering/Simulation.h"
 #include "src/scattering/escl/constants.h"
 #include "src/utils/ParametersFactory.h"
 
@@ -11,7 +11,7 @@
 TEST_CASE("Compare Sigma XX/XY results to verified results") {
     ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
 
-    auto es = new GPUElasticScattering();
+    auto es = new GPUSimulation();
 
 
 
@@ -36,7 +36,7 @@ TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 	ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
     sp.mode = MODE_SIGMA_XX;
 
-	auto e = new ElasticScatteringCPU;
+	auto e = new SimulationCPU;
     double result;
     e->Compute(sp, result);
 

@@ -1,9 +1,9 @@
-#include "ElasticScattering.h"
+#include "Simulation.h"
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
 
-void ElasticScatteringCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const ImpurityIndex& grid)
+void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid)
 {
 	sp = p_sp;
 
@@ -25,7 +25,7 @@ void ElasticScatteringCPU::ComputeLifetimes(const ScatteringParameters& p_sp, co
 	}
 }
 
-IterationResult ElasticScatteringCPU::DeriveTemperature(const double temperature)
+IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 {
 	UpdateSimulationParameters(sp, temperature);
 
@@ -43,7 +43,7 @@ IterationResult ElasticScatteringCPU::DeriveTemperature(const double temperature
 	return b;
 }
 
-SigmaResult ElasticScatteringCPU::ComputeSigmas(const std::vector<double>& current_lifetimes)
+SigmaResult SimulationCPU::ComputeSigmas(const std::vector<double>& current_lifetimes)
 {
 	const double w = (sp.is_clockwise == 1) ? -sp.angular_speed : sp.angular_speed;
 	const int limit = sp.dim - 1;
@@ -86,7 +86,7 @@ SigmaResult ElasticScatteringCPU::ComputeSigmas(const std::vector<double>& curre
 	return result;
 }
 
-std::vector<double> ElasticScatteringCPU::IntegrateParticle(const std::vector<double>& current_lifetimes)
+std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& current_lifetimes)
 {
 	const int limit = sp.dim - 1;
 	const double integrand_factor = sp.integrand_angle_area / ((sp.integrand_steps - 1) * 3.0);
@@ -113,7 +113,7 @@ std::vector<double> ElasticScatteringCPU::IntegrateParticle(const std::vector<do
 	return particle_lifetimes;
 }
 
-Sigma ElasticScatteringCPU::IntegrateResult(const std::vector<double>& current_lifetimes)
+Sigma SimulationCPU::IntegrateResult(const std::vector<double>& current_lifetimes)
 {
 	const double w = (sp.is_clockwise == 1) ? -sp.angular_speed : sp.angular_speed;
 	const int limit = sp.dim - 1;

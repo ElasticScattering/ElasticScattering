@@ -6,6 +6,6 @@ This project was made and tested on Windows 10, with Visual Studio 2019. You sho
 
 ## Usage
 
-ElasticScattering gpu
-ElasticScattering gpu silent
-ElasticScattering test silent
+Simulation gpu
+Simulation gpu silent
+Simulation test silent

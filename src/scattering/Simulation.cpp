@@ -1,8 +1,8 @@
-#include "ElasticScattering.h"
+#include "Simulation.h"
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-double ElasticScattering::SigmaFactor(const ScatteringParameters& sp) {
+double Simulation::SigmaFactor(const ScatteringParameters& sp) {
 	double kf      = M * sp.particle_speed / HBAR;
 	double outside = (E*E * kf*kf) / (2.0 * PI*PI * M * sp.region_size*sp.region_size * C1);
 	double wct     = sp.angular_speed * sp.tau;
@@ -11,7 +11,7 @@ double ElasticScattering::SigmaFactor(const ScatteringParameters& sp) {
 	return outside;
 };
 
-void ElasticScattering::UpdateSimulationParameters(ScatteringParameters& sp, double temperature) {
+void Simulation::UpdateSimulationParameters(ScatteringParameters& sp, double temperature) {
 	sp.temperature = temperature;
 
 	if (sp.is_incoherent == 1) {
@@ -20,7 +20,7 @@ void ElasticScattering::UpdateSimulationParameters(ScatteringParameters& sp, dou
 	}
 }
 
-void ElasticScattering::CompleteSimulationParameters(ScatteringParameters& sp) {
+void Simulation::CompleteSimulationParameters(ScatteringParameters& sp) {
 	sp.angular_speed = E * sp.magnetic_field / M;
 
 	if (sp.is_incoherent == 1) {

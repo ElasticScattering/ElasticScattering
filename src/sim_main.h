@@ -2,14 +2,14 @@
 
 #include "SimulationConfiguration.h"
 #include "SimulationResult.h"
-#include "scattering/ImpurityIndex.h"
-#include "scattering/ElasticScattering.h"
+#include "scattering/Grid.h"
+#include "scattering/Simulation.h"
 
 #include <string>
 
 void sim_main(const InitParameters& init);
 
-void RunSimulation(const SimulationConfiguration& sp, ElasticScattering& es);
+void RunSimulation(const SimulationConfiguration& sp, Simulation& es);
 
 SimulationConfiguration ParseConfig(const std::string file);
 std::string GetAvailableDirectory(std::string base);

@@ -363,10 +363,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\scattering\ElasticScattering.cpp" />
-    <ClCompile Include="src\scattering\ElasticScatteringCPU.cpp" />
-    <ClCompile Include="src\scattering\ElasticScatteringCL.cpp" />
-    <ClCompile Include="src\scattering\ImpurityIndex.cpp" />
+    <ClCompile Include="src\scattering\Simulation.cpp" />
+    <ClCompile Include="src\scattering\SimulationCPU.cpp" />
+    <ClCompile Include="src\scattering\SimulationCL.cpp" />
+    <ClCompile Include="src\scattering\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
@@ -378,20 +378,21 @@
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
     <ClInclude Include="src\scattering\escl\v2.h" />
-    <ClInclude Include="src\scattering\ElasticScattering.h" />
+    <ClInclude Include="src\scattering\Simulation.h" />
     <ClInclude Include="src\scattering\escl\constants.h" />
     <ClInclude Include="src\scattering\escl\details.h" />
     <ClInclude Include="src\scattering\escl\device_macros.h" />
     <ClInclude Include="src\scattering\escl\cell_grid.h" />
     <ClInclude Include="src\scattering\escl\lifetime.h" />
     <ClInclude Include="src\scattering\escl\util.h" />
-    <ClInclude Include="src\scattering\ImpurityIndex.h" />
+    <ClInclude Include="src\scattering\Grid.h" />
     <ClInclude Include="src\sim_main.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
-    <ClInclude Include="tests\ImpurityIndexGenerationTests.h" />
+    <ClInclude Include="tests\ElasticScatteringTests.h" />
+    <ClInclude Include="tests\GridGenerationTests.h" />
     <ClInclude Include="tests\IndexTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
@@ -405,9 +406,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="src\scattering\escl\scatter.cl" />
-    <None Include="src\scattering\escl\scatter_one_file.cl" />
-    <None Include="src\scattering\escl\util_kernels.cl" />
+    <None Include="src\scattering\cl\scatter.cl" />
+    <None Include="src\scattering\cl\scatter_one_file.cl" />
+    <None Include="src\scattering\cl\util_kernels.cl" />
     <None Include="tests\kernels\test_cpp.cl" />
     <None Include="tests\kernels\test_precision.cl" />
     <None Include="tests\kernels\test_double2.cl" />

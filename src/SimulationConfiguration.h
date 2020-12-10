@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-enum ProgramMode {
+enum class ProgramMode {
     Test,
     Simulation
 };
@@ -34,7 +34,6 @@ typedef struct SimulationConfiguration
     std::string output_directory;
     std::string intermediates_directory;
     std::string result_file;
-
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;

@@ -4,7 +4,7 @@
 
 #include "sim_main.h"
 
-#include "scattering/ElasticScattering.h"
+#include "scattering/Simulation.h"
 #include "scattering/escl/constants.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -38,7 +38,7 @@ void sim_main(const InitParameters& init)
         CreateLog(cfg, cfg.temperatures[i]);
     }
 
-    ElasticScatteringCPU es;
+    SimulationCPU es;
     for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
         cfg.scattering_params.magnetic_field = cfg.magnetic_field_range.min + cfg.magnetic_field_range.step_size * i;
 
@@ -55,7 +55,7 @@ void sim_main(const InitParameters& init)
     }
 }
 
-void RunSimulation(const SimulationConfiguration& cfg, ElasticScattering& es)
+void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 {
 
     ScatteringParameters sp_inc = cfg.scattering_params;
@@ -74,7 +74,7 @@ void RunSimulation(const SimulationConfiguration& cfg, ElasticScattering& es)
     std::vector<double> total_dxx_sq(cfg.temperatures.size());
 
     for (int j = 0; j < cfg.samples_per_run; j++) {
-        auto impurity_index = ImpurityIndex(sp_coh.impurity_count, random_device(), sp_coh.impurity_spawn_range, sp_coh.impurity_radius, sp_coh.cells_per_row);
+        auto impurity_index = Grid(sp_coh.impurity_count, random_device(), sp_coh.impurity_spawn_range, sp_coh.impurity_radius, sp_coh.cells_per_row);
 
         std::vector<Sigma> sample_coherent_results(cfg.temperatures.size());
         std::vector<Sigma> sample_incoherent_results(cfg.temperatures.size());

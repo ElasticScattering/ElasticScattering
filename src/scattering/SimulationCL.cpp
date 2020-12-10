@@ -1,5 +1,5 @@
 #include "windows.h"
-#include "ElasticScattering.h"
+#include "Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 
 typedef struct
@@ -32,14 +32,14 @@ typedef struct
 
 OCLSimResources ocl;
 
-IterationResult ElasticScatteringCL::DeriveTemperature(const double temperature)
+IterationResult SimulationCL::DeriveTemperature(const double temperature)
 {
     IterationResult ir;
 
     return ir;
 }
 
-void ElasticScatteringCL::ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid)
+void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid)
 {
     const size_t items_in_work_group = min(sp.dim, 256);
 
@@ -149,7 +149,7 @@ void ElasticScatteringCL::ComputeLifetimes(const ScatteringParameters& sp, const
     */
 }
 
-void ElasticScatteringCL::UploadImpurities(const ImpurityIndex& grid)
+void SimulationCL::UploadImpurities(const Grid& grid)
 {
     cl_int clStatus;
 
@@ -166,7 +166,7 @@ void ElasticScatteringCL::UploadImpurities(const ImpurityIndex& grid)
     CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
 }
 
-void ElasticScatteringCL::PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup)
+void SimulationCL::PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup)
 {
     cl_int clStatus;
 
@@ -205,7 +205,7 @@ void ElasticScatteringCL::PrepareKernels(const ScatteringParameters& sp, const s
     }
 }
 
-ElasticScatteringCL::ElasticScatteringCL(bool use_gpu, bool show_info, int particle_count)
+SimulationCL::SimulationCL(bool use_gpu, bool show_info, int particle_count)
 {
     InitializeOpenCL(use_gpu, &ocl.deviceID, &ocl.context, &ocl.queue);
     if (show_info)
@@ -246,7 +246,7 @@ ElasticScatteringCL::ElasticScatteringCL(bool use_gpu, bool show_info, int parti
     CL_FAIL_CONDITION(clStatus, "Couldn't create sum buffer.");
 }
 
-ElasticScatteringCL::~ElasticScatteringCL()
+SimulationCL::~SimulationCL()
 {
     clReleaseMemObject(ocl.parameters);
     clReleaseMemObject(ocl.impurities);

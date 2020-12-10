@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include "OrbitDetailsTest.h"
-#include "ImpurityIndexGenerationTests.h"
+#include "GridGenerationTests.h"
 #include "IndexTests.h"
 #include "AngleTests.h"
 #include "SimpsonWeightsTest.h"
@@ -46,7 +46,7 @@ void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected
 	while (1)
 	{
 		entry = exit;
-		bool cell_available = GetNextCell(&o, 0, &entry, cell_size, cells_per_row, spawn_range, &exit);
+		bool cell_available = GetNextCell(&o, 0, cell_size, cells_per_row, spawn_range, &entry, &exit);
 
 		if (!cell_available)
 		{
@@ -54,11 +54,13 @@ void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected
 			break;
 		}
 
+		/*
 		printf("Cell: (%e, %e)", exit.position.x, exit.position.y);
 		printf(" < ->Cell: (% e, % e)\n", expected_intersections[i].position.x, expected_intersections[i].position.y);
 		//printf("\tPhi: %f\n", exit.incident_angle);
 		//printf("\tPhi: %f <-> %f\n", exit.incident_angle, expected_intersections[i].incident_angle);
 		printf("\tEntering: (%i, %i)\n", exit.entering_cell.x, exit.entering_cell.y);
+		*/
 
 		CHECK_ALMOST(exit.position.x, expected_intersections[i].position.x);
 		CHECK_ALMOST(exit.position.y, expected_intersections[i].position.y);
@@ -67,13 +69,12 @@ void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected
 		CHECK(exit.entering_cell.y == expected_intersections[i].entering_cell.y);
 
 		i++;
-		printf("Progress: (%i / %i)\n", i, expected_intersections.size());
+		//printf("Progress: (%i / %i)\n", i, expected_intersections.size());
 	}
 }
 
 TEST_CASE("GetNextCell")
 {
-	/*
 	SUBCASE("1st setup.")
 	{
 		Orbit o({ 7e-07, 2.6858643180165056e-06 }, 2.3878643180165057e-06, true);
@@ -233,8 +234,8 @@ TEST_CASE("GetNextCell")
 
 		TestSetup(o, exit, intersections);
 	}
-*/
 
+	/*
 	SUBCASE("7th setup.")
 	{
 		Orbit o({ 7e-07, 4.1170782466745266e-07 }, 1.1370782466745266e-07, true);

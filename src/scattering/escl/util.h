@@ -1,5 +1,4 @@
 #pragma once
-#include "device_macros.h"
 
 ESCL_INLINE double SimpsonWeight(const int i, const int dim) {
     const double main_multiplier = (i % 2 == 0) ? 2.0 : 4.0;
@@ -7,7 +6,7 @@ ESCL_INLINE double SimpsonWeight(const int i, const int dim) {
     return is_edge ? 1.0 : main_multiplier;
 }
 
-ESCL_INLINE double SimpsonWeight2D(unsigned int i, int j, int dim) {
+ESCL_INLINE double SimpsonWeight2D(int i, int j, int dim) {
     return SimpsonWeight(i, dim) * SimpsonWeight(j, dim);
 }
 

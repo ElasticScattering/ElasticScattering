@@ -1,4 +1,4 @@
-#include "ImpurityIndex.h"
+#include "Grid.h"
 
 #include "escl/constants.h"
 
@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <set>
 
-ImpurityIndex::ImpurityIndex(int count, int seed, v2 _spawn_range, double impurity_radius, int _cells_per_row)
+Grid::Grid(int count, int seed, v2 _spawn_range, double impurity_radius, int _cells_per_row)
 {
 	spawn_range = _spawn_range;
 	cells_per_row = _cells_per_row;
@@ -16,7 +16,7 @@ ImpurityIndex::ImpurityIndex(int count, int seed, v2 _spawn_range, double impuri
 	ConvertToIndex();
 }
 
-void ImpurityIndex::GenerateImpurityCells(int count, int seed, double impurity_radius)
+void Grid::GenerateImpurityCells(int count, int seed, double impurity_radius)
 {
 	cells.resize(cells_per_row * cells_per_row);
 
@@ -41,7 +41,7 @@ void ImpurityIndex::GenerateImpurityCells(int count, int seed, double impurity_r
 }
 
 // Move impurities to single array and build an index.
-void ImpurityIndex::ConvertToIndex()
+void Grid::ConvertToIndex()
 {
 	impurities.resize(total_indexed_impurities);
 	imp_index.resize(cells_per_row * cells_per_row);
@@ -61,7 +61,7 @@ void ImpurityIndex::ConvertToIndex()
 	}
 }
 
-int ImpurityIndex::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius)
+int Grid::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius)
 {
 	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
 
@@ -88,19 +88,18 @@ int ImpurityIndex::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 p
 		}
 	}
 	
-	//printf("Main cell: (%d,%d), total: %d\n", cell.x, cell.y, added_cells.size());
 	return added_cells.size();
 }
 
-v2i ImpurityIndex::get_cell(const double x, const double y)
+v2i Grid::get_cell(const double x, const double y)
 {
 	return {
-		(int)((x - spawn_range.x) / (spawn_range.y - spawn_range.x) * (cells_per_row)),
-		(int)((y - spawn_range.x) / (spawn_range.y - spawn_range.x) * (cells_per_row))
+		(int)((x - spawn_range.x) / (spawn_range.y - spawn_range.x) * (double)(cells_per_row)),
+		(int)((y - spawn_range.x) / (spawn_range.y - spawn_range.x) * (double)(cells_per_row))
 	};
 }
 
-bool ImpurityIndex::within_bounds(const v2i p)
+bool Grid::within_bounds(const v2i p)
 {
 	return (p.x >= 0 && p.x < cells_per_row) && (p.y >= 0 && p.y < cells_per_row);
 }

@@ -23,14 +23,14 @@ struct Cell {
 	std::vector<v2> impurities;
 };
 
-class ImpurityIndex {
+class Grid {
 private:
 	std::vector<Cell> cells;
 	std::vector<v2> impurities;
 	std::vector<int> imp_index;
 
 	int total_indexed_impurities;
-	double cells_per_row;
+	int cells_per_row;
 	v2 spawn_range;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
@@ -45,5 +45,5 @@ public:
 	const std::vector<v2>& GetImpurities() const { return impurities; };
 	const std::vector<int>& GetIndex() const { return imp_index; };
 
-	ImpurityIndex(int count, int seed, v2 spawn_range, double impurity_radius, int cells_per_row);
+	Grid(int count, int seed, v2 spawn_range, double impurity_radius, int cells_per_row);
 };

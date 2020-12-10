@@ -1,13 +1,13 @@
 #ifndef ELASTIC_SCATTERING_H
 #define ELASTIC_SCATTERING_H
 
-#include "ImpurityIndex.h"
+#include "Grid.h"
 #include "escl/ScatteringParameters.h"
 #include "src/SimulationResult.h"
 
 #include <vector>
 
-class ElasticScattering {
+class Simulation {
 protected:
 	std::vector<double> raw_lifetimes;
 	ScatteringParameters sp;
@@ -18,34 +18,34 @@ public:
 	void UpdateSimulationParameters(ScatteringParameters& sp, double temperature);
 	void CompleteSimulationParameters(ScatteringParameters& p_sp);
 
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) = 0;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) = 0;
 	virtual IterationResult DeriveTemperature(const double temperature) = 0;
 };
 
 
-class ElasticScatteringCPU : public ElasticScattering {
+class SimulationCPU : public Simulation {
 private:
 	SigmaResult ComputeSigmas(const std::vector<double>& current_lifetimes);
 	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes);
 	Sigma IntegrateResult(const std::vector<double>& current_lifetimes);
 
 public:
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) override;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) override;
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 };
 
 
 
-class ElasticScatteringCL : public ElasticScattering {
+class SimulationCL : public Simulation {
 	void PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup);
 
 public:
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const ImpurityIndex& grid) override;
-	void UploadImpurities(const ImpurityIndex& grid);
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) override;
+	void UploadImpurities(const Grid& grid);
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 
-	ElasticScatteringCL(bool use_gpu, bool show_info, int particle_count);
-	~ElasticScatteringCL();
+	SimulationCL(bool use_gpu, bool show_info, int particle_count);
+	~SimulationCL();
 };
 
 #endif // ELASTIC_SCATTERING_H

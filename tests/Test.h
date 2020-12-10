@@ -1,7 +1,7 @@
 #ifndef TEST_H
 #define TEST_H
 
-#include "src/scattering/ElasticScattering.h"
+#include "src/scattering/Simulation.h"
 #include "src/scattering/escl/lifetime.h"
 #include "src/scattering/escl/util.h"
 #include "src/utils/OpenCLUtils.h"
@@ -20,8 +20,8 @@ TEST_CASE("Different scatter modes")
 {
 	ScatteringParameters sp = ParametersFactory::GenerateDefault();
 	
-	auto e  = new ElasticScatteringCPU();
-	auto e2 = new GPUElasticScattering();
+	auto e  = new SimulationCPU();
+	auto e2 = new GPUSimulation();
 
 	double cpu_result, gpu_result, diff;
 	
@@ -45,8 +45,8 @@ TEST_CASE("Different scatter modes")
 /*
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
-	auto e  = new ElasticScatteringCPU();
-	auto e2 = new GPUElasticScattering();
+	auto e  = new SimulationCPU();
+	auto e2 = new GPUSimulation();
 
 	ScatteringParameters sp;
 	sp.region_size     = 1e-6;

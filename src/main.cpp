@@ -43,8 +43,8 @@ int main(int argc, char **argv)
     ParseArgs(argc, argv, &init);
 
     switch (init.mode) {
-        case Test       : test_main();    break;
-        case Simulation : sim_main(init); break;
+        case ProgramMode::Test       : test_main();    break;
+        case ProgramMode::Simulation : sim_main(init); break;
     }
     
     return 0;
