@@ -10,6 +10,8 @@
 void sim_main(const InitParameters& init);
 
 void RunSimulation(const SimulationConfiguration& sp, Simulation& es);
+void UpdateTemperature(ScatteringParameters& sp, double temperature);
+void CompleteSimulationParameters(ScatteringParameters& sp);
 
 SimulationConfiguration ParseConfig(const std::string file);
 std::string GetAvailableDirectory(std::string base);

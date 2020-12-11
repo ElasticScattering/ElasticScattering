@@ -27,8 +27,6 @@ void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Gri
 
 IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 {
-	UpdateSimulationParameters(sp, temperature);
-
 	IterationResult b;
 
 	std::vector<double> new_lifetimes(raw_lifetimes.size());

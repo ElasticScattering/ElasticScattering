@@ -212,7 +212,7 @@ SimulationCL::SimulationCL(bool use_gpu, bool show_info, int particle_count)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     std::cout << "\nBuilding OpenCL program..." << std::endl;
-    CompileOpenCLProgram(ocl.deviceID, ocl.context, "scatter.cl", &ocl.program);
+    CompileOpenCLProgram(ocl.deviceID, ocl.context, "scattering/cl/scatter.cl", &ocl.program);
     std::cout << "Compilation succeeded! Starting simulation..." << std::endl;
 
 

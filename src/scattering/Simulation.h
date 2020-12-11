@@ -5,6 +5,8 @@
 #include "escl/ScatteringParameters.h"
 #include "src/SimulationResult.h"
 
+#include "escl/constants.h"
+
 #include <vector>
 
 class Simulation {
@@ -12,7 +14,14 @@ protected:
 	std::vector<double> raw_lifetimes;
 	ScatteringParameters sp;
 	
-	static double SigmaFactor(const ScatteringParameters& sp);
+	static double SigmaFactor(const ScatteringParameters& sp) {
+		double kf = M * sp.particle_speed / HBAR;
+		double outside = (E * E * kf * kf) / (2.0 * PI * PI * M * sp.region_size * sp.region_size * C1);
+		double wct = sp.angular_speed * sp.tau;
+		outside *= sp.tau / (1.0 + wct * wct);
+
+		return outside;
+	}
 
 public:
 	void UpdateSimulationParameters(ScatteringParameters& sp, double temperature);

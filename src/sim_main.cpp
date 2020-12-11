@@ -64,8 +64,8 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
     ScatteringParameters sp_coh = cfg.scattering_params;
     sp_coh.is_incoherent = 0;
 
-    es.CompleteSimulationParameters(sp_inc);
-    es.CompleteSimulationParameters(sp_coh);
+    CompleteSimulationParameters(sp_inc);
+    CompleteSimulationParameters(sp_coh);
 
     std::random_device random_device;
 
@@ -81,6 +81,7 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 
         es.ComputeLifetimes(sp_coh, impurity_index);
         for (int i = 0; i < cfg.temperatures.size(); i++) {
+            UpdateTemperature(sp_coh, cfg.temperatures[i]);
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
 
             coherent_results[i]       += iteration.result;
@@ -91,6 +92,7 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 
         es.ComputeLifetimes(sp_inc, impurity_index);
         for (int i = 0; i < cfg.temperatures.size(); i++) {
+            UpdateTemperature(sp_inc, cfg.temperatures[i]);
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
 
             incoherent_results[i]       += iteration.result;
@@ -130,6 +132,40 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
         row.xxd = sxx_std / sxx_exp;
         
         LogResult(cfg.output_directory + "/results_" + std::to_string(i) + ".dat", row);
+    }
+}
+
+void UpdateTemperature(ScatteringParameters& sp, double temperature) {
+    sp.temperature = temperature;
+
+    if (sp.is_incoherent == 1) {
+        sp.tau = HBAR / (KB * sp.temperature);
+        sp.default_max_lifetime = 15.0 * sp.tau;
+    }
+}
+
+void CompleteSimulationParameters(ScatteringParameters& sp) {
+    sp.angular_speed = E * sp.magnetic_field / M;
+
+    if (sp.is_incoherent == 1) sp.tau = HBAR / (KB * sp.temperature);
+    sp.default_max_lifetime = 15.0 * sp.tau;
+
+    {
+        sp.impurity_spawn_range = { -sp.region_extends, sp.region_size + sp.region_extends };
+        double area_length = sp.impurity_spawn_range.y - sp.impurity_spawn_range.x;
+        sp.impurity_count = max(1, (int)ceil(area_length * area_length * sp.impurity_density));
+        sp.cells_per_row = max((int)ceil(sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell)), 1);
+        sp.cell_size = (sp.impurity_spawn_range.y - sp.impurity_spawn_range.x) / (double)sp.cells_per_row;
+    }
+
+    {
+        bool incoherent = (sp.is_incoherent == 1);
+
+        const double incoherent_area = sp.alpha * 2.0;
+        sp.integrand_angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+        sp.integrand_step_size = sp.integrand_angle_area / (sp.integrand_steps - 1);
+
+        sp.integrand_start_angle = (incoherent ? -sp.alpha : sp.alpha);
     }
 }
 

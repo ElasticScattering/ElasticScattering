@@ -363,7 +363,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\scattering\Simulation.cpp" />
     <ClCompile Include="src\scattering\SimulationCPU.cpp" />
     <ClCompile Include="src\scattering\SimulationCL.cpp" />
     <ClCompile Include="src\scattering\Grid.cpp" />
