@@ -400,6 +400,7 @@
     <ClInclude Include="tests\Test.h" />
     <ClInclude Include="tests\OrbitDetailsTest.h" />
     <ClInclude Include="tests\TestMacros.h" />
+    <ClInclude Include="tests\TestUtils.h" />
     <ClInclude Include="tests\test_main.h" />
     <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>

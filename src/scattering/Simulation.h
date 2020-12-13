@@ -14,7 +14,7 @@ protected:
 	std::vector<double> raw_lifetimes;
 	ScatteringParameters sp;
 	
-	static double SigmaFactor(const ScatteringParameters& sp) {
+	double SigmaFactor(const ScatteringParameters& sp) {
 		double kf = M * sp.particle_speed / HBAR;
 		double outside = (E * E * kf * kf) / (2.0 * PI * PI * M * sp.region_size * sp.region_size * C1);
 		double wct = sp.angular_speed * sp.tau;
@@ -24,9 +24,6 @@ protected:
 	}
 
 public:
-	void UpdateSimulationParameters(ScatteringParameters& sp, double temperature);
-	void CompleteSimulationParameters(ScatteringParameters& p_sp);
-
 	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) = 0;
 	virtual IterationResult DeriveTemperature(const double temperature) = 0;
 };

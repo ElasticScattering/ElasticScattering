@@ -2,43 +2,62 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
+#include "TestUtils.h"
+
+#include "src/scattering/Grid.h"
 #include "src/scattering/escl/lifetime.h"
+#include "src/sim_main.h"
 
 TEST_CASE("Lifetime tests")
 {
-	/*
-	region, extends = 1e-6, 1e-6
-    particle = np.array([7e-7, 2.99e-7, 0])
-    vf = 1.68e5
-    wc = E * 10 / (5 * 9.109e-31)
-    imps = get_test_impurities()
-    imp3d, nr1D = grid_divide(imps, 1e-8, region, extends, 10)
-    alpha = np.pi / 4
-    imp_rad = 1e-8
-
-    # Intersect in the second box
-    t = lifetime_full(particle, vf, wc,
-                      region, extends, nr1D, imp3d, imp_rad,
-                      alpha, True, True)
-    radians = wc * t
-    assert(0.88 < radians < 0.89)
-
-	*/
 	ScatteringParameters sp;
-	sp.impurity_radius = 1e-8;
 	sp.alpha = PI / 4.0;
 	sp.region_extends = 1e-6;
 	sp.region_size = 1e-6;
+    sp.impurity_radius = 1e-8;
+    sp.max_expected_impurities_in_cell = 10;
+    sp.particle_speed = 1.67834e5;
 
-	double wc = E * 2.5 / M0;
+    CompleteSimulationParameters(sp);
 
-	CellInde
+    double wc = E * 10 / M;
+
+    auto impurities = GetTestImpurities();
+    REQUIRE(impurities.size() > 0);
+
+    Grid grid(impurities, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
 	SUBCASE("Intersect in the second box")
 	{
-		double lt = wc * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp,  );
+        sp.is_incoherent = 1;
+        sp.is_clockwise = 1;
+        double lt = wc * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
 
-		CHECK(lt > 0.88 && lt < 0.89);
+        printf("LT: %f, %e\n", lt, lt);
+        CHECK(lt > 0.88);
+        CHECK(lt < 0.89);
 	}
+
+    SUBCASE("Intersect in first box")
+    {
+        sp.is_incoherent = 1;
+        sp.is_clockwise = 0;
+        double lt = wc * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+        printf("LT: %f, %e\n", lt, lt);
+        CHECK(lt > 0.078);
+        CHECK(lt < 0.079);
+    }
+
+    SUBCASE("3rd test")
+    {
+        sp.is_incoherent = 0;
+        sp.is_clockwise = 1;
+        double lt = wc * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+        printf("LT: %f, %e\n", lt, lt);
+        double r = abs(lt - PI / 4);
+        CHECK(r < 1e-7);
+    }
 }
 

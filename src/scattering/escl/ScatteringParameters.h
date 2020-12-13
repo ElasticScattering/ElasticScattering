@@ -10,7 +10,7 @@ typedef struct ScatteringParameters
     int values_per_particle;
     int impurity_count;
 
-    double magnetic_field; //
+    double magnetic_field;
     double tau;
     double temperature;
     double default_max_lifetime;

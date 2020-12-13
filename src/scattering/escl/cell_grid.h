@@ -25,14 +25,6 @@ typedef struct Intersection {
 #endif
 } Intersection;
 
-ESCL_INLINE int2 get_cell(const double x, const double y, const double2 range, const int cells_per_row)
-{
-	return v2i(
-		(int)((x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
-		(int)((y - range.x) / (range.y - range.x) * (double)(cells_per_row))
-	);
-}
-
 ESCL_INLINE int2 get_cell(const int index, const int cells_per_row)
 {
 	return v2i(index % cells_per_row, index / cells_per_row);
@@ -42,9 +34,12 @@ ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
 	return p.y * cells_per_row + p.x;
 }
 
-ESCL_INLINE int get_cell_index(const double2 pos, const double2 range, const int cells_per_row)
+ESCL_INLINE int2 get_cell(const double2 pos, const double2 range, const int cells_per_row)
 {
-	return get_index(get_cell(pos.x, pos.y, range, cells_per_row), cells_per_row);
+	return v2i(
+		(int)((pos.x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
+		(int)((pos.y - range.x) / (range.y - range.x) * (double)(cells_per_row))
+	);
 }
 
 ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
@@ -62,24 +57,21 @@ ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 	return (point > l0 && point < l1) || (point < l0 && point > l1);
 }
 
-ESCL_INLINE bool 
-DifferentPoint(double2 p1, double2 p2, double L)
+ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 {
 	return abs(p1.x - p2.x) > 1e-6 * L || abs(p1.y - p2.y) > 1e-6 * L;
 }
 
-ESCL_INLINE void 
-UpdateBestIntersect(const int2 next_cell, const double2 intersection_point, const Intersection* last_intersection, const Orbit* orbit, double L, Intersection* closest_intersection)
-{
-	Intersection candidate;
-	candidate.position       = intersection_point;
-	candidate.entering_cell  = next_cell;
-	candidate.incident_angle = GetAngle(candidate.position, orbit);
-	candidate.dphi           = GetCrossAngle(last_intersection->dphi, candidate.incident_angle, orbit->clockwise);
-
-	if (candidate.dphi < closest_intersection->dphi && DifferentPoint(candidate.position, last_intersection->position, L)) {
-		*closest_intersection = candidate; //printf("\t\tPhi Candidate: %f :: (%e, %e) \n", candidate.incident_angle, candidate.position.x, candidate.position.y);
-	}
+#define Update_Best_Intersect(intersection_point) {																			\
+	double incident_angle = GetAngle(intersection_point, orbit);															\
+	double dphi = GetCrossAngle(last_intersection->dphi, incident_angle, orbit->clockwise);									\
+																															\
+	if (dphi < closest_intersection->dphi && DifferentPoint(intersection_point, last_intersection->position, L)) {			\
+		closest_intersection->position       = intersection_point;															\
+		closest_intersection->entering_cell  = next_cell;																	\
+		closest_intersection->incident_angle = incident_angle;																\
+		closest_intersection->dphi           = dphi;																		\
+	}																														\
 }
 
 ESCL_INLINE bool 
@@ -115,12 +107,11 @@ UpdateFirstBoundaryIntersect(
 
 	int2 next_cell = last_intersection->entering_cell + cell_offset;
 
-	if (i1_valid) UpdateBestIntersect(next_cell, i1, last_intersection, orbit, L, closest_intersection);
-	if (i2_valid) UpdateBestIntersect(next_cell, i2, last_intersection, orbit, L, closest_intersection);
+	if (i1_valid) Update_Best_Intersect(i1);
+	if (i2_valid) Update_Best_Intersect(i2);
 
 	return i1_valid || i2_valid;
 }
-
 
 ESCL_INLINE bool 
 GetNextCell(const Orbit* orbit,

@@ -1,8 +1,17 @@
 #pragma once
 #include <doctest.h>
 #include "TestMacros.h"
+#include "TestUtils.h"
+
 #include "src/scattering/Grid.h"
 #include "src/scattering/escl/cell_grid.h"
+
+//Todo: test test_impurities.
+
+int get_cell_index(const double2 pos, const double2 range, const int cells_per_row)
+{
+	return get_index(get_cell(pos, range, cells_per_row), cells_per_row);
+}
 
 bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, double2 range, int cells_per_row)
 {

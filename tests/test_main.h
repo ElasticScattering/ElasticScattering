@@ -11,6 +11,7 @@
 #include "IndexTests.h"
 #include "AngleTests.h"
 #include "SimpsonWeightsTest.h"
+//#include "LifetimeTests.h"
 
 //#include "BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"
@@ -21,17 +22,6 @@ void test_main() {
     context.setOption("no-breaks", true);
     //context.setOption("success", true);
     int res = context.run();
-}
-
-TEST_CASE("DifferentPoint")
-{
-	v2 p1 = { 5.000000e-07, 3.063904e-07 };
-	
-	CHECK(!DifferentPoint(p1, p1, 3e-7));
-	CHECK(!DifferentPoint(p1, { 5.000000e-07, 3.063904e-07 }, 3e-7));
-
-	v2 p3 = { 2.000000e-07, 3.063904e-07 };
-	CHECK( DifferentPoint(p1, p3, 3e-7));
 }
 
 void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected_intersections)

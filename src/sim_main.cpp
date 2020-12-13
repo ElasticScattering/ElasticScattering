@@ -57,7 +57,6 @@ void sim_main(const InitParameters& init)
 
 void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 {
-
     ScatteringParameters sp_inc = cfg.scattering_params;
     sp_inc.is_incoherent = 1;
 

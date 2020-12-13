@@ -8,20 +8,16 @@
 #include <stdio.h>
 
 
-/*
-TEST_CASE("UpdateBestIntersect Tests")
+TEST_CASE("DifferentPoint")
 {
-	Orbit o({ 1.5, 1.5 }, sqrt(2.5), true);
-	Intersection entry;
-	entry.position = v2(1, 0);
-	entry.dphi = GetAngle({ 1, 0 }, &o);
+	v2 p1 = { 5.000000e-07, 3.063904e-07 };
 
-	Intersection candidate;
-	Intersection closest;
+	CHECK(!DifferentPoint(p1, p1, 3e-7));
+	CHECK(!DifferentPoint(p1, { 5.000000e-07, 3.063904e-07 }, 3e-7));
 
-	UpdateBestIntersect(candidate, { 0,1 }, entry, true, 20, 1e-2, &closest);
+	v2 p3 = { 2.000000e-07, 3.063904e-07 };
+	CHECK(DifferentPoint(p1, p3, 3e-7));
 }
-*/
 
 /* Todo: check alle waardes van de intersectie? */
 /*
@@ -139,14 +135,14 @@ TEST_CASE("to_world Tests")
 TEST_CASE("get_cell Tests")
 {
 	SUBCASE("Extends is empty, (0,0) should get the first cell") {
-		auto cell = get_cell(0, 0, { 0, 0.4 }, 6);
+		auto cell = get_cell(v2(0, 0), { 0, 0.4 }, 6);
 
 		auto expected_cell = v2i(0, 0);
 		CHECK(cell == expected_cell);
 	}
 
 	SUBCASE("Extends is not empty, (0,0) should be offset") {
-		auto cell = get_cell(0, 0, { -0.1, 0.4 }, 6);
+		auto cell = get_cell(v2(0, 0), { -0.1, 0.4 }, 6);
 
 		auto expected_cell = v2i(1, 1);
 		CHECK(cell == expected_cell);
@@ -157,7 +153,7 @@ TEST_CASE("get_cell Tests")
 		v2 range = { -0.1, 0.4 };
 		double dim = range.y - range.x;
 		double mid = range.x + 0.5 * dim;
-		auto cell = get_cell(mid, mid, range, cells_per_row);
+		auto cell = get_cell(v2(mid, mid), range, cells_per_row);
 
 		v2i expected_cell = { cells_per_row / 2, cells_per_row / 2 };
 		CHECK(cell == expected_cell);
@@ -165,35 +161,12 @@ TEST_CASE("get_cell Tests")
 
 	SUBCASE("Position at the bottom right corner should be in the last cell.") {
 		int cells_per_row = 9;
-		auto cell = get_cell(0.399, 0.399, { -0.1, 0.4 }, cells_per_row);
+		auto cell = get_cell(v2(0.399, 0.399), { -0.1, 0.4 }, cells_per_row);
 
 		v2i expected_cell = { cells_per_row - 1, cells_per_row - 1 };
 		CHECK(cell == expected_cell);
 	}
 }
-
-
-TEST_CASE("get_cell_index Tests")
-{
-	SUBCASE("Extends is empty, (0,0) should get the first cell.") {
-		auto cell = get_cell_index({ 0, 0 }, { 0, 0.4 }, 6);
-		CHECK(cell == 0);
-	}
-
-	SUBCASE("Extends is not empty, (0,0) should not be the first cell.") {
-		auto cell = get_cell_index({ 0, 0 }, { -0.1, 0.4 }, 6);
-		CHECK(cell == 7);
-	}
-
-	SUBCASE("Position at the bottom right corner should be in the last cell.") {
-		int cells_per_row = 9;
-		auto cell = get_cell_index({ 0.399, 0.399 }, { -0.1, 0.4 }, cells_per_row);
-
-		int last_cell = (cells_per_row * cells_per_row) - 1;
-		CHECK(cell == last_cell);
-	}
-}
-
 
 TEST_CASE("to_index Tests")
 {

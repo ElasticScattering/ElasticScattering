@@ -26,7 +26,7 @@ struct Cell {
 class Grid {
 private:
 	std::vector<Cell> cells;
-	std::vector<v2> impurities;
+	std::vector<v2> ordered_impurities;
 	std::vector<int> imp_index;
 
 	int total_indexed_impurities;
@@ -37,13 +37,15 @@ private:
 	v2i get_cell(const double x, double y);
 	bool within_bounds(const v2i p);
 
-	void GenerateImpurityCells(int count, int seed, double impurity_radius);
+	std::vector<v2> GenerateImpurities(int count, int seed);
+	void GenerateImpurityCells(std::vector<v2> impurities, double impurity_radius);
 	void ConvertToIndex();
 
 public:
 	int impurity_count;
-	const std::vector<v2>& GetImpurities() const { return impurities; };
+	const std::vector<v2>& GetImpurities() const { return ordered_impurities; };
 	const std::vector<int>& GetIndex() const { return imp_index; };
 
 	Grid(int count, int seed, v2 spawn_range, double impurity_radius, int cells_per_row);
+	Grid(std::vector<v2> impurities, v2 _spawn_range, double impurity_radius, int _cells_per_row);
 };

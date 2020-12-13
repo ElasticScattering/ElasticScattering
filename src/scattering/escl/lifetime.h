@@ -13,7 +13,7 @@
 #endif
 
 /// <summary>
-/// Returns the time at which the orbit collides with the first impurity, or INF if no collision happened. 
+/// Returns the time at which the orbit collides with the first impurity, or INF if no collision happened.
 /// </summary>
 ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit, BUFFER_ARGS)
 {
@@ -69,31 +69,28 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
             break;
     }
     
-    // @Todo, Hou bij of particle ergens op gebotst heeft (default_max_lifetime).
-    
     return min(lifetime, orbit->bound_time);
 }
 
 ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)
 {
-    const bool clockwise = sp->is_clockwise == 1;
+    const bool clockwise  = sp->is_clockwise == 1;
     const bool incoherent = sp->is_incoherent == 1;
 
     Particle p;
     p.starting_position = pos;
-    p.phi = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
-    p.starting_cell = get_cell(pos.x, pos.y, sp->impurity_spawn_range, sp->cells_per_row);
-    p.position_angle = GetPositionAngle(p.phi, clockwise);
+    p.phi               = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
+    p.starting_cell     = get_cell(pos, sp->impurity_spawn_range, sp->cells_per_row);
+    p.position_angle    = GetPositionAngle(p.phi, clockwise);
 
     int particle_cell_index = get_index(p.starting_cell, sp->cells_per_row);
-    int impurity_start = (p.starting_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
-    int impurity_end = cell_indices[particle_cell_index];
+    int impurity_start      = (p.starting_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
+    int impurity_end        = cell_indices[particle_cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {
         if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
             return 0;
     }
-
 
     const double bound_time = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, clockwise, false);
     const double bound_angle = GetBoundAngle(p.phi, sp->alpha, clockwise);

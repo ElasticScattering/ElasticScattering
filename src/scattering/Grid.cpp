@@ -12,11 +12,39 @@ Grid::Grid(int count, int seed, v2 _spawn_range, double impurity_radius, int _ce
 	cells_per_row = _cells_per_row;
 	impurity_count = count;
 
-	GenerateImpurityCells(count, seed, impurity_radius);
+	auto impurities = GenerateImpurities(count, seed);
+	GenerateImpurityCells(impurities, impurity_radius);
 	ConvertToIndex();
 }
 
-void Grid::GenerateImpurityCells(int count, int seed, double impurity_radius)
+Grid::Grid(std::vector<v2> impurities, v2 _spawn_range, double impurity_radius, int _cells_per_row)
+{
+	spawn_range = _spawn_range;
+	cells_per_row = _cells_per_row;
+	impurity_count = impurities.size();
+
+	GenerateImpurityCells(impurities, impurity_radius);
+	ConvertToIndex();
+}
+
+
+std::vector<v2> Grid::GenerateImpurities(int count, int seed)
+{
+	std::vector<v2> impurities(count);
+
+	std::uniform_real_distribution<double> unif(spawn_range.x, spawn_range.y);
+
+	std::random_device random_device;
+	std::default_random_engine re(seed);
+
+	for (int i = 0; i < count; i++) {
+		impurities[i] = { unif(re), unif(re) };
+	}
+
+	return impurities;
+}
+
+void Grid::GenerateImpurityCells(std::vector<v2> impurities, double impurity_radius)
 {
 	cells.resize(cells_per_row * cells_per_row);
 
@@ -26,24 +54,15 @@ void Grid::GenerateImpurityCells(int count, int seed, double impurity_radius)
 		}
 	}
 
-	// Generate impurities and put them into a cell.
-	{
-		std::uniform_real_distribution<double> unif(spawn_range.x, spawn_range.y);
-
-		std::random_device random_device;
-		std::default_random_engine re(seed);
-
-		for (int i = 0; i < count; i++) {
-			v2 pos = { unif(re), unif(re) };
-			total_indexed_impurities += add_to_overlapping_cells(cells, pos, impurity_radius);
-		}
+	for (int i = 0; i < impurities.size(); i++) {
+		total_indexed_impurities += add_to_overlapping_cells(cells, impurities[i], impurity_radius);
 	}
 }
 
-// Move impurities to single array and build an index.
+// Move impurities back to single array and build an index.
 void Grid::ConvertToIndex()
 {
-	impurities.resize(total_indexed_impurities);
+	ordered_impurities.resize(total_indexed_impurities);
 	imp_index.resize(cells_per_row * cells_per_row);
 
 	int impurity_counter = 0;
@@ -54,7 +73,7 @@ void Grid::ConvertToIndex()
 			imp_index[j * cells_per_row + i] = impurity_counter + imps.size();
 
 			for (int k = 0; k < imps.size(); k++) {
-				impurities[impurity_counter] = imps[k];
+				ordered_impurities[impurity_counter] = imps[k];
 				impurity_counter++;
 			}
 		}
