@@ -10,6 +10,8 @@
 void sim_main(const InitParameters& init);
 
 void RunSimulation(const SimulationConfiguration& sp, Simulation& es);
+
+void UpdateMagneticField(ScatteringParameters& sp, double magnetic_field);
 void UpdateTemperature(ScatteringParameters& sp, double temperature);
 void CompleteSimulationParameters(ScatteringParameters& sp);
 

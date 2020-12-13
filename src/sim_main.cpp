@@ -31,7 +31,7 @@ void sim_main(const InitParameters& init)
 
     SimulationCPU es;
     for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
-        cfg.scattering_params.magnetic_field = cfg.magnetic_field_range.min + cfg.magnetic_field_range.step_size * i;
+        UpdateMagneticField(cfg.scattering_params, cfg.magnetic_field_range.min + cfg.magnetic_field_range.step_size * i);
 
         cfg.intermediates_directory = cfg.output_directory + "/" + std::to_string(i) + ". Intermediates";
         std::filesystem::create_directory(cfg.intermediates_directory);
@@ -52,9 +52,6 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 
     ScatteringParameters sp_coh = cfg.scattering_params;
     sp_coh.is_incoherent = 0;
-
-    CompleteSimulationParameters(sp_inc);
-    CompleteSimulationParameters(sp_coh);
 
     std::random_device random_device;
 
@@ -122,6 +119,11 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
         
         Logger::LogResult(cfg.output_directory + "/results_" + std::to_string(i) + ".dat", row);
     }
+}
+
+void UpdateMagneticField(ScatteringParameters& sp, double magnetic_field) {
+    sp.magnetic_field = magnetic_field;
+    sp.angular_speed = E * sp.magnetic_field / M;
 }
 
 void UpdateTemperature(ScatteringParameters& sp, double temperature) {
@@ -250,6 +252,8 @@ SimulationConfiguration ParseConfig(std::string file)
     sp.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
 
     sp.is_clockwise                    = atoi(values.at("is_clockwise").c_str());
+
+    CompleteSimulationParameters(sp);
 
     cfg.scattering_params = sp;
 

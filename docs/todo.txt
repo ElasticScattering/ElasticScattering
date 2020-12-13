@@ -1,91 +1,11 @@
 
 
-
- - temperatuur inlezen met lijst van vooraf gedefinieerde waardes.
- - magnetisch veld temperatuur omdraaien
-		zodat we iteration lifetime lijst kunnen hergebruiken voor volgende temperatuur daarop kan werken.
- - FIX: impurity count negatief in resultaat log
- - implementeer nieuwe tests.
-
-
-
-
-
-
- /*
-angle = GetAngle({ 1, 0 }, &o);
-	//assert(get_angle(1, 0, 0, 0, 1, False) == 3 * np.pi / 2)
-	// Actual: -HALF_PI
-	printf("Angle %e\n", angle);
-	printf("Angle %e\n", (3 * HALF_PI));
-	CHECK_APPROX(angle, (3 * HALF_PI));
-*/
-
-/*
-angle = GetAngle({ 0, -1 }, &o);
-	//assert(get_angle(0, -1, 0, 0, 1, False) == np.pi)
-	// Actual: -PI
-	printf("Angle %e\n", angle);
-	printf("Angle %e\n", PI);
-	//CHECK_APPROX(angle, PI);
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-- Verwijder diag_regions.
-
-
-
 Code / Resultaten
-	Diagonale kruising?
 	Invloed van particles die in impurity starten?
 	(impurity randomness model per materiaal)
 
-Visualisatie
-	Optie 1 (Permanent, eenvoudiger):
-		Lees configuratie in via bestand
-		Schrijf afbeeldingen naar schijf.
-	Optie 2 (Interactief):
-		Zelfde als voorheen maar dan met 4/6 textures.
-
-Tests
-	Af
-		StartsInside
-		AngleInRange
-		x CrossAngle
-		x IsCrossed
-		x CrossPoints
-		x to_cell / to_index / ...
-		x within_bounds
-	
-	Half
-		FindExitIntersect // mijn methode is anders...
-		Lifetime // test impurities...
-		GetAngle // kan!
-		BoundaryIntersect // mijn methode returned maar één intersectie.
-
-	Moet deze?
-		Boxmotion
-
 Optimalisaties
 	Bereken phi, BoundTime waardes vooraf?
-
 	clockwise vooraf bepalen?.
 
 Tellers

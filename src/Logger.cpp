@@ -60,7 +60,7 @@ void Logger::CreateLog(const std::string result_file, const SimulationConfigurat
     file << "#" << std::endl;
     file << "###########################" << std::endl;
     file << "# Results:                #" << std::endl;
-    file << "###########################" << std::endl;
+    file << "###########################" << std::endl << std::endl;
     file << "magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
 }
 
