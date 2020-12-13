@@ -14,7 +14,7 @@ std::vector<v2> GetTestImpurities()
 {
     std::filebuf fb;
     if (!fb.open("tests/data/test_impurities.dat", std::ios::in)) {
-        printf("Could not load config file.");
+        printf("Could not load test_impurities.");
         return std::vector<v2>();
     }
 
@@ -40,7 +40,6 @@ std::vector<v2> GetTestImpurities()
         }
     }
 
-    printf("Loaded %i test impurities.\n", impurities.size());
     fb.close();
     return impurities;
 }
