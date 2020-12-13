@@ -5,29 +5,28 @@
 void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid)
 {
 	sp = p_sp;
-
+	
 	// GPU kernel works only with even work size.
 	const int limit = sp.dim - 1;
-
 	raw_lifetimes.resize(limit * limit * sp.values_per_particle);
+
+	v2 small_offset = v2(sp.cell_size * 0.01, sp.cell_size * 0.005);
 
 	for (int j = 0; j < limit; j++) {
 		for (int i = 0; i < limit; i++) {
-			v2 pos = v2(i, j) * (sp.region_size / (double)(sp.dim - 2)) + v2(sp.cell_size * 0.01, sp.cell_size * 0.005);
+			v2 pos = v2(i, j) * (sp.region_size / (double)(sp.dim - 2)) + small_offset;
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < sp.integrand_steps; p++) {
 					double lt = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex());
 					raw_lifetimes[GetIndex(i, j, q, p)] = lt;
 					if (lt > 1) {
-						printf("Large LT: %e", lt);
+						//printf("Large LT: %e", lt);
 					}
 				}
 			}
 		}
 	}
-
-
 }
 
 IterationResult SimulationCPU::DeriveTemperature(const double temperature)

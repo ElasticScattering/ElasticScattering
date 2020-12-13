@@ -7,12 +7,13 @@
 
 #include "scattering/escl/constants.h"
 
+#include <algorithm>
+#include <filesystem>
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-#include <filesystem>
-#include <string>
 #include <iomanip> 
 #include <ctime>
 
@@ -83,25 +84,60 @@ void Logger::FinishLog(const std::string file_path, const double time_elapsed)
     file << "# Elapsed time: " << time_elapsed << " seconds." << std::endl;
 }
 
+void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::vector<double> &values, const int dim, const int image_id, const bool colored)
+{
+    const int image_width = dim * 3 * 3;
+    const int image_height = dim;
+    const int offset = image_id * dim * 3;
+
+    double min_element =  INF;
+    double max_element = -INF;
+
+    for (int i = 0; i < values.size(); i++) {
+        auto k = values[i];
+        if (k < min_element) min_element = k;
+        if (k > max_element) max_element = k;
+    }
+
+    int i, j, idx = 0;
+    for (j = 0; j < dim; j++)
+        for (i = 0; i < dim; i++)
+        {
+            idx = j * image_width + i * 3 + offset;
+            
+            if (!colored) {
+                auto k = (unsigned char)((values[j * dim + i] - min_element) / max_element * 255.0);
+                pixels[idx]     = k;
+                pixels[idx + 1] = k;
+                pixels[idx + 2] = k;
+            }
+            else {
+                auto c = values[j * dim + i];
+                if (c < 0) {
+                    pixels[idx]     = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = (unsigned char)(c / min_element * 255.0);
+                }
+                else {
+                    pixels[idx]     = (unsigned char)(c / max_element * 255.0);
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
+                }
+            }
+        }
+}
+
 void Logger::LogImages(const std::string file, const int dim, const double scale, const IterationResult iteration)
 {
-    const int image_width = dim * 3;
+    const int image_width  = dim * 3;
     const int image_height = dim;
+    const int num_channels = 3;
 
-    std::vector<unsigned char> pixels(image_width * image_height);
+    std::vector<unsigned char> pixels(image_width * image_height * num_channels);
 
-    int i, j = 0;
-    for (j = 0; j < dim; j++)
-        for (i = 0; i < dim; i++)
-            pixels[j * image_width + i] = (unsigned char)(iteration.particle_lifetimes[j * dim + i] / scale * 255.0);
+    WriteImageSection(pixels, iteration.particle_lifetimes, dim, 0);
+    WriteImageSection(pixels, iteration.sigmas.xx_buffer,   dim, 1);
+    WriteImageSection(pixels, iteration.sigmas.xy_buffer,   dim, 2, true);
 
-    for (j = 0; j < dim; j++)
-        for (i = 0; i < dim; i++)
-            pixels[j * image_width + (i + dim)] = (unsigned char)(iteration.sigmas.xx_buffer[j * dim + i] / 3.0 * 255.0);
-
-    for (j = 0; j < dim; j++)
-        for (i = 0; i < dim; i++)
-            pixels[j * image_width + (i + dim * 2)] = (unsigned char)(iteration.sigmas.xy_buffer[j * dim + i] / 1.5 * 255.0);
-
-    stbi_write_png(file.c_str(), image_width, image_height, 1, pixels.data(), image_width);
+    stbi_write_png(file.c_str(), image_width, image_height, 3, pixels.data(), image_width * num_channels);
 }

@@ -7,7 +7,8 @@
 
 class Logger {
 private:
-    //std::string file_path;
+    static void WriteImageSection(std::vector<unsigned char>& pixels, const std::vector<double>& values, const int dim, const int image_id, const bool colored = false);
+
 public:
     static void CreateLog(const std::string result_file, const SimulationConfiguration& cfg, double temperature);
     static void FinishLog(const std::string file_path, const double time_elapsed);

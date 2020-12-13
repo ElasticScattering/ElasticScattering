@@ -371,7 +371,7 @@
     <ClCompile Include="src\sim_main.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
     <ClCompile Include="tests\AngleTests.h" />
-    <ClCompile Include="tests\kernels\test_cpp.cpp" />
+    <ClCompile Include="tests\data\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Logger.h" />
@@ -394,10 +394,11 @@
     <ClInclude Include="tests\BasicOpenCLTest.h" />
     <ClInclude Include="tests\ElasticScatteringTests.h" />
     <ClInclude Include="tests\GridGenerationTests.h" />
+    <ClInclude Include="tests\GridMovement.h" />
     <ClInclude Include="tests\IndexTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
-    <ClInclude Include="tests\kernels\test_cpp.h" />
+    <ClInclude Include="tests\data\kernels\test_cpp.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
     <ClInclude Include="tests\OrbitDetailsTest.h" />
@@ -411,10 +412,11 @@
     <None Include="src\scattering\cl\scatter.cl" />
     <None Include="src\scattering\cl\scatter_one_file.cl" />
     <None Include="src\scattering\cl\util_kernels.cl" />
-    <None Include="tests\kernels\test_cpp.cl" />
-    <None Include="tests\kernels\test_precision.cl" />
-    <None Include="tests\kernels\test_double2.cl" />
-    <None Include="tests\kernels\test_printf.cl" />
+    <None Include="tests\data\kernels\test_cpp.cl" />
+    <None Include="tests\data\kernels\test_precision.cl" />
+    <None Include="tests\data\kernels\test_double2.cl" />
+    <None Include="tests\data\kernels\test_printf.cl" />
+    <None Include="tests\data\test_impurities.dat" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="docs\todo.txt" />

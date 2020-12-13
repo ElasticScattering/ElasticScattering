@@ -1,12 +1,7 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
 #include "src/scattering/escl/cell_grid.h"
-
-#include <vector>
-#include <stdio.h>
-
 
 TEST_CASE("DifferentPoint")
 {
@@ -19,68 +14,6 @@ TEST_CASE("DifferentPoint")
 	CHECK(DifferentPoint(p1, p3, 3e-7));
 }
 
-/* Todo: check alle waardes van de intersectie? */
-/*
-TEST_CASE("GetFirstBoundaryIntersects Tests")
-{
-	SUBCASE("Hit 1")
-	{
-		Orbit orbit({ 0, 0 }, 2, false, 0, 0);
-		Intersection i;
-
-		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, -3 }, { 0, 3 }, 6, 0, &i);
-
-		v2 expected_intersection = { 0, -2 };
-		CHECK(hit);
-		CHECK(expected_intersection == i.position);
-	}
-
-	SUBCASE("Hit 2")
-	{
-		Orbit orbit({ 0.7, 0 }, .5, false, 0, 0);
-		Intersection i;
-
-		bool hit = GetFirstBoundaryIntersect(&orbit, { 1, 0 }, { 1, 6 }, 6, 0, &i);
-
-		v2 expected_intersection = { 1, 0.4 };
-		CHECK(hit);
-		CHECK_APPROX(expected_intersection.x, i.position.x);
-		CHECK_APPROX(expected_intersection.y, i.position.y);
-	}
-
-	SUBCASE("Hit 3")
-	{
-		Orbit orbit({ 1, 1 }, 1.1, false, 0, 0);
-		Intersection i;
-
-		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, 0 }, { 0, 2 }, 2, 0, &i);
-
-		v2 expected_intersection = { 0, (1 - sqrt(1.1 * 1.1 - 1)) };
-		CHECK(hit);
-		CHECK((expected_intersection == i.position));
-	}
-
-	SUBCASE("Orbit that encircles line segment should return no intersection")
-	{
-		Orbit orbit({ 0.2 , 0.2 }, 20, false, 0, 0);
-
-		Intersection i;
-		bool hit = GetFirstBoundaryIntersect(&orbit, { 0, -3 }, { 0, 3 }, 6, 0, &i);
-
-		CHECK(!hit);
-	}
-
-	SUBCASE("Orbit that misses the line segment should return no intersection")
-	{
-		Orbit orbit({ 0, 0 }, 1, false, 0, 0);
-
-		Intersection i;
-		bool hit = GetFirstBoundaryIntersect(&orbit, { 5, -50 }, { 5, 60 }, 110, 0, &i);
-
-		CHECK(!hit);
-	}
-}
-*/
 
 TEST_CASE("to_world Tests")
 {

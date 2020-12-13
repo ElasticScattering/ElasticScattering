@@ -215,19 +215,22 @@ TEST_CASE("Cross Time")
 	Orbit orbit2({ 0,0 }, 5, false, 0, 0);
 
 	const v2 pos = { 3, 4 };
+	const double phi1 = GetAngle(pos, &orbit1);
+	const double phi2 = GetAngle(pos, &orbit2);
+
 	double ir = 0.1;
 	double w = 2;
 
-	double t = GetFirstCrossTime(&orbit1, pos, { 5, 0 }, ir, w, { 0, 0}); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t = GetFirstCrossTime(&orbit1, phi1, { 5, 0 }, ir, w, { 0, 0});
 	CHECK_APPROX_LOW(t, 0.907 / 2);
 
-	double t2 = GetFirstCrossTime(&orbit2, pos, { 5, 0 }, ir, w, { -0, 0 }); // @todo, pos/center omdraaien geeft GetPhi assert error!
+	double t2 = GetFirstCrossTime(&orbit2, phi2, { 5, 0 }, ir, w, { -0, 0 });
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit2.radius)) / w);
 
 	ir = 0.059;
 	w = 100;
 
-	t = GetFirstCrossTime(&orbit1, pos, { 5, 0 }, ir, w, { 0, 0 });
-	t2 = GetFirstCrossTime(&orbit2, pos, { 5, 0 }, ir, w, { 0, 0 });
+	t = GetFirstCrossTime(&orbit1, phi1, { 5, 0 }, ir, w, { 0, 0 });
+	t2 = GetFirstCrossTime(&orbit2, phi2, { 5, 0 }, ir, w, { 0, 0 });
 	CHECK_APPROX(t + t2, (PI2 - (ir * 2.0 / orbit1.radius)) / w);
 }
