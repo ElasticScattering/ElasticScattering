@@ -363,6 +363,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\scattering\SimulationCPU.cpp" />
     <ClCompile Include="src\scattering\SimulationCL.cpp" />
     <ClCompile Include="src\scattering\Grid.cpp" />
@@ -373,6 +374,7 @@
     <ClCompile Include="tests\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />

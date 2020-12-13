@@ -1,8 +1,9 @@
 #pragma once
 
 #include "scattering/escl/ScatteringParameters.h"
-#include <string>
+
 #include <vector>
+#include <string>
 
 enum class ProgramMode {
     Test,
@@ -33,7 +34,6 @@ typedef struct SimulationConfiguration
 
     std::string output_directory;
     std::string intermediates_directory;
-    std::string result_file;
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;
