@@ -16,6 +16,11 @@
 //#include "BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"
 
+#include "TestUtils.h"
+#include "src/scattering/Grid.h"
+#include "src/scattering/escl/lifetime.h"
+#include "src/sim_main.h"
+
 void test_main() {
     doctest::Context context;
     context.setOption("order-by", "file");
@@ -23,6 +28,120 @@ void test_main() {
     //context.setOption("success", true);
     int res = context.run();
 }
+
+void DecideFinalParameters(ScatteringParameters& sp)
+{
+	if (sp.is_incoherent == 1) sp.tau = HBAR / (KB * sp.temperature);
+	sp.default_max_lifetime = 15.0 * sp.tau;
+
+	{
+		bool incoherent = (sp.is_incoherent == 1);
+
+		const double incoherent_area = sp.alpha * 2.0;
+		sp.integrand_angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+		sp.integrand_step_size = sp.integrand_angle_area / (sp.integrand_steps - 1);
+
+		sp.integrand_start_angle = (incoherent ? -sp.alpha : sp.alpha);
+	}
+}
+
+TEST_CASE("Lifetime tests")
+{
+	auto impurities = GetTestImpurities();
+	REQUIRE(impurities.size() > 0);
+
+	ScatteringParameters sp;
+	sp.alpha = PI / 4.0;
+
+	sp.max_expected_impurities_in_cell = 10;
+	sp.impurity_count = impurities.size();
+	sp.region_extends = 1e-6;
+	sp.region_size = 1e-6;
+	sp.impurity_radius = 1e-8;
+	sp.impurity_spawn_range = { -sp.region_extends, sp.region_size + sp.region_extends };
+	double t = sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell);
+	sp.cells_per_row = (int)ceil(sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell));
+	sp.cell_size = (sp.impurity_spawn_range.y - sp.impurity_spawn_range.x) / (double)sp.cells_per_row;
+
+	sp.particle_speed = 1.68e5;
+	sp.magnetic_field = 10;
+	sp.angular_speed = E * sp.magnetic_field / M;
+
+	Grid grid(impurities, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
+
+	SUBCASE("Intersect in the second box")
+	{
+		sp.is_incoherent = 0;
+		sp.is_clockwise = 1;
+		DecideFinalParameters(sp);
+		sp.integrand_start_angle = 0;
+
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+		printf("LT: %f, %e\n", lt, lt);
+		CHECK(lt > 0.88);
+		CHECK(lt < 0.89);
+	}
+
+	SUBCASE("Intersect in the second box, incoherent -> boundtime")
+	{
+		sp.is_incoherent = 1;
+		sp.is_clockwise = 1;
+		DecideFinalParameters(sp);
+		sp.integrand_start_angle = 0;
+
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+		printf("LT: %f, %e\n", lt, lt);
+		CHECK_ALMOST(lt, (PI / 4));
+	}
+
+	SUBCASE("Intersect in first box")
+	{
+		sp.is_incoherent = 0;
+		sp.is_clockwise = 0;
+		DecideFinalParameters(sp);
+		sp.integrand_start_angle = 0;
+
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+		printf("LT: %f, %e\n", lt, lt);
+		CHECK(lt > 0.078);
+		CHECK(lt < 0.079);
+	}
+
+	SUBCASE("3rd test")
+	{
+		sp.is_incoherent = 1;
+		sp.is_clockwise = 1;
+		DecideFinalParameters(sp);
+		sp.integrand_start_angle = 0;
+
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+
+		printf("LT: %f, %e\n", lt, lt);
+		double r = abs(lt - PI / 4);
+		CHECK(r < 1e-7);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/// <summary>
+/// /////
+/// </summary>
+/// <param name="o"></param>
+/// <param name="exit"></param>
+/// <param name="expected_intersections"></param>
 
 void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected_intersections)
 {
@@ -46,7 +165,7 @@ void TestSetup(Orbit& o, Intersection& exit, std::vector<Intersection>& expected
 
 		/*
 		printf("Cell: (%e, %e)", exit.position.x, exit.position.y);
-		printf(" < ->Cell: (% e, % e)\n", expected_intersections[i].position.x, expected_intersections[i].position.y);
+		printf(" <> (% e, % e)\n", expected_intersections[i].position.x, expected_intersections[i].position.y);
 		//printf("\tPhi: %f\n", exit.incident_angle);
 		//printf("\tPhi: %f <-> %f\n", exit.incident_angle, expected_intersections[i].incident_angle);
 		printf("\tEntering: (%i, %i)\n", exit.entering_cell.x, exit.entering_cell.y);
@@ -83,7 +202,6 @@ TEST_CASE("GetNextCell")
 			Intersection({-4.000000000000000e-07, 5.664549660374142e-07}, {1,  5}, 5.804443623619448e+00),
 			Intersection({-7.000000000000000e-07, 7.514662200913574e-07}, {0,  5}, 5.656703934600270e+00),
 			Intersection({-7.647224226072912e-07, 8.000000000000001e-07}, {0,  6}, 5.622823418415306e+00)
-			//Intersection({-1.000000000000000e-06, 1.008993422194041e-06}, {9, -1}, 5.490937979801705e+00)
 		};
 
 		TestSetup(o, exit, intersections);
@@ -108,12 +226,10 @@ TEST_CASE("GetNextCell")
 			Intersection({-6.199757562702194e-07, -9.999999999999989e-08}, {1,  2}, 5.857026755566084e-01),
 			Intersection({-7.000000000000000e-07, -1.554662200913575e-07}, {0,  2}, 6.264813725793159e-01),
 			Intersection({-9.870846416084292e-07, -4.000000000000000e-07}, {0,  1}, 7.845750310926594e-01)
-			//Intersection({-1.000000000000000e-06, -4.129934221940419e-07}, {9, -1}, 7.922473273778809e-01) 
 		};
 
 		TestSetup(o, exit, intersections);
 	}
-
 
 	SUBCASE("3rd setup.")
 	{
@@ -136,7 +252,6 @@ TEST_CASE("GetNextCell")
 			Intersection({-4.903875328875842e-07, 1.400000000000000e-06}, {1, 8}, 4.789464754429844e+00),
 			Intersection({-4.756622703221965e-07, 1.700000000000000e-06}, {1, 9}, 4.537223513199825e+00),
 			Intersection({-4.000000000000000e-07, 1.956123930062101e-06}, {2, 9}, 4.313068451610086e+00)
-			//Intersection({-3.804355923719342e-07, 2.000000000000000e-06}, {9,-1}, 4.272828648669241e+00) 
 		};
 
 		TestSetup(o, exit, intersections);
@@ -161,7 +276,6 @@ TEST_CASE("GetNextCell")
 			Intersection({-3.860595259816659e-07, -4.000000000000000e-07}, {2,  1}, 1.142438932907954e+00),
 			Intersection({-4.000000000000000e-07, -4.317403879544051e-07}, {1,  1}, 1.171475798020293e+00),
 			Intersection({-4.777455537510948e-07, -7.000000000000000e-07}, {1,  0}, 1.405944052499597e+00)
-			//Intersection({-4.893880295283892e-07, -1.000000000000000e-06}, {9, -1},1.658071026302413e+00) 
 		};
 
 		TestSetup(o, exit, intersections);
@@ -190,7 +304,6 @@ TEST_CASE("GetNextCell")
 			Intersection({1.100000000000000e-06, 5.146593912599645e-07}, {6, 5}, 9.928173815333787e-01),
 			Intersection({1.090045429271686e-06, 5.000000000000001e-07}, {6, 4}, 9.557113906857211e-01),
 			Intersection({8.000000000000002e-07, 3.085869536978123e-07}, {5, 4}, 2.109532692655360e-01)
-			//Intersection({6.999999999999999e-07, 2.979999999999999e-07}, {9,-1}, 0.000000000000000e+00)
 		};
 
 		TestSetup(o, exit, intersections);
@@ -219,13 +332,11 @@ TEST_CASE("GetNextCell")
 			Intersection({1.100000000000000e-06,  8.134060874003542e-08}, {6, 3}, 5.290367925646208e+00),
 			Intersection({9.898280201537577e-07,  2.000000000000001e-07}, {6, 4}, 5.631059862011840e+00),
 			Intersection({8.000000000000002e-07,  2.874130463021876e-07}, {5, 4}, 6.072232037914050e+00)
-			//Intersection({7.000000000000000e-07,  2.980000000000000e-07}, {9, -1}, 0.000000000000000e+00)
 		};
 
 		TestSetup(o, exit, intersections);
 	}
 
-	/*
 	SUBCASE("7th setup.")
 	{
 		Orbit o({ 7e-07, 4.1170782466745266e-07 }, 1.1370782466745266e-07, true);
@@ -241,13 +352,11 @@ TEST_CASE("GetNextCell")
 			Intersection({7.716516654771601e-07, 5.000000000000001e-07}, {5,  4}, 2.459861229191086e+00),
 			Intersection({8.000000000000001e-07, 4.658323975581844e-07}, {6,  4}, 2.066893572964171e+00),
 			Intersection({8.000000000000002e-07, 3.575832517767211e-07}, {5,  4}, 1.074699080625624e+00)
-			//Intersection({7.000000000000000e-07, 2.980000000000000e-07}, {9, -1}, 0.000000000000000e+00)
 		};
 
 		TestSetup(o, exit, intersections);
 	}
 	
-	/*
 	SUBCASE("8th setup.")
 	{
 		Orbit o({ 7e-07, 3.9351457272066023e-07 }, 9.551457272066024e-08, true);
@@ -270,43 +379,32 @@ TEST_CASE("GetNextCell")
 		TestSetup(o, exit, intersections);
 	}
 
-	SUBCASE("Nth setup.")
+	SUBCASE("9th setup.")
 	{
 		Orbit o({ 4.623049896354275e-07, -1.3769501036457238e-07 }, 4.775728636033011e-07, false);
 
 		Intersection exit;
-		exit.position = v2();
+		exit.position = v2(4.623049896354275e-07, 3.398778532387288e-07);
 		exit.dphi = PI2;
 		exit.entering_cell = { 4, 4 };
 		exit.incident_angle = 0;
 
-		std::vector<Intersection> intersections{
-			{2.000000000000000e-07, 2.613938675343432e-07},
-			{1.246099792708551e-07, 2.000000000000000e-07},
-			{-1.377790886426873e-08, -9.999999999999989e-08},
-			{6.321611173651196e-08, -4.000000000000000e-07},
-			{2.000000000000001e-07, -5.367838882634881e-07},
-			{5.000000000000000e-07, -6.137779088642687e-07},
-			{8.000000000000001e-07, -4.753900207291446e-07},
-			{8.613938675343431e-07, -4.000000000000000e-07},
-			{9.383878881351238e-07, -1.000000000000000e-07},
-			{8.000000000000002e-07, 1.999999999999997e-07},
-			{5.000000000000001e-07, 3.383878881351238e-07},
-			{4.623049896354275e-07, 3.398778532387288e-07}
-		};
-
-		std::vector<v2i> expected_cells{
-			{3, 4}, {3, 3}, {3, 2}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {6, 2}, {6, 3}, {5, 4}, {4, 4}
-		};
-
-		std::vector<double> expected_cell_phis{
-			5.814617014956047e-01, 7.853981633974483e-01, 1.491783754263309e+00, 2.152258028290502e+00, 2.560130952094189e+00, 3.220605226121379e+00, 3.926990816987241e+00, 4.130927278889084e+00, 4.791401552916278e+00, 5.497787143782137e+00, 6.204172734647999e+00, 0.000000000000000e+00
+		std::vector<Intersection> intersections {
+			Intersection({ 2.000000000000000e-07,  2.613938675343432e-07}, {3, 4}, 5.814617014956047e-01),
+			Intersection({ 1.246099792708551e-07,  2.000000000000000e-07}, {3, 3}, 7.853981633974483e-01),
+			Intersection({-1.377790886426873e-08, -9.999999999999989e-08}, {3, 2}, 1.491783754263309e+00),
+			Intersection({ 6.321611173651196e-08, -4.000000000000000e-07}, {3, 1}, 2.152258028290502e+00),
+			Intersection({ 2.000000000000001e-07, -5.367838882634881e-07}, {4, 1}, 2.560130952094189e+00),
+			Intersection({ 5.000000000000000e-07, -6.137779088642687e-07}, {5, 1}, 3.220605226121379e+00),
+			Intersection({ 8.000000000000001e-07, -4.753900207291446e-07}, {6, 1}, 3.926990816987241e+00),
+			Intersection({ 8.613938675343431e-07, -4.000000000000000e-07}, {6, 2}, 4.130927278889084e+00),
+			Intersection({ 9.383878881351238e-07, -1.000000000000000e-07}, {6, 3}, 4.791401552916278e+00),
+			Intersection({ 8.000000000000002e-07,  1.999999999999997e-07}, {5, 4}, 5.497787143782137e+00),
+			Intersection({ 5.000000000000001e-07,  3.383878881351238e-07}, {4, 4}, 6.204172734647999e+00)
 		};
 
 		TestSetup(o, exit, intersections);
 	}
-	*/
-
 }
 
 

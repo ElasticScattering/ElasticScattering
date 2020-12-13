@@ -64,8 +64,7 @@ ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 
 #define Update_Best_Intersect(intersection_point) {																			\
 	double incident_angle = GetAngle(intersection_point, orbit);															\
-	double dphi = GetCrossAngle(last_intersection->dphi, incident_angle, orbit->clockwise);									\
-																															\
+	double dphi = GetCrossAngle(last_intersection->incident_angle, incident_angle, orbit->clockwise);									\
 	if (dphi < closest_intersection->dphi && DifferentPoint(intersection_point, last_intersection->position, L)) {			\
 		closest_intersection->position       = intersection_point;															\
 		closest_intersection->entering_cell  = next_cell;																	\
@@ -93,6 +92,7 @@ UpdateFirstBoundaryIntersect(
 	if (proj_circle_distance_sq >= orbit->radius_squared) {
 		return false;
 	}
+
 	// A circle can intersect a line segment twice. Determine which 
 	// intersects happened and return the earliest.
 	double2 to_edge = u * sqrt(orbit->radius_squared - proj_circle_distance_sq);
@@ -135,12 +135,26 @@ GetNextCell(const Orbit* orbit,
 	UpdateFirstBoundaryIntersect(orbit, int2( 1,  0), low_right, top_right, L, last_intersection, next_intersection);
 	UpdateFirstBoundaryIntersect(orbit, int2(-1,  0), low_left,  top_left,  L, last_intersection, next_intersection);
 
+	{
+		double delta = 1e-7 * L;
+		bool is_xlow = next_intersection->position.x - low_left.x < delta;
+		bool is_xtop = -next_intersection->position.x + L + low_left.x < delta;
+		bool is_ylow = next_intersection->position.y - low_left.y < delta;
+		bool is_ytop = -next_intersection->position.y + L + low_left.y < delta;
+
+		int2 offset = next_intersection->entering_cell - last_intersection->entering_cell;
+		if (is_xtop && is_ylow) offset = int2(1, -1);
+		if (is_xlow && is_ylow) offset = int2(-1, -1);
+		if (is_xlow && is_ytop) offset = int2(-1, 1);
+		if (is_xtop && is_ytop) offset = int2(1, 1);
+		next_intersection->entering_cell = last_intersection->entering_cell + offset;
+	}
+
 	// Return whether we moved to a new valid cell.
 	// Stop conditions:
 	//	1. Progress: didn't move to a new cell
 	//  2. Inside:   next cell would be outside of grid.
 	//  3. Done:     next intersection would come full circle and move past the starting point.
-	
 	return (
 		next_intersection->entering_cell != last_intersection->entering_cell &&
 		within_bounds(next_intersection->entering_cell, cells_per_row) &&

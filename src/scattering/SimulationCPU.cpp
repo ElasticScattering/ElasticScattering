@@ -2,7 +2,6 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-
 void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid)
 {
 	sp = p_sp;
@@ -18,11 +17,17 @@ void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Gri
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < sp.integrand_steps; p++) {
-					raw_lifetimes[j * limit + i * sp.values_per_particle + (q * sp.integrand_steps) + p] = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex());
+					double lt = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex());
+					raw_lifetimes[GetIndex(i, j, q, p)] = lt;
+					if (lt > 1) {
+						printf("Large LT: %e", lt);
+					}
 				}
 			}
 		}
 	}
+
+
 }
 
 IterationResult SimulationCPU::DeriveTemperature(const double temperature)
@@ -32,11 +37,11 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 	std::vector<double> new_lifetimes(raw_lifetimes.size());
 
 	for (int i = 0; i < new_lifetimes.size(); i++)
-		new_lifetimes[i] = min(new_lifetimes[i], sp.default_max_lifetime);
+		new_lifetimes[i] = min(raw_lifetimes[i], sp.default_max_lifetime);
 
 	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
-	b.sigmas = ComputeSigmas(new_lifetimes);
-	b.result = IntegrateResult(new_lifetimes);
+	b.sigmas             = ComputeSigmas(new_lifetimes);
+	b.result             = IntegrateResult(new_lifetimes);
 
 	return b;
 }
@@ -60,10 +65,8 @@ SigmaResult SimulationCPU::ComputeSigmas(const std::vector<double>& current_life
 			Sigma totals;
 
 			for (int q = 0; q < 4; q++) {
-				int base_idx = j * limit + i * sp.values_per_particle + (q * sp.integrand_steps);
-
 				for (int p = 0; p < sp.integrand_steps; p++) {
-					double lt = current_lifetimes[base_idx + p];
+					double lt = current_lifetimes[GetIndex(i, j, q, p)];
 
 					double phi = sp.integrand_start_angle + q * (PI * 0.5) + p * sp.integrand_step_size;
 					double sigma_base = GetSigma(lt, phi, sp.tau, w) * SimpsonWeight(p, sp.integrand_steps);
@@ -97,10 +100,8 @@ std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& 
 			double particle_total = 0;
 			
 			for (int q = 0; q < 4; q++) {
-				int base_idx = j * limit + i * sp.values_per_particle + (q * sp.integrand_steps);
-
-				for (int p = 0; p < sp.integrand_steps; p++) {
-					particle_total += current_lifetimes[base_idx + p] * SimpsonWeight(p, sp.integrand_steps);
+				for (size_t p = 0; p < sp.integrand_steps; p++) {
+					particle_total += current_lifetimes[GetIndex(i, j, q, p)] * SimpsonWeight(p, sp.integrand_steps);
 				}
 			}
 			
@@ -127,7 +128,7 @@ Sigma SimulationCPU::IntegrateResult(const std::vector<double>& current_lifetime
 				for (int p = 0; p < sp.integrand_steps; p++) {
 					double wp = SimpsonWeight(p, sp.integrand_steps);
 
-					double lt = current_lifetimes[j * limit + i * sp.values_per_particle + (q * sp.integrand_steps) + p];
+					double lt = current_lifetimes[GetIndex(i, j, q, p)];
 					double phi = sp.integrand_start_angle + q * (PI * 0.5) + p * sp.integrand_step_size;
 
 					double sigma_base = GetSigma(lt, phi, sp.tau, w) * (wy * wx * wp);

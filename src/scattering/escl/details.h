@@ -175,10 +175,16 @@ ESCL_INLINE double GetFirstCrossTime(const Orbit* orbit, const double2 pos, cons
 
     const double2 p1 = { cross_points.x, cross_points.y };
     const double2 p2 = { cross_points.z, cross_points.w };
-
+    
+    /*
     const double phi0 = GetPhi(pos, orbit);
     const double phi1 = GetPhi(p1, orbit);
     const double phi2 = GetPhi(p2, orbit);
+
+    */
+    const double phi0 = GetAngle(pos, orbit); // todo, dit vooraf berekenen.
+    const double phi1 = GetAngle(p1, orbit);
+    const double phi2 = GetAngle(p2, orbit);
 
     double traversal_time = INF;
 

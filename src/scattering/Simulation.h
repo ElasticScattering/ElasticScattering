@@ -13,6 +13,10 @@ class Simulation {
 protected:
 	std::vector<double> raw_lifetimes;
 	ScatteringParameters sp;
+
+	size_t GetIndex(int i, int j, int q, int p) {
+		return j * ((sp.dim-1) * sp.values_per_particle) + i * sp.values_per_particle + (q * sp.integrand_steps) + p;
+	};
 	
 	double SigmaFactor(const ScatteringParameters& sp) {
 		double kf = M * sp.particle_speed / HBAR;
