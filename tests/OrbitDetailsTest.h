@@ -189,6 +189,7 @@ TEST_CASE("Circle Crosspoints")
 	}
 }
 
+/* Obsolete function.
 TEST_CASE("Phi")
 {
 	Orbit orbit1({ 0, 0 }, 1, true, 0, 0);
@@ -208,6 +209,7 @@ TEST_CASE("Phi")
 	phi = GetPhi({ 0.99999, -0.0045 }, &orbit1);
 	CHECK_APPROX_LOW(phi, PI2);
 }
+*/
 
 TEST_CASE("Cross Time")
 {

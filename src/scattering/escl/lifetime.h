@@ -96,9 +96,9 @@ ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 po
     const double2 vel         = v2(cos(p.phi), sin(p.phi)) * sp->particle_speed;
     const double2 center      = GetCyclotronOrbitCenter(p.starting_position, vel, orbit_radius, sp->particle_speed, clockwise);
 
-    const double bound_time = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, clockwise, false);
+    const double bound_time  = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, clockwise, false);
     const double bound_angle = GetBoundAngle(p.phi, sp->alpha, clockwise);
-    const double bound_phi = sp->is_incoherent ? GetCrossAngle(p.phi, bound_angle, clockwise) : INF;
+    const double bound_phi   = sp->is_incoherent ? GetCrossAngle(p.phi, bound_angle, clockwise) : INF;
 
     Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
 
