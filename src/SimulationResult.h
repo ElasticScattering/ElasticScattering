@@ -67,3 +67,9 @@ class SampleResult {
 public:
     void AddSample();
 };
+
+class SimulationResult {
+    double time_elapsed;
+    //SimulationConfiguration cfg;
+    std::vector<SampleResult> samples;
+};

@@ -3,9 +3,10 @@
 
 #include "Grid.h"
 #include "escl/ScatteringParameters.h"
-#include "src/SimulationResult.h"
-
 #include "escl/constants.h"
+
+#include "src/SimulationResult.h"
+#include "src/Metrics.h"
 
 #include <vector>
 
@@ -28,7 +29,7 @@ protected:
 	}
 
 public:
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) = 0;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid, Metrics &metrics) = 0;
 	virtual IterationResult DeriveTemperature(const double temperature) = 0;
 };
 
@@ -40,7 +41,7 @@ private:
 	Sigma IntegrateResult(const std::vector<double>& current_lifetimes);
 
 public:
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) override;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid, Metrics& metrics) override;
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 };
 
@@ -50,7 +51,7 @@ class SimulationCL : public Simulation {
 	void PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup);
 
 public:
-	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid) override;
+	virtual void ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid, Metrics& metrics) override;
 	void UploadImpurities(const Grid& grid);
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 

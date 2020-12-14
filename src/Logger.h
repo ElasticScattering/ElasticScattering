@@ -2,6 +2,7 @@
 
 #include "SimulationConfiguration.h"
 #include "SimulationResult.h"
+#include "Metrics.h"
 
 #include <string>
 
@@ -10,9 +11,12 @@ private:
     static void WriteImageSection(std::vector<unsigned char>& pixels, const std::vector<double>& values, const int dim, const int image_id, const bool colored = false);
 
 public:
-    static void CreateLog(const std::string result_file, const SimulationConfiguration& cfg, double temperature);
-    static void FinishLog(const std::string file_path, const double time_elapsed);
+    static void CreateTemperatureLog(const SimulationConfiguration& cfg, int temperature_index, double temperature);
+
+    static void FinishLog(const std::string file_path, const Metrics metrics);
 
     static void LogResult(const std::string file_path, const DataRow row);
-    static void LogImages(const std::string file, const int dim, const double scale, const IterationResult iteration);
+    static void LogImages(const std::string file_path, const int dim, const double scale, const IterationResult iteration);
+
+    static void LogMetrics(const std::string file_path, const Metrics& metrics, const SimulationConfiguration& cfg);
 };

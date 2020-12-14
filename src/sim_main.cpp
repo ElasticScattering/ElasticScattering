@@ -17,6 +17,25 @@
 #include <random>
 #include <windows.h>
 
+void CreateOutputDirectories(const SimulationConfiguration &cfg)
+{
+    std::filesystem::create_directory(cfg.base_output_directory + "/Metrics");
+    for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
+        std::filesystem::create_directory(cfg.base_output_directory + "/Metrics/MF" + std::to_string(i));
+    }
+
+    for (int i = 0; i < cfg.temperatures.size(); i++) {
+        auto temp_dir = cfg.base_output_directory + "/T" + std::to_string(i);
+        std::filesystem::create_directory(temp_dir);
+        auto inter_dir = temp_dir + "/Intermediates";
+        std::filesystem::create_directory(inter_dir);
+
+        for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
+            std::filesystem::create_directory(inter_dir + "/MF" + std::to_string(i));
+        }
+    }
+}
+
 void sim_main(const InitParameters& init)
 {
     LARGE_INTEGER beginClock, endClock, clockFrequency;
@@ -25,28 +44,42 @@ void sim_main(const InitParameters& init)
     SimulationConfiguration cfg = ParseConfig(init.config_file);
     PrintSimulationInfo(cfg);
 
-    auto base_name = cfg.output_directory + "/results_";
-    for (int i = 0; i < cfg.temperatures.size(); i++) 
-        Logger::CreateLog(base_name + std::to_string(i) + ".dat", cfg, cfg.temperatures[i]);
+    CreateOutputDirectories(cfg);
 
     SimulationCPU es;
     for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
-        UpdateMagneticField(cfg.scattering_params, cfg.magnetic_field_range.min + cfg.magnetic_field_range.step_size * i);
-
-        cfg.intermediates_directory = cfg.output_directory + "/" + std::to_string(i) + ". Intermediates";
-        std::filesystem::create_directory(cfg.intermediates_directory);
-
         QueryPerformanceCounter(&beginClock);
-        RunSimulation(cfg, es);
+        RunSimulation(i, cfg, es);
         QueryPerformanceCounter(&endClock);
+
         double time_elapsed = double(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart;
 
-        printf("Simulation completed (%d/%d)\n", i + 1, cfg.magnetic_field_range.n);
+        printf("Simulation completed (%d/%d) - %f\n", i + 1, cfg.magnetic_field_range.n, time_elapsed);
     }
 }
 
-void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
+std::string GetImagePath(std::string base_directory, int t_idx, int m_idx, int s_idx, bool incoherent)
 {
+    auto type = incoherent ? " Incoherent" : " Coherent";
+    return base_directory + "/T" + std::to_string(t_idx) +
+        "/Intermediates/MF" + std::to_string(m_idx) + "/S" + std::to_string(s_idx) + type + ".png";
+}
+
+std::string GetMetricsPath(std::string base_directory, int m_idx, int s_idx, bool incoherent)
+{
+    auto type = incoherent ? " Incoherent" : " Coherent";
+    return base_directory + "/Metrics/MF" + std::to_string(m_idx) + "/S" + std::to_string(s_idx) + type + ".txt";
+}
+
+std::string GetResultPath(std::string base_directory, int t_idx)
+{
+    return base_directory + "/T" + std::to_string(t_idx) + "/result.dat";
+}
+
+void RunSimulation(const int magnetic_index, SimulationConfiguration& cfg, Simulation& es)
+{
+    UpdateMagneticField(cfg.scattering_params, cfg.magnetic_field_range.min + cfg.magnetic_field_range.step_size * magnetic_index);
+
     ScatteringParameters sp_inc = cfg.scattering_params;
     sp_inc.is_incoherent = 1;
 
@@ -55,46 +88,62 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
 
     std::random_device random_device;
 
-    std::vector<Sigma>  coherent_results(cfg.temperatures.size());
-    std::vector<Sigma>  incoherent_results(cfg.temperatures.size());
-    std::vector<double> total_dxx_sq(cfg.temperatures.size());
+    const int N = cfg.temperatures.size();
+    std::vector<Sigma>  coherent_results(N);
+    std::vector<Sigma>  incoherent_results(N);
+    std::vector<double> total_dxx_sq(N);
+    Metrics metrics;
+
+    QueryPerformanceFrequency(&metrics.clockFrequency);
 
     for (int j = 0; j < cfg.samples_per_run; j++) {
         auto impurity_index = Grid(sp_coh.impurity_count, random_device(), sp_coh.impurity_spawn_range, sp_coh.impurity_radius, sp_coh.cells_per_row);
+        metrics.actual_impurity_count = impurity_index.GetImpurities().size();
 
-        std::vector<Sigma> sample_coherent_results(cfg.temperatures.size());
-        std::vector<Sigma> sample_incoherent_results(cfg.temperatures.size());
+        std::vector<Sigma> sample_coherent_results(N);
+        std::vector<Sigma> sample_incoherent_results(N);
 
-        es.ComputeLifetimes(sp_coh, impurity_index);
-        for (int i = 0; i < cfg.temperatures.size(); i++) {
+        QueryPerformanceCounter(&metrics.beginClock);
+        es.ComputeLifetimes(sp_coh, impurity_index, metrics);
+        QueryPerformanceCounter(&metrics.endClock);
+
+        metrics.time_elapsed = double(metrics.endClock.QuadPart - metrics.beginClock.QuadPart) / metrics.clockFrequency.QuadPart;
+
+        Logger::LogMetrics(GetMetricsPath(cfg.base_output_directory, magnetic_index, j, false), metrics, cfg);
+        
+        for (int i = 0; i < N; i++) {
             UpdateTemperature(sp_coh, cfg.temperatures[i]);
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
 
             coherent_results[i]       += iteration.result;
             sample_coherent_results[i] = iteration.result;
 
-            Logger::LogImages(cfg.intermediates_directory + "/" + std::to_string(i) + ". Sample " + std::to_string(j) + ".png", sp_coh.dim - 1, sp_inc.tau, iteration);
+            auto image_path = GetImagePath(cfg.base_output_directory, i, magnetic_index, j, false);
+            Logger::LogImages(image_path, sp_coh.dim - 1, sp_inc.tau, iteration);
         }
 
-        es.ComputeLifetimes(sp_inc, impurity_index);
-        for (int i = 0; i < cfg.temperatures.size(); i++) {
+        es.ComputeLifetimes(sp_inc, impurity_index, metrics);
+        Logger::LogMetrics(GetMetricsPath(cfg.base_output_directory, magnetic_index, j, true), metrics, cfg);
+        for (int i = 0; i < N; i++) {
             UpdateTemperature(sp_inc, cfg.temperatures[i]);
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
 
             incoherent_results[i]       += iteration.result;
             sample_incoherent_results[i] = iteration.result;
-            Logger::LogImages(cfg.intermediates_directory + "/" + std::to_string(i) + ". Sample " + std::to_string(j) + "I.png", sp_inc.dim - 1, sp_inc.tau, iteration);
+            
+            auto image_path = GetImagePath(cfg.base_output_directory, i, magnetic_index, j, true);
+            Logger::LogImages(image_path, sp_inc.dim - 1, sp_inc.tau, iteration);
         }
 
-        for (int i = 1; i < cfg.temperatures.size(); i++) {
+        for (int i = 1; i < N; i++) {
             total_dxx_sq[i] += pow(sample_coherent_results[i].xx + sample_incoherent_results[i].xx, 2);
         }
 
-        printf("Sample completed!\n");
+        printf("\tSample completed!\n");
     }
 
     double sample_count = (double)cfg.samples_per_run;
-    for (int i = 0; i < cfg.temperatures.size(); i++)
+    for (int i = 0; i < N; i++)
     {
         coherent_results[i].xx /= sample_count;
         coherent_results[i].xy /= sample_count;
@@ -103,7 +152,7 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
         incoherent_results[i].xy /= sample_count;
     }
 
-    for (int i = 0; i < cfg.temperatures.size(); i++)
+    for (int i = 0; i < N; i++)
     {
         DataRow row;
         row.magnetic_field = cfg.scattering_params.magnetic_field;
@@ -116,8 +165,8 @@ void RunSimulation(const SimulationConfiguration& cfg, Simulation& es)
         double sxx_std    = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (sample_count - 1));
 
         row.xxd = sxx_std / sxx_exp;
-        
-        Logger::LogResult(cfg.output_directory + "/results_" + std::to_string(i) + ".dat", row);
+
+        Logger::LogResult(GetResultPath(cfg.base_output_directory, i), row);
     }
 }
 
@@ -233,8 +282,8 @@ SimulationConfiguration ParseConfig(std::string file)
         }
     }
 
-    cfg.samples_per_run  = atoi(values.at("samples_per_run").c_str());
-    cfg.output_directory = GetAvailableDirectory(values.at("output_directory"));
+    cfg.samples_per_run                = atoi(values.at("samples_per_run").c_str());
+    cfg.base_output_directory          = GetAvailableDirectory(values.at("output_directory"));
 
     ScatteringParameters sp;
     sp.integrand_steps                 = atoi(values.at("integrand_steps").c_str());
@@ -263,5 +312,5 @@ SimulationConfiguration ParseConfig(std::string file)
 void PrintSimulationInfo(const SimulationConfiguration &cfg)
 {
     printf("Starting simulation...\n");
-    printf("\tWriting to: %s\n\n", cfg.output_directory.c_str());
+    printf("\tWriting to: %s\n\n", cfg.base_output_directory.c_str());
 }

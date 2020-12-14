@@ -2,7 +2,7 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
-void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid)
+void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid, Metrics& metrics)
 {
 	sp = p_sp;
 	
@@ -18,11 +18,7 @@ void SimulationCPU::ComputeLifetimes(const ScatteringParameters& p_sp, const Gri
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < sp.integrand_steps; p++) {
-					double lt = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex());
-					raw_lifetimes[GetIndex(i, j, q, p)] = lt;
-					if (lt > 1) {
-						//printf("Large LT: %e", lt);
-					}
+					raw_lifetimes[GetIndex(i, j, q, p)] = lifetime(q, p, pos, &sp, grid.GetImpurities(), grid.GetIndex(), &metrics);
 				}
 			}
 		}

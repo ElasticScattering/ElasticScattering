@@ -20,48 +20,94 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 
-void Logger::CreateLog(const std::string result_file, const SimulationConfiguration& cfg, double temperature)
+void Logger::CreateTemperatureLog(const SimulationConfiguration& cfg, int temperature_index, double temperature)
 {
+    auto file_path = cfg.base_output_directory + "/T" + std::to_string(temperature_index) + "/results.dat";
     std::ofstream file;
-    file.open(result_file);
-
-    file << "# Elastic Scattering simulation results" << std::endl;
-    file << "# Number of runs: " << cfg.magnetic_field_range.n << std::endl;
-    file << "# Samples per row: " << cfg.samples_per_run << std::endl;
-
+    file.open(file_path);
+    
     ScatteringParameters sp = cfg.scattering_params;
 
+    file << "# Elastic Scattering simulation results summary." << std::endl;
+    file << "# Simulations " << cfg.magnetic_field_range.n << std::endl;
+    file << "# Samples     " << cfg.samples_per_run << std::endl;
+    file << "# Particles   " << sp.dim << "x" << sp.dim << std::endl;
+    file << "# Phi steps   " << sp.integrand_steps << std::endl;
+
     file << std::scientific << std::setprecision(3);
-    file << "#" << std::endl;
+    file << std::endl;
     file << "###########################" << std::endl;
-    file << "# Scattering parameters:  #" << std::endl;
-    file << "###########################" << std::endl;
-    file << "#\t" << "Dimension:        " << sp.dim << std::endl;
-    file << "#\t" << "Integrand steps:  " << sp.integrand_steps << std::endl;
+    file << "# Scattering parameters   #" << std::endl;
     file << "#" << std::endl;
-    file << "#\t" << "Temperature:      " << temperature << std::endl;
-    file << "#\t" << "Tau:              " << sp.tau << std::endl;
-    file << "#\t" << "Alpha:            " << sp.alpha << std::endl;
-    file << "#\t" << "Particle speed:   " << sp.particle_speed << std::endl;
-    file << "#\t" << "Clockwise:        " << ((sp.is_clockwise == 1) ? "True" : "False") << std::endl;
+    file << "#\t" << "Temperature    " << temperature << std::endl;
+    file << "#\t" << "Tau            " << sp.tau << std::endl;
+    file << "#\t" << "Alpha          " << sp.alpha << std::endl;
+    file << "#\t" << "Particle speed " << sp.particle_speed << std::endl;
+    file << "#\t" << "Clockwise      " << ((sp.is_clockwise == 1) ? "True" : "False") << std::endl;
     file << "#\n# Impurities:" << std::endl;
-    file << "#\t" << "Count:            " << sp.impurity_count << std::endl;
-    file << "#\t" << "Region size:      " << sp.region_size << std::endl;
-    file << "#\t" << "Region extends:   " << sp.region_extends << std::endl;
-    file << "#\t" << "Density:          " << sp.impurity_density << std::endl;
-    file << "#\t" << "Radius:           " << sp.impurity_radius << std::endl;
+    file << "#\t" << "Count          " << sp.impurity_count << std::endl;
+    file << "#\t" << "Region size    " << sp.region_size << std::endl;
+    file << "#\t" << "Region extends " << sp.region_extends << std::endl;
+    file << "#\t" << "Density        " << sp.impurity_density << std::endl;
+    file << "#\t" << "Radius         " << sp.impurity_radius << std::endl;
 
     file << "#\n# Constants:" << std::endl;
-    file << "#\t" << "Particle mass:    " << M << std::endl;
-    file << "#\t" << "E:                " << E << std::endl;
-    file << "#\t" << "HBAR:             " << HBAR << std::endl;
-    file << "#\t" << "C:                " << C1 << std::endl;
-    file << "#\t" << "KB:               " << KB << std::endl;
-    file << "#" << std::endl;
+    file << "#\t" << "Particle mass  " << M << std::endl;
+    file << "#\t" << "E              " << E << std::endl;
+    file << "#\t" << "HBAR           " << HBAR << std::endl;
+    file << "#\t" << "C              " << C1 << std::endl;
+    file << "#\t" << "KB             " << KB << std::endl;
+    file << "#\n# Other:" << std::endl;
+    file << "#" << "Grid cells       " << sp.cells_per_row << "x" << sp.cells_per_row << std::endl;
+    file << "#" << "Grid cell size   " << sp.cell_size << std::endl;
+    file << std::endl;
     file << "###########################" << std::endl;
-    file << "# Results:                #" << std::endl;
-    file << "###########################" << std::endl << std::endl;
-    file << "magnetic_field sigma_xx_inc sigma_xx_coh sigma_xy_inc sigma_xy_coh delta_xx" << std::endl;
+    file << "# Results                 #" << std::endl;
+    file << "#" << std::endl << std::endl;
+    file << "magnetic_field     sigma_xx_inc        sigma_xx_coh       sigma_xy_inc        sigma_xy_coh       delta_xx" << std::endl;
+}
+
+void Logger::LogMetrics(const std::string file_path, const Metrics& metrics, const SimulationConfiguration& cfg)
+{
+    auto sp = cfg.scattering_params;
+
+    double nparticles = pow(sp.dim - 1, 2);
+    double n_lt = nparticles * 4.0 * sp.integrand_steps;
+    double pct_escaped  = 100 * (double)metrics.particles_escaped / n_lt;
+
+    double avg_impurities_in_cell = metrics.actual_impurity_count / (double)(sp.cells_per_row * sp.cells_per_row);
+
+    std::ofstream file;
+    file.open(file_path);
+    
+    file << "# Metrics collected during particle lifetime computation." << std::endl << std::endl;
+    
+    file << std::setprecision(4);
+    file << ":/ Problem size" << std::endl;
+    file << "Particles               " << sp.dim << "x" << sp.dim << std::endl;
+    file << "Values per particle     " << (sp.integrand_steps*4.0) << std::endl;
+    file << "Time passed             " << metrics.time_elapsed << " seconds" << std::endl;
+    file << std::endl;
+    file << ":/ Grid" << std::endl;
+    file << "Impurities              " << sp.impurity_count << std::endl;
+    file << "Cells                   " << sp.cells_per_row << "x" << sp.cells_per_row << std::endl;
+    file << "Avg. impurities in cell " << avg_impurities_in_cell << " (includes overlapping impurities)" <<std::endl;
+    file << "Avg. overlapping        " << avg_impurities_in_cell - sp.max_expected_impurities_in_cell << std::endl;
+    file << std::endl;
+    file << ":/ Totals" << std::endl;
+    file << "Impurity intersections  " << metrics.impurity_intersections << std::endl;
+    file << "Cells passed            " << metrics.cells_passed           << std::endl;
+    file << "Particles escaped       " << metrics.particles_escaped      << " (" << pct_escaped  << "%)" << std::endl;
+
+    double prt_impurity_intersections = (double)metrics.impurity_intersections / n_lt;
+    double prt_cells_passed           = (double)metrics.cells_passed           / n_lt;
+
+    double prt_pct_impurity = 100 * prt_impurity_intersections / sp.impurity_count;
+    double prt_pct_passed   = 100 * prt_cells_passed           / pow(sp.cells_per_row, 2);
+    
+    file << "\n:/ Particle" << std::endl;
+    file << "Avg. intersections      " << prt_impurity_intersections << " (" << prt_pct_impurity << "%)" << std::endl;
+    file << "Avg. cells passed       " << prt_cells_passed           << " (" << prt_pct_passed   << "%)" << std::endl;
 }
 
 void Logger::LogResult(const std::string file_path, const DataRow row)
@@ -69,19 +115,22 @@ void Logger::LogResult(const std::string file_path, const DataRow row)
     std::ofstream file;
     file.open(file_path, std::ios_base::app);
 
+    std::string s = "   ";
     file << std::scientific << std::setprecision(10);
-    file << row.magnetic_field << " " << row.incoherent.xx << " " << row.coherent.xx << " " << row.incoherent.xy << " " << row.coherent.xy << " " << row.xxd << std::endl;
+    file << row.magnetic_field << s << row.incoherent.xx << s << row.coherent.xx << s << row.incoherent.xy << s << row.coherent.xy << s << row.xxd << std::endl;
 }
 
-void Logger::FinishLog(const std::string file_path, const double time_elapsed)
+void Logger::FinishLog(const std::string file_path, const Metrics metrics)
 {
     std::ofstream file;
     file.open(file_path, std::ios_base::app);
 
     auto date_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    file << "\n\n\n###################################" << std::endl;
-    file << "# Completed on: " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
-    file << "# Elapsed time: " << time_elapsed << " seconds." << std::endl;
+    file << "\n\n\n###########################" << std::endl;
+    file << "# Statistics              #" << std::endl;
+    file << "#" << std::endl << std::endl;
+    file << "# Completed on " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
+    file << "# Elapsed time " << metrics.time_elapsed << " seconds." << std::endl;
 }
 
 void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::vector<double> &values, const int dim, const int image_id, const bool colored)
@@ -127,7 +176,7 @@ void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::ve
         }
 }
 
-void Logger::LogImages(const std::string file, const int dim, const double scale, const IterationResult iteration)
+void Logger::LogImages(const std::string file_path, const int dim, const double scale, const IterationResult iteration)
 {
     const int image_width  = dim * 3;
     const int image_height = dim;
@@ -139,5 +188,5 @@ void Logger::LogImages(const std::string file, const int dim, const double scale
     WriteImageSection(pixels, iteration.sigmas.xx_buffer,   dim, 1);
     WriteImageSection(pixels, iteration.sigmas.xy_buffer,   dim, 2, true);
 
-    stbi_write_png(file.c_str(), image_width, image_height, 3, pixels.data(), image_width * num_channels);
+    stbi_write_png(file_path.c_str(), image_width, image_height, 3, pixels.data(), image_width * num_channels);
 }

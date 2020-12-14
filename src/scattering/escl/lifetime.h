@@ -7,6 +7,8 @@
 #include "constants.h"
 #include "cell_grid.h"
 
+#include "src/Metrics.h"
+
 #ifndef DEVICE_PROGRAM
     #include <vector>
     #include "windows.h"
@@ -51,6 +53,11 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         int impurity_start = (cell_idx > 0) ? cell_indices[cell_idx - 1] : 0;
         int impurity_end = cell_indices[cell_idx];
 
+#ifndef DEVICE_PROGRAM
+        metrics->impurity_intersections += (impurity_end - impurity_start);
+        metrics->cells_passed           += 1;
+#endif
+
         // Test each impurity.
         for (int i = impurity_start; i < impurity_end; i++) {
             double2 impurity = impurities[i];
@@ -69,7 +76,12 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         if (lifetime < INF || !next_cell_available)
             break;
     }
-    
+
+#ifndef DEVICE_PROGRAM
+    if (lifetime > 1)
+    metrics->particles_escaped += 1;
+#endif
+
     return min(lifetime, orbit->bound_time);
 }
 
@@ -104,6 +116,6 @@ ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 po
 
     p.orbit_angle = GetAngle(pos, &orbit);
 
-    double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices);
+    double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices, metrics);
     return lt;
 }

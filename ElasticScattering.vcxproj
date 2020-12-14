@@ -375,6 +375,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Logger.h" />
+    <ClInclude Include="src\Metrics.h" />
     <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />

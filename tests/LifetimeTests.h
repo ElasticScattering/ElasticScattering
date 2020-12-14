@@ -48,6 +48,8 @@ TEST_CASE("Lifetime tests")
 
 	Grid grid(impurities, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
+	Metrics m;
+
 	SUBCASE("Intersect in the second box")
 	{
 		sp.is_incoherent = 0;
@@ -55,7 +57,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 		
 		CHECK(lt > 0.88);
 		CHECK(lt < 0.89);
@@ -68,7 +70,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK_ALMOST(lt, (PI / 4));
 	}
@@ -80,7 +82,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt > 0.078);
 		CHECK(lt < 0.079);
@@ -93,7 +95,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 2.99e-7), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		double r = abs(lt - PI / 4);
 		CHECK(r < 1e-7);
@@ -106,7 +108,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 4.3e-7), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(7e-7, 4.3e-7), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt > 3.82); 
 		CHECK(lt < 3.83);
@@ -121,7 +123,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(6.5e-7, 1.35e-6), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(6.5e-7, 1.35e-6), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt > 100);
 	}
@@ -135,7 +137,7 @@ TEST_CASE("Lifetime tests")
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
-		double lt = sp.angular_speed * lifetime(0, 0, v2(6.15e-7, 1.35e-6), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 0, v2(6.15e-7, 1.35e-6), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt > 2.21);
 		CHECK(lt < 2.215);
@@ -151,7 +153,7 @@ TEST_CASE("Lifetime tests")
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;
 
-		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 5.0000000e-07), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 5.0000000e-07), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt > 1);
 	}
@@ -166,7 +168,7 @@ TEST_CASE("Lifetime tests")
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;
 
-		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 5.0000100e-07), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 5.0000100e-07), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt < 1);
 	}
@@ -181,7 +183,7 @@ TEST_CASE("Lifetime tests")
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;
 
-		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 4.9999900e-07), &sp, grid.GetImpurities(), grid.GetIndex());
+		double lt = sp.angular_speed * lifetime(0, 1, v2(1.00000000e-06, 4.9999900e-07), &sp, grid.GetImpurities(), grid.GetIndex(), &m);
 
 		CHECK(lt < 1);
 	}

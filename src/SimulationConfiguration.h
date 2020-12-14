@@ -32,8 +32,9 @@ typedef struct SimulationConfiguration
     Range magnetic_field_range;
     std::vector<double> temperatures;
 
-    std::string output_directory;
-    std::string intermediates_directory;
+    std::string base_output_directory;
+    std::string current_intermediates_dir;
+    std::string current_metrics_directory;
 
     ScatteringParameters scattering_params;
 } SimulationConfiguration;

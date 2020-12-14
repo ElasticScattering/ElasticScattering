@@ -39,7 +39,7 @@ IterationResult SimulationCL::DeriveTemperature(const double temperature)
     return ir;
 }
 
-void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid)
+void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid, Metrics &metrics)
 {
     const size_t items_in_work_group = min(sp.dim, 256);
 
