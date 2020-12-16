@@ -45,8 +45,6 @@ public:
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 };
 
-
-
 class SimulationCL : public Simulation {
 	void PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup);
 

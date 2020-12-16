@@ -4,7 +4,7 @@
 Loggen
 	- Gem. integrated_particles. (simpson integratie)
 	- Particle waardes die niet botsen.
-
+	- aantal particles die starten in impurity
 
 Code / Resultaten
 	Invloed van particles die in impurity starten?

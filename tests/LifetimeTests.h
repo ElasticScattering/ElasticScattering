@@ -6,7 +6,6 @@
 
 #include "src/scattering/Grid.h"
 #include "src/scattering/escl/lifetime.h"
-#include "src/sim_main.h"
 
 void DecideFinalParameters(ScatteringParameters& sp)
 {

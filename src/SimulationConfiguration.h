@@ -21,9 +21,8 @@ typedef struct
 
 typedef struct Range
 {
-    double min, max;
+    double min, max, step_size;
     int n;
-    int step_size;
 } Range;
 
 typedef struct SimulationConfiguration

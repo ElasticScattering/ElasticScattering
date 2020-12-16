@@ -20,9 +20,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 
-void Logger::CreateTemperatureLog(const SimulationConfiguration& cfg, int temperature_index, double temperature)
+void Logger::CreateTemperatureLog(std::string file_path, const SimulationConfiguration& cfg, double temperature)
 {
-    auto file_path = cfg.base_output_directory + "/T" + std::to_string(temperature_index) + "/results.dat";
     std::ofstream file;
     file.open(file_path);
     
@@ -31,7 +30,7 @@ void Logger::CreateTemperatureLog(const SimulationConfiguration& cfg, int temper
     file << "# Elastic Scattering simulation results summary." << std::endl;
     file << "# Simulations " << cfg.magnetic_field_range.n << std::endl;
     file << "# Samples     " << cfg.samples_per_run << std::endl;
-    file << "# Particles   " << sp.dim << "x" << sp.dim << std::endl;
+    file << "# Particles   " << sp.dim-1 << "x" << sp.dim-1 << std::endl;
     file << "# Phi steps   " << sp.integrand_steps << std::endl;
 
     file << std::scientific << std::setprecision(3);
@@ -67,47 +66,59 @@ void Logger::CreateTemperatureLog(const SimulationConfiguration& cfg, int temper
     file << "magnetic_field     sigma_xx_inc        sigma_xx_coh       sigma_xy_inc        sigma_xy_coh       delta_xx" << std::endl;
 }
 
-void Logger::LogMetrics(const std::string file_path, const Metrics& metrics, const SimulationConfiguration& cfg)
+void Logger::CreateMetricsLog(const std::string file_path, const ScatteringParameters& sp)
 {
-    auto sp = cfg.scattering_params;
-
-    double nparticles = pow(sp.dim - 1, 2);
-    double n_lt = nparticles * 4.0 * sp.integrand_steps;
-    double pct_escaped  = 100 * (double)metrics.particles_escaped / n_lt;
-
-    double avg_impurities_in_cell = metrics.actual_impurity_count / (double)(sp.cells_per_row * sp.cells_per_row);
-
     std::ofstream file;
     file.open(file_path);
+
+    int phi_values = 4 * sp.integrand_steps;
+    int lifetimes = pow(sp.dim - 1, 2) * phi_values;
     
     file << "# Metrics collected during particle lifetime computation." << std::endl << std::endl;
-    
     file << std::setprecision(4);
     file << ":/ Problem size" << std::endl;
-    file << "Particles               " << sp.dim << "x" << sp.dim << std::endl;
-    file << "Values per particle     " << (sp.integrand_steps*4.0) << std::endl;
-    file << "Time passed             " << metrics.time_elapsed << " seconds" << std::endl;
-    file << std::endl;
-    file << ":/ Grid" << std::endl;
-    file << "Impurities              " << sp.impurity_count << std::endl;
-    file << "Cells                   " << sp.cells_per_row << "x" << sp.cells_per_row << std::endl;
-    file << "Avg. impurities in cell " << avg_impurities_in_cell << " (includes overlapping impurities)" <<std::endl;
-    file << "Avg. overlapping        " << avg_impurities_in_cell - sp.max_expected_impurities_in_cell << std::endl;
-    file << std::endl;
-    file << ":/ Totals" << std::endl;
-    file << "Impurity intersections  " << metrics.impurity_intersections << std::endl;
-    file << "Cells passed            " << metrics.cells_passed           << std::endl;
-    file << "Particles escaped       " << metrics.particles_escaped      << " (" << pct_escaped  << "%)" << std::endl;
+    file << "Magnetic field " << sp.magnetic_field << std::endl;
+    file << "Particles      " << sp.dim - 1 << "x" << sp.dim - 1 << std::endl;
+    file << "Phi values     " << phi_values << std::endl;
+    file << "Lifetimes      " << lifetimes << std::endl;
+    file << "Impurities     " << sp.impurity_count << std::endl;
+    file << "Cells          " << sp.cells_per_row << "x" << sp.cells_per_row << std::endl;
+    file << std::endl << std::endl << std::endl;
+}
 
-    double prt_impurity_intersections = (double)metrics.impurity_intersections / n_lt;
-    double prt_cells_passed           = (double)metrics.cells_passed           / n_lt;
+void Logger::LogMetrics(const std::string file_path, const SampleMetrics& metrics, const int sample_id)
+{
+    /*
+    Niet erg interessant maar wel per iteratie...
+    double avg_impurities_in_cell = metrics.actual_impurity_count / (double)(sp.cells_per_row * sp.cells_per_row);
+    file << "Avg. impurities in cell " << avg_impurities_in_cell << " (" << avg_impurities_in_cell - sp.max_expected_impurities_in_cell << "from overlapping)" << std::endl;
+    */
 
-    double prt_pct_impurity = 100 * prt_impurity_intersections / sp.impurity_count;
-    double prt_pct_passed   = 100 * prt_cells_passed           / pow(sp.cells_per_row, 2);
-    
-    file << "\n:/ Particle" << std::endl;
-    file << "Avg. intersections      " << prt_impurity_intersections << " (" << prt_pct_impurity << "%)" << std::endl;
-    file << "Avg. cells passed       " << prt_cells_passed           << " (" << prt_pct_passed   << "%)" << std::endl;
+    const int metric_width = 26;
+    const int value_width = 15;
+
+    auto f = fopen(file_path.c_str(), "a");
+    fprintf(f, ":/ Sample %i\n", sample_id);
+    fprintf(f, "\n");
+    fprintf(f, "%-*s| %-13s| %s\n", metric_width, "Metric", "Coherent", "Incoherent");
+    fprintf(f, "%s|%s|%s\n", std::string(metric_width, '-').c_str(), std::string(14, '-').c_str(), std::string(14, '-').c_str());
+    fprintf(f, "%-*s| %-13f| %f\n", metric_width, "Time passed LT (s)", metrics.coherent.time_elapsed_lifetimes, metrics.incoherent.time_elapsed_lifetimes);
+    fprintf(f, "%-*s| %-13f| %f\n", metric_width, "Time passed Rest (s)", metrics.coherent.time_elapsed_temperatures, metrics.incoherent.time_elapsed_temperatures);
+    fprintf(f, "%-*s| %-13s|\n", metric_width, "", "");
+    fprintf(f, "%-*s| %-13i| %i\n", metric_width, "Impurity intersections", metrics.coherent.impurity_intersections, metrics.incoherent.impurity_intersections);
+    fprintf(f, "\t%-*s| %-13f| %f\n", metric_width - 4, "Particle average", metrics.coherent.prt_impurity_intersections, metrics.incoherent.prt_impurity_intersections);
+    fprintf(f, "\t%-*s| %-13f| %f\n", metric_width - 4, "Particle percentage", metrics.coherent.pct_prt_impurity_intersections, metrics.incoherent.pct_prt_impurity_intersections);
+    fprintf(f, "%-*s| %-13s|\n", metric_width, "", "");
+    fprintf(f, "%-*s| %-13i| %i\n", metric_width, "Cells passed", metrics.coherent.cells_passed, metrics.incoherent.cells_passed);
+    fprintf(f, "\t%-*s| %-13f| %f\n", metric_width - 4, "Particle average", metrics.coherent.prt_cells_passed, metrics.incoherent.prt_cells_passed);
+    fprintf(f, "\t%-*s| %-13f| %f\n", metric_width - 4, "Particle percentage", metrics.coherent.pct_prt_cells_passed, metrics.incoherent.pct_prt_cells_passed);
+    fprintf(f, "%-*s| %-13s|\n", metric_width, "", "");
+    fprintf(f, "%-*s| %-13i| %i\n", metric_width, "Escaped", metrics.coherent.particles_escaped, metrics.incoherent.particles_escaped);
+    fprintf(f, "%-*s| %-13i| %i\n", metric_width, "Started inside impurity", metrics.coherent.particles_inside_impurity, metrics.incoherent.particles_inside_impurity);
+    fprintf(f, "\n");
+    fprintf(f, "\n");
+
+    fclose(f);
 }
 
 void Logger::LogResult(const std::string file_path, const DataRow row)
@@ -130,7 +141,7 @@ void Logger::FinishLog(const std::string file_path, const Metrics metrics)
     file << "# Statistics              #" << std::endl;
     file << "#" << std::endl << std::endl;
     file << "# Completed on " << std::put_time(std::localtime(&date_time), "%F %T") << "." << std::endl;
-    file << "# Elapsed time " << metrics.time_elapsed << " seconds." << std::endl;
+    file << "# Elapsed time " << metrics.time_elapsed_lifetimes << " seconds." << std::endl;
 }
 
 void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::vector<double> &values, const int dim, const int image_id, const bool colored)
@@ -176,7 +187,7 @@ void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::ve
         }
 }
 
-void Logger::LogImages(const std::string file_path, const int dim, const double scale, const IterationResult iteration)
+void Logger::LogImages(const std::string file_path, const int dim, const IterationResult iteration)
 {
     const int image_width  = dim * 3;
     const int image_height = dim;

@@ -79,7 +79,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
 
 #ifndef DEVICE_PROGRAM
     if (lifetime > 1)
-    metrics->particles_escaped += 1;
+        metrics->particles_escaped += 1;
 #endif
 
     return min(lifetime, orbit->bound_time);
@@ -100,8 +100,10 @@ ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 po
     int impurity_end        = cell_indices[particle_cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {
-        if (InsideImpurity(pos, impurities[i], sp->impurity_radius))
+        if (InsideImpurity(pos, impurities[i], sp->impurity_radius)) {
+            metrics->particles_inside_impurity += 1;
             return 0;
+        }
     }
 
     const double orbit_radius = sp->particle_speed / sp->angular_speed;

@@ -11,12 +11,12 @@ private:
     static void WriteImageSection(std::vector<unsigned char>& pixels, const std::vector<double>& values, const int dim, const int image_id, const bool colored = false);
 
 public:
-    static void CreateTemperatureLog(const SimulationConfiguration& cfg, int temperature_index, double temperature);
-
-    static void FinishLog(const std::string file_path, const Metrics metrics);
-
+    static void CreateTemperatureLog(std::string file_path, const SimulationConfiguration& cfg, double temperature);
     static void LogResult(const std::string file_path, const DataRow row);
-    static void LogImages(const std::string file_path, const int dim, const double scale, const IterationResult iteration);
+    static void FinishLog(const std::string file_path, const Metrics metrics);
+    
+    static void LogImages(const std::string file_path, const int dim, const IterationResult iteration);
 
-    static void LogMetrics(const std::string file_path, const Metrics& metrics, const SimulationConfiguration& cfg);
+    static void CreateMetricsLog(const std::string file_path, const ScatteringParameters& sp);
+    static void LogMetrics(const std::string file_path, const SampleMetrics& metrics, const int sample_id);
 };

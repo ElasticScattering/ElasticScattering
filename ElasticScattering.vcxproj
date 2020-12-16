@@ -368,7 +368,7 @@
     <ClCompile Include="src\scattering\SimulationCL.cpp" />
     <ClCompile Include="src\scattering\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\sim_main.cpp" />
+    <ClCompile Include="src\SimulationRunner.cpp" />
     <ClCompile Include="src\utils\ParametersFactory.cpp" />
     <ClCompile Include="tests\AngleTests.h" />
     <ClCompile Include="tests\data\kernels\test_cpp.cpp" />
@@ -388,7 +388,7 @@
     <ClInclude Include="src\scattering\escl\lifetime.h" />
     <ClInclude Include="src\scattering\escl\util.h" />
     <ClInclude Include="src\scattering\Grid.h" />
-    <ClInclude Include="src\sim_main.h" />
+    <ClInclude Include="src\SimulationRunner.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="src\utils\ParametersFactory.h" />

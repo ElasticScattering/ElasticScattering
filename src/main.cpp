@@ -2,7 +2,7 @@
 
 #include "SimulationConfiguration.h"
 #include "tests/test_main.h"
-#include "sim_main.h"
+#include "SimulationRunner.h"
 
 #include <string>
 
@@ -44,7 +44,11 @@ int main(int argc, char **argv)
 
     switch (init.mode) {
         case ProgramMode::Test       : test_main();    break;
-        case ProgramMode::Simulation : sim_main(init); break;
+        case ProgramMode::Simulation: {
+            SimulationRunner sr;
+            sr.Run(init);
+            break;
+        }
     }
     
     return 0;
