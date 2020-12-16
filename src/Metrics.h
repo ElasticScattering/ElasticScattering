@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef DEVICE_PROGRAM
 #include <windows.h>
+#endif // !DEVICE_PROGRAM
 
 struct Metrics {
     int cells_passed;
@@ -22,6 +24,7 @@ struct Metrics {
     double time_elapsed_temperatures;
 };
 
+#ifndef DEVICE_PROGRAM
 class SampleMetrics {
 public:
     Metrics coherent, incoherent;
@@ -30,3 +33,4 @@ public:
 
     LARGE_INTEGER beginClock, endClock, clockFrequency;
 };
+#endif // !DEVICE_PROGRAM

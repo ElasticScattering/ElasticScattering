@@ -29,6 +29,7 @@ private:
 	std::vector<v2> ordered_impurities;
 	std::vector<int> imp_index;
 
+	int unique_impurity_count;
 	int total_indexed_impurities;
 	int cells_per_row;
 	v2 spawn_range;
@@ -42,7 +43,6 @@ private:
 	void ConvertToIndex();
 
 public:
-	int impurity_count;
 	const std::vector<v2>& GetImpurities() const { return ordered_impurities; };
 	const std::vector<int>& GetIndex() const { return imp_index; };
 

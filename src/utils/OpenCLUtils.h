@@ -149,12 +149,8 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
     cl_program program = clCreateProgramWithSource(p_ocl_context, 1, (const char**)&code, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create program.");
 
-    if (true) {
-        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM -D NO_WINDOW", NULL, NULL);
-    }
-    else {
-        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
-    }
+    clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
+
     if (clStatus != CL_SUCCESS) {
         size_t len;
         char buffer[4086];

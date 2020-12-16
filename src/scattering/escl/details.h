@@ -6,7 +6,7 @@
 #ifndef DEVICE_PROGRAM
     #include <cmath>
     #include <cfloat>
-    #include<cstdio>
+    #include <cstdio>
 #endif
 
 typedef struct Orbit {
@@ -19,6 +19,7 @@ typedef struct Orbit {
 
 	bool clockwise;
 
+#ifndef DEVICE_PROGRAM
 	Orbit(double2 _center, double _radius, bool _clockwise, double _bound_time, double _bound_phi) {
 		center = _center;
 		radius = _radius;
@@ -38,6 +39,7 @@ typedef struct Orbit {
 
         radius_squared = radius * radius;
     }
+#endif
 } Orbit;
 
 typedef struct Particle {
@@ -65,22 +67,24 @@ AngleVelocity(const double pos_angle, const bool clockwise)
     return smod(pos_angle + offset, PI2);
 }
 
+
 ESCL_INLINE 
 double GetAngle(const double2 pos, const Orbit* orbit) {
     const double y_dist = pos.y - orbit->center.y;
     const bool left_side = pos.x < orbit->center.x;
-
     double angle = 0;
-    if (abs(y_dist) > (1e-10 * orbit->radius)) {
+    if (fabs(y_dist) > (1e-10 * orbit->radius)) {
         angle = asin(y_dist / orbit->radius);
         angle = left_side ? PI - angle : angle;
     }
     else {
         angle = left_side ? PI : 0;
     }
-    
+
     return AngleVelocity(angle, orbit->clockwise);
 }
+
+
 
 ESCL_INLINE double
 GetCrossAngle(const double p, const double q, const bool clockwise)
@@ -89,10 +93,11 @@ GetCrossAngle(const double p, const double q, const bool clockwise)
     return smod(g, PI2);
 }
 
+
 ESCL_INLINE bool 
 AngleInRange(const double phi, const double2 phi_range, const bool clockwise)
 {
-    if (abs(phi_range.x - phi_range.y) < 1e-10) return true;
+    if (fabs(phi_range.x - phi_range.y) < 1e-10) return true;
 
     double low  = (clockwise) ? phi_range.y : phi_range.x;
     double high = (clockwise) ? phi_range.x : phi_range.y;
@@ -114,13 +119,12 @@ AngleInRange(const double phi, const double2 phi_range, const bool clockwise)
     }
     */
 
-    return (low < phi && phi < high ) || (low < (phi + PI2) && (phi + PI2) < high);
+    return (low < phi && phi < high) || (low < (phi + PI2) && (phi + PI2) < high);
 }
 
 ///
 /// Impurity intersect
 ///
-
 ESCL_INLINE bool 
 CirclesCross(const Orbit* orbit, const double2 p2, const double r2)
 {
@@ -157,18 +161,18 @@ GetCrossPoints(const Orbit* orbit, const double2 p2, const double r2)
 }
 
 /* Returns the first intersection with the impurity circle, or INF if it lies in an invalid range.
- * 
- * Orbit hits this impurity, but it can still lie in a subsection of the cell that is strictly later on 
- * the orbit's trajectory than parts of other cells, and thus it should be ignored until we have found 
- * no intersection in those cells.
- */
+* 
+* Orbit hits this impurity, but it can still lie in a subsection of the cell that is strictly later on 
+* the orbit's trajectory than parts of other cells, and thus it should be ignored until we have found 
+* no intersection in those cells.
+*/
 ESCL_INLINE double 
 GetFirstCrossTime(const Orbit* orbit, const double particle_phi, const double2 ip, const double ir, const double w, const double2 valid_range)
 {
     const double4 cross_points = GetCrossPoints(orbit, ip, ir);
 
-    const double2 p1 = { cross_points.x, cross_points.y };
-    const double2 p2 = { cross_points.z, cross_points.w };
+    const double2 p1 = MAKE_DOUBLE2(cross_points.x, cross_points.y);
+    const double2 p2 = MAKE_DOUBLE2(cross_points.z, cross_points.w);
     
     const double phi1 = GetAngle(p1, orbit);
     const double phi2 = GetAngle(p2, orbit);
@@ -223,10 +227,10 @@ GetBoundAngle(const double phi, const double alpha, const bool clockwise)
     return (dangle1 < dangle2) ? bound1 : bound2;
 }
 
-ESCL_INLINE double2 
+ESCL_INLINE double2
 GetCyclotronOrbitCenter(const double2 p, const double2 velocity, const double radius, const double vf, const bool is_electron)
 {
-    double2 shift = { velocity.y, -velocity.x };
+    double2 shift = MAKE_DOUBLE2(velocity.y, -velocity.x );
     shift = shift * radius / vf;
 
     return is_electron ? (p - shift) : (p + shift);

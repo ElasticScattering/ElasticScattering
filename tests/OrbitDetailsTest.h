@@ -189,28 +189,6 @@ TEST_CASE("Circle Crosspoints")
 	}
 }
 
-/* Obsolete function.
-TEST_CASE("Phi")
-{
-	Orbit orbit1({ 0, 0 }, 1, true, 0, 0);
-
-	double phi = GetPhi({ 1, 0 }, &orbit1);
-	CHECK(phi == 0);
-
-	phi = GetPhi({ 0, 1 }, &orbit1);
-	CHECK(phi == PI / 2);
-
-	phi = GetPhi({ -1, 0 }, &orbit1);
-	CHECK(phi == PI);
-
-	phi = GetPhi({ 0, -1 }, &orbit1);
-	CHECK(phi == (3 * PI / 2));
-
-	phi = GetPhi({ 0.99999, -0.0045 }, &orbit1);
-	CHECK_APPROX_LOW(phi, PI2);
-}
-*/
-
 TEST_CASE("Cross Time")
 {
 	Orbit orbit1({ 0,0 }, 5, true, 0, 0);

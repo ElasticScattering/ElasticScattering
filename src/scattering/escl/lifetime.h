@@ -46,7 +46,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         Intersection entry_point = next_intersection;
 
         bool next_cell_available = GetNextCell(orbit, p->phi, sp->cell_size, sp->cells_per_row, sp->impurity_spawn_range, &entry_point, &next_intersection);
-        double2 valid_phi_range = v2(entry_point.incident_angle, next_cell_available ? next_intersection.incident_angle : p->phi);
+        double2 valid_phi_range = MAKE_DOUBLE2(entry_point.incident_angle, next_cell_available ? next_intersection.incident_angle : p->phi);
 
         // Use the grid index to get the impurities in the current cell.
         int cell_idx = get_index(entry_point.entering_cell, sp->cells_per_row);
@@ -93,31 +93,37 @@ ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 po
     Particle p;
     p.starting_position = pos;
     p.phi               = sp->integrand_start_angle + quadrant * (PI * 0.5) + step * sp->integrand_step_size;
+    p.starting_cell = 0;
     p.starting_cell     = get_cell(pos, sp->impurity_spawn_range, sp->cells_per_row);
 
-    int particle_cell_index = get_index(p.starting_cell, sp->cells_per_row);
-    int impurity_start      = (p.starting_cell == 0) ? 0 : cell_indices[particle_cell_index - 1];
+    int particle_cell_index = 0; // get_index(p.starting_cell, sp->cells_per_row);
+    int impurity_start      = (particle_cell_index == 0) ? 0 : cell_indices[particle_cell_index - 1];
     int impurity_end        = cell_indices[particle_cell_index];
     for (int i = impurity_start; i < impurity_end; i++)
     {
         if (InsideImpurity(pos, impurities[i], sp->impurity_radius)) {
+#ifndef DEVICE_PROGRAM
             metrics->particles_inside_impurity += 1;
+#endif
             return 0;
         }
     }
 
-    const double orbit_radius = sp->particle_speed / sp->angular_speed;
-    const double2 vel         = v2(cos(p.phi), sin(p.phi)) * sp->particle_speed;
-    const double2 center      = GetCyclotronOrbitCenter(p.starting_position, vel, orbit_radius, sp->particle_speed, clockwise);
+    const double radius      = sp->particle_speed / sp->angular_speed;
+    const double2 vel        = MAKE_DOUBLE2(cos(p.phi), sin(p.phi)) * sp->particle_speed;
+    const double2 center     = GetCyclotronOrbitCenter(p.starting_position, vel, radius, sp->particle_speed, clockwise);
 
     const double bound_time  = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, clockwise, false);
     const double bound_angle = GetBoundAngle(p.phi, sp->alpha, clockwise);
     const double bound_phi   = sp->is_incoherent ? GetCrossAngle(p.phi, bound_angle, clockwise) : INF;
 
-    Orbit orbit(center, orbit_radius, clockwise, bound_time, bound_phi);
+    Orbit orbit = MAKE_ORBIT(center, radius, clockwise, bound_time, bound_phi);
 
     p.orbit_angle = GetAngle(pos, &orbit);
-
+#ifdef DEVICE_PROGRAM
+    double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices);
+#else
     double lt = TraceOrbit(&p, &orbit, sp, impurities, cell_indices, metrics);
+#endif
     return lt;
 }

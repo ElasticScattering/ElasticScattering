@@ -10,14 +10,14 @@ typedef struct
     cl_command_queue queue;
 
     cl_kernel quadrant_lifetimes_kernel;
-    cl_kernel quadrant_sigmas_kernel;
+    cl_kernel quadrant_apply_sigma_comp_kernel;
     cl_kernel integrate_particle_kernel;
     cl_kernel simpson_weight_particle_kernel;
     cl_kernel sum_kernel;
 
     cl_mem parameters;
     cl_mem impurities;
-    cl_mem imp_index;
+    cl_mem cell_indices;
 
     cl_mem lifetimes;
     cl_mem lifetimes_particle;
@@ -34,16 +34,45 @@ OCLSimResources ocl;
 
 IterationResult SimulationCL::DeriveTemperature(const double temperature)
 {
+
     IterationResult ir;
 
     return ir;
-}
 
-void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& grid, Metrics& metrics)
-{
+    /*
+    cl_int clStatus;
+
+    // temperature is niet genoeg, moet sp meegeven...
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    // Set up kernels
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 1, sizeof(cl_mem), (void*)&ocl.parameters);
+
+    // Integrate particle kernel.
+    // First argument should be set before execution.
+    clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 1, sizeof(cl_mem), (void*)&ocl.parameters);
+    clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 2, sizeof(cl_mem), (void*)&ocl.lifetimes_particle);
+
+    clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.incomplete_sum);
+    clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * items_in_workgroup, nullptr);
+
+    int mode = 0;
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 2, sizeof(int), (void*)&mode);
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 3, sizeof(cl_mem), (void*)&ocl.sigma_xx);
+
+    mode = 1;
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 2, sizeof(int), (void*)&mode);
+    clStatus = clSetKernelArg(ocl.quadrant_apply_sigma_comp_kernel, 3, sizeof(cl_mem), (void*)&ocl.sigma_xy);
+
+
+    ocl.sigma_xx                       = clCreateBuffer(ocl.context, CL_MEM_WRITE_ONLY, sizeof(double) * particle_count, nullptr, &clStatus);
+    ocl.sigma_xy                       = clCreateBuffer(ocl.context, CL_MEM_WRITE_ONLY, sizeof(double) * particle_count, nullptr, &clStatus);
+    ocl.incomplete_sum                 = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count / 2, nullptr, &clStatus);
+
     const size_t items_in_work_group = min(sp.dim, 256);
 
-    UploadImpurities(grid);
     PrepareKernels(sp, items_in_work_group);
 
     cl_int clStatus;
@@ -56,10 +85,6 @@ void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& 
 
     std::vector<double> particle_lifetimes(particles_work_size);
     {
-        // Lifetimes
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_lifetimes_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
-
         clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
         clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.integrate_particle_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start integration kernel execution.");
@@ -72,7 +97,7 @@ void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& 
     std::vector<double> sigma_xy(particles_work_size);
     {
         // Sigma lifetimes
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_sigmas_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_apply_sigma_comp_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
 
         // Sigma xx per particle
@@ -137,113 +162,81 @@ void SimulationCL::ComputeLifetimes(const ScatteringParameters& sp, const Grid& 
         for (int i = 0; i < incomplete_sum.size(); i++)
             sigma.xy += incomplete_sum[i];
     }
-
-    /*
-    IterationResult ir;
-    ir.particle_lifetimes = particle_lifetimes;
-    ir.sigmas.xx_buffer = sigma_xx;
-    ir.sigmas.xx_buffer = sigma_xy;
-    ir.result = sigma;
-
-    return ir;
     */
+}
+
+void SimulationCL::ComputeLifetimes(const ScatteringParameters& p_sp, const Grid& grid, Metrics& metrics)
+{
+    sp = p_sp;
+
+    UploadImpurities(grid);
+
+    cl_int clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    {
+        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
+        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
+        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl.cell_indices);
+        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl.lifetimes);
+    }
+    
+    const size_t items_in_work_group = min(sp.dim, 256);
+
+    size_t global_work_size[3] = { (size_t)sp.dim, (size_t)sp.dim, 4 };
+    size_t local_work_size[3] = { items_in_work_group, 256 / items_in_work_group, 1 };
+
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_lifetimes_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
+    clFinish(ocl.queue);
 }
 
 void SimulationCL::UploadImpurities(const Grid& grid)
 {
     cl_int clStatus;
 
-    ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(v2) * grid.impurity_count, nullptr, &clStatus);
+    ocl.impurities = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(v2) * grid.GetImpurities().size(), nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create impurities buffer.");
 
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * grid.impurity_count, grid.GetImpurities().data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(v2) * grid.GetImpurities().size(), grid.GetImpurities().data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't upload impurities.");
 
-    ocl.imp_index = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(int) * grid.GetIndex().size(), nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create impurity index buffer.");
+    ocl.cell_indices = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(int) * grid.GetIndex().size(), nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create cell index buffer.");
 
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurities, CL_TRUE, 0, sizeof(int) * grid.GetIndex().size(), grid.GetIndex().data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to impurities buffer.");
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.cell_indices, CL_TRUE, 0, sizeof(int) * grid.GetIndex().size(), grid.GetIndex().data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't upload cell indices.");
 }
 
 void SimulationCL::PrepareKernels(const ScatteringParameters& sp, const size_t items_in_workgroup)
 {
-    cl_int clStatus;
-
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-    {
-        // Scatter kernel.
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl.parameters);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurities);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl.imp_index);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl.lifetimes);
-    }
-
-    {
-        // Sigma kernel.
-        clStatus = clSetKernelArg(ocl.quadrant_sigmas_kernel, 0, sizeof(cl_mem), (void*)&ocl.lifetimes);
-        clStatus = clSetKernelArg(ocl.quadrant_sigmas_kernel, 1, sizeof(cl_mem), (void*)&ocl.parameters);
-        clStatus = clSetKernelArg(ocl.quadrant_sigmas_kernel, 2, sizeof(cl_mem), (void*)&ocl.sigma_xx);
-        clStatus = clSetKernelArg(ocl.quadrant_sigmas_kernel, 3, sizeof(cl_mem), (void*)&ocl.sigma_xy);
-    }
-
-    {
-        // Integrate particle kernel.
-        // First argument should be set before execution.
-        clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 1, sizeof(cl_mem), (void*)&ocl.parameters);
-        clStatus = clSetKernelArg(ocl.integrate_particle_kernel, 2, sizeof(cl_mem), (void*)&ocl.lifetimes_particle);
-    }
-
-    {
-        clStatus = clSetKernelArg(ocl.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl.incomplete_sum);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-
-        clStatus = clSetKernelArg(ocl.sum_kernel, 2, sizeof(double) * items_in_workgroup, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
-    }
 }
 
-SimulationCL::SimulationCL(bool use_gpu, bool show_info, int particle_count)
+SimulationCL::SimulationCL() : SimulationCL(true, true) {};
+
+SimulationCL::SimulationCL(bool use_gpu, bool show_info)
 {
     InitializeOpenCL(use_gpu, &ocl.deviceID, &ocl.context, &ocl.queue);
     if (show_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     std::cout << "\nBuilding OpenCL program..." << std::endl;
-    CompileOpenCLProgram(ocl.deviceID, ocl.context, "scattering/cl/scatter.cl", &ocl.program);
+    CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/scattering/cl/scatter.cl", &ocl.program);
     std::cout << "Compilation succeeded! Starting simulation..." << std::endl;
-
 
     cl_int clStatus;
 
-    ocl.quadrant_lifetimes_kernel = clCreateKernel(ocl.program, "quadrant_lifetime", &clStatus);
+    ocl.quadrant_lifetimes_kernel      = clCreateKernel(ocl.program, "quadrant_lifetime", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
-    ocl.quadrant_sigmas_kernel = clCreateKernel(ocl.program, "quadrant_sigma_lifetimes", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-
-    ocl.integrate_particle_kernel = clCreateKernel(ocl.program, "integrate_particle", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-
+    /*
+    ocl.quadrant_apply_sigma_comp_kernel         = clCreateKernel(ocl.program, "quadrant_sigma_lifetimes", &clStatus);
+    ocl.integrate_particle_kernel      = clCreateKernel(ocl.program, "integrate_particle", &clStatus);
     ocl.simpson_weight_particle_kernel = clCreateKernel(ocl.program, "simpson_weight_particle_kernel", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
+    ocl.sum_kernel                     = clCreateKernel(ocl.program, "sum", &clStatus);
+    */
 
-    ocl.sum_kernel = clCreateKernel(ocl.program, "sum", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
-
-    ocl.parameters = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ScatteringParameters), nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create imp buffer.");
-
-    ocl.sigma_xx = clCreateBuffer(ocl.context, CL_MEM_WRITE_ONLY, sizeof(double) * particle_count, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
-
-    ocl.sigma_xy = clCreateBuffer(ocl.context, CL_MEM_WRITE_ONLY, sizeof(double) * particle_count, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
-
-    ocl.incomplete_sum = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * particle_count / 2, nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create sum buffer.");
+    ocl.parameters                     = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ScatteringParameters), nullptr, &clStatus);
 }
 
 SimulationCL::~SimulationCL()

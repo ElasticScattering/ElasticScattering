@@ -25,18 +25,13 @@ typedef struct Intersection {
 #endif
 } Intersection;
 
-ESCL_INLINE int2 get_cell(const int index, const int cells_per_row)
-{
-	return v2i(index % cells_per_row, index / cells_per_row);
-}
-
 ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
 	return p.y * cells_per_row + p.x;
 }
 
 ESCL_INLINE int2 get_cell(const double2 pos, const double2 range, const int cells_per_row)
 {
-	return v2i(
+	return MAKE_INT2(
 		(int)((pos.x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
 		(int)((pos.y - range.x) / (range.y - range.x) * (double)(cells_per_row))
 	);
@@ -45,7 +40,7 @@ ESCL_INLINE int2 get_cell(const double2 pos, const double2 range, const int cell
 ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
 {
 	double factor = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-	return v2(spawn_range.x + current_cell.x * factor, spawn_range.x + current_cell.y * factor);
+	return MAKE_DOUBLE2(spawn_range.x + current_cell.x * factor, spawn_range.x + current_cell.y * factor);
 }
 
 ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row) {
@@ -59,8 +54,9 @@ ESCL_INLINE bool PointInSegment(double point, double l0, double l1)
 
 ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 {
-	return abs(p1.x - p2.x) > 1e-6 * L || abs(p1.y - p2.y) > 1e-6 * L;
+	return fabs(p1.x - p2.x) > 1e-6 * L || fabs(p1.y - p2.y) > 1e-6 * L;
 }
+
 
 #define Update_Best_Intersect(intersection_point) {																			\
 	double incident_angle = GetAngle(intersection_point, orbit);															\
@@ -83,6 +79,7 @@ UpdateFirstBoundaryIntersect(
 	const Intersection* last_intersection,
 	Intersection* closest_intersection)
 {
+
 	double2 u = (p2 - p1) / L;
 	double projection_distance = u.x * (orbit->center.x - p1.x) + u.y * (orbit->center.y - p1.y);
 	double2 proj = p1 + (u * projection_distance);
@@ -101,17 +98,18 @@ UpdateFirstBoundaryIntersect(
 	i1 = proj + to_edge;
 	i2 = proj - to_edge;
 
-	bool horizontal_line = abs(u.x) > abs(u.y);
+	bool horizontal_line = fabs(u.x) > fabs(u.y);
 	bool i1_valid = horizontal_line ? PointInSegment(i1.x, p1.x, p2.x) : PointInSegment(i1.y, p1.y, p2.y);
 	bool i2_valid = horizontal_line ? PointInSegment(i2.x, p1.x, p2.x) : PointInSegment(i2.y, p1.y, p2.y);
 
 	int2 next_cell = last_intersection->entering_cell + cell_offset;
 
 	if (i1_valid) Update_Best_Intersect(i1);
+	
 	if (i2_valid) Update_Best_Intersect(i2);
-
 	return i1_valid || i2_valid;
 }
+
 
 ESCL_INLINE bool 
 GetNextCell(const Orbit* orbit,
@@ -126,27 +124,27 @@ GetNextCell(const Orbit* orbit,
 	*next_intersection = *last_intersection;
 
 	double2 low_left  = to_world(last_intersection->entering_cell, cells_per_row, spawn_range);
-	double2 low_right = low_left + v2(L, 0);
-	double2 top_right = low_left + v2(L, L);
-	double2 top_left  = low_left + v2(0, L);
+	double2 low_right = low_left + MAKE_DOUBLE2(L, 0);
+	double2 top_right = low_left + MAKE_DOUBLE2(L, L);
+	double2 top_left  = low_left + MAKE_DOUBLE2(0, L);
 
-	UpdateFirstBoundaryIntersect(orbit, int2( 0,  1), top_left,  top_right, L, last_intersection, next_intersection);
-	UpdateFirstBoundaryIntersect(orbit, int2( 0, -1), low_left,  low_right, L, last_intersection, next_intersection);
-	UpdateFirstBoundaryIntersect(orbit, int2( 1,  0), low_right, top_right, L, last_intersection, next_intersection);
-	UpdateFirstBoundaryIntersect(orbit, int2(-1,  0), low_left,  top_left,  L, last_intersection, next_intersection);
+	UpdateFirstBoundaryIntersect(orbit, MAKE_INT2( 0,  1), top_left,  top_right, L, last_intersection, next_intersection);
+	UpdateFirstBoundaryIntersect(orbit, MAKE_INT2( 0, -1), low_left,  low_right, L, last_intersection, next_intersection);
+	UpdateFirstBoundaryIntersect(orbit, MAKE_INT2( 1,  0), low_right, top_right, L, last_intersection, next_intersection);
+	UpdateFirstBoundaryIntersect(orbit, MAKE_INT2(-1,  0), low_left,  top_left,  L, last_intersection, next_intersection);
 
 	{
 		double delta = 1e-7 * L;
-		bool is_xlow = next_intersection->position.x - low_left.x < delta;
-		bool is_xtop = -next_intersection->position.x + L + low_left.x < delta;
-		bool is_ylow = next_intersection->position.y - low_left.y < delta;
-		bool is_ytop = -next_intersection->position.y + L + low_left.y < delta;
+		bool is_xlow = (next_intersection->position.x - low_left.x) < delta;
+		bool is_xtop = (-next_intersection->position.x + L + low_left.x) < delta;
+		bool is_ylow = (next_intersection->position.y - low_left.y) < delta;
+		bool is_ytop = (-next_intersection->position.y + L + low_left.y) < delta;
 
 		int2 offset = next_intersection->entering_cell - last_intersection->entering_cell;
-		if (is_xtop && is_ylow) offset = int2(1, -1);
-		if (is_xlow && is_ylow) offset = int2(-1, -1);
-		if (is_xlow && is_ytop) offset = int2(-1, 1);
-		if (is_xtop && is_ytop) offset = int2(1, 1);
+		if (is_xtop && is_ylow) offset = MAKE_INT2(1, -1);
+		if (is_xlow && is_ylow) offset = MAKE_INT2(-1, -1);
+		if (is_xlow && is_ytop) offset = MAKE_INT2(-1, 1);
+		if (is_xtop && is_ytop) offset = MAKE_INT2(1, 1);
 		next_intersection->entering_cell = last_intersection->entering_cell + offset;
 	}
 
@@ -155,9 +153,11 @@ GetNextCell(const Orbit* orbit,
 	//	1. Progress: didn't move to a new cell
 	//  2. Inside:   next cell would be outside of grid.
 	//  3. Done:     next intersection would come full circle and move past the starting point.
-	return (
-		next_intersection->entering_cell != last_intersection->entering_cell &&
+	#define SAME_CELL(c1, c2) c1.x == c2.x && c1.y == c2.y
+	bool same_cell = SAME_CELL(next_intersection->entering_cell, last_intersection->entering_cell);
+
+	return
+		!same_cell &&
 		within_bounds(next_intersection->entering_cell, cells_per_row) &&
-		!AngleInRange(phi, v2(last_intersection->incident_angle, next_intersection->incident_angle), orbit->clockwise)
-	);
+		!AngleInRange(phi, MAKE_DOUBLE2(last_intersection->incident_angle, next_intersection->incident_angle), orbit->clockwise);
 }

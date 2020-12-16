@@ -15,4 +15,7 @@
 #define EPSILON 0.000001
 #define INF (DBL_MAX)
 
+#define MODE_SIGMA_XX 0
+#define MODE_SIGMA_XY 1
+
 #endif // CL_CONSTANTS

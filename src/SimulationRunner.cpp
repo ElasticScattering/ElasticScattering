@@ -30,6 +30,7 @@ void SimulationRunner::Run(const InitParameters& init)
     CreateOutputDirectories();
 
     SimulationCPU es;
+
     for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
         QueryPerformanceCounter(&beginClock);
         RunIteration(i, es);

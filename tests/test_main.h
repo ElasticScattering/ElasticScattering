@@ -2,17 +2,16 @@
 #include <doctest.h>
 
 #include "TestMacros.h"
-#include "scattering/escl/cell_grid.h"
-#include <vector>
-#include <stdio.h>
 
-#include "OrbitDetailsTest.h"
-#include "GridGenerationTests.h"
 #include "AngleTests.h"
-#include "SimpsonWeightsTest.h"
+#include "OrbitDetailsTest.h"
+
+#include "GridGenerationTests.h"
 #include "IndexTests.h"
-#include "GridMovement.h"
+#include "GridMovementTests.h"
 #include "LifetimeTests.h"
+
+#include "SimpsonWeightsTest.h"
 
 //#include "BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"

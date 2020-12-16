@@ -8,6 +8,7 @@
 
 void TestGridMovement(Orbit& o, Intersection& exit, std::vector<Intersection>& expected_intersections)
 {
+
 	Intersection entry;
 
 	int cells_per_row = 10;

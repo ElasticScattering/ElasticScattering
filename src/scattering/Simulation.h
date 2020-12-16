@@ -15,7 +15,7 @@ protected:
 	std::vector<double> raw_lifetimes;
 	ScatteringParameters sp;
 
-	size_t GetIndex(int i, int j, int q, int p) {
+	int GetIndex(int i, int j, int q, int p) {
 		return j * ((sp.dim-1) * sp.values_per_particle) + i * sp.values_per_particle + (q * sp.integrand_steps) + p;
 	};
 	
@@ -53,7 +53,8 @@ public:
 	void UploadImpurities(const Grid& grid);
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 
-	SimulationCL(bool use_gpu, bool show_info, int particle_count);
+	SimulationCL();
+	SimulationCL(bool use_gpu, bool show_info);
 	~SimulationCL();
 };
 

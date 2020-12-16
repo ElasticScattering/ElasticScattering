@@ -91,7 +91,6 @@ std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& 
 
 	for (int j = 0; j < limit; j++) {
 		for (int i = 0; i < limit; i++) {
-			int particle_idx = j * limit + i;
 			double particle_total = 0;
 			
 			for (int q = 0; q < 4; q++) {
@@ -99,7 +98,8 @@ std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& 
 					particle_total += current_lifetimes[GetIndex(i, j, q, p)] * SimpsonWeight(p, sp.integrand_steps);
 				}
 			}
-			
+
+			int particle_idx = j * limit + i;
 			particle_lifetimes[particle_idx] = particle_total * integrand_factor;
 		}
 	}

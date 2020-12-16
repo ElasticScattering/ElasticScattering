@@ -10,7 +10,7 @@ Grid::Grid(int count, int seed, v2 _spawn_range, double impurity_radius, int _ce
 {
 	spawn_range = _spawn_range;
 	cells_per_row = _cells_per_row;
-	impurity_count = count;
+	unique_impurity_count = count;
 
 	auto impurities = GenerateImpurities(count, seed);
 	GenerateImpurityCells(impurities, impurity_radius);
@@ -21,7 +21,7 @@ Grid::Grid(std::vector<v2> impurities, v2 _spawn_range, double impurity_radius, 
 {
 	spawn_range = _spawn_range;
 	cells_per_row = _cells_per_row;
-	impurity_count = impurities.size();
+	unique_impurity_count = impurities.size();
 
 	GenerateImpurityCells(impurities, impurity_radius);
 	ConvertToIndex();

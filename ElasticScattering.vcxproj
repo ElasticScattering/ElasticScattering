@@ -395,7 +395,7 @@
     <ClInclude Include="tests\BasicOpenCLTest.h" />
     <ClInclude Include="tests\ElasticScatteringTests.h" />
     <ClInclude Include="tests\GridGenerationTests.h" />
-    <ClInclude Include="tests\GridMovement.h" />
+    <ClInclude Include="tests\GridMovementTests.h" />
     <ClInclude Include="tests\IndexTests.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
