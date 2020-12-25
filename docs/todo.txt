@@ -1,8 +1,6 @@
 
 
 
-Samples > MF > T
-
 Incoherent resultaten fixen
 	Lijkt onafhankelijk van MF?
 

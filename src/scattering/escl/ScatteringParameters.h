@@ -18,10 +18,13 @@ typedef struct ScatteringParameters
     double particle_speed;
     double angular_speed;
     double alpha;
-
+#ifdef DEVICE_PROGRAM
     int is_clockwise;
-    int is_incoherent;
-    
+    int is_coherent;
+#else
+    bool is_clockwise;
+    bool is_coherent;
+#endif
     double integrand_step_size;
     double integrand_start_angle;
     double integrand_angle_area;

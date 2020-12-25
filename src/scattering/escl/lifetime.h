@@ -72,7 +72,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         // cross any more cells, or if the particle's lifetime has
         // ended.
         
-        //bool bound_reached = sp->is_incoherent && orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise);
+        //bool bound_reached = !sp->is_coherent && orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise);
         if (lifetime < INF || !next_cell_available)
             break;
     }
@@ -87,8 +87,13 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
 
 ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)
 {
-    const bool clockwise  = sp->is_clockwise == 1;
-    const bool incoherent = sp->is_incoherent == 1;
+#ifdef DEVICE_PROGRAM
+    const bool clockwise = sp->is_clockwise == 1;
+    const bool coherent  = sp->is_coherent  == 1;
+#else
+    const bool clockwise = sp->is_clockwise;
+    const bool coherent  = sp->is_coherent;
+#endif
 
     Particle p;
     p.starting_position = pos;
@@ -113,9 +118,9 @@ ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 po
     const double2 vel        = MAKE_DOUBLE2(cos(p.phi), sin(p.phi)) * sp->particle_speed;
     const double2 center     = GetCyclotronOrbitCenter(p.starting_position, vel, radius, sp->particle_speed, clockwise);
 
-    const double bound_time  = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, incoherent, clockwise, false);
+    const double bound_time  = GetBoundTime(p.phi, sp->alpha, sp->angular_speed, coherent, clockwise, false);
     const double bound_angle = GetBoundAngle(p.phi, sp->alpha, clockwise);
-    const double bound_phi   = sp->is_incoherent ? GetCrossAngle(p.phi, bound_angle, clockwise) : INF;
+    const double bound_phi   = coherent ? INF : GetCrossAngle(p.phi, bound_angle, clockwise);
 
     Orbit orbit = MAKE_ORBIT(center, radius, clockwise, bound_time, bound_phi);
 

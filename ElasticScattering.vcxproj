@@ -369,7 +369,6 @@
     <ClCompile Include="src\scattering\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\SimulationRunner.cpp" />
-    <ClCompile Include="src\utils\ParametersFactory.cpp" />
     <ClCompile Include="tests\AngleTests.h" />
     <ClCompile Include="tests\data\kernels\test_cpp.cpp" />
   </ItemGroup>
@@ -391,7 +390,6 @@
     <ClInclude Include="src\SimulationRunner.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
-    <ClInclude Include="src\utils\ParametersFactory.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
     <ClInclude Include="tests\ElasticScatteringTests.h" />
     <ClInclude Include="tests\GridGenerationTests.h" />
@@ -411,7 +409,6 @@
   <ItemGroup>
     <None Include="cpp.hint" />
     <None Include="src\scattering\cl\scatter.cl" />
-    <None Include="src\scattering\cl\scatter_one_file.cl" />
     <None Include="src\scattering\cl\util_kernels.cl" />
     <None Include="tests\data\kernels\test_cpp.cl" />
     <None Include="tests\data\kernels\test_precision.cl" />

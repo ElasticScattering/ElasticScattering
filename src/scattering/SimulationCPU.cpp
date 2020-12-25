@@ -32,7 +32,8 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 	std::vector<double> new_lifetimes(raw_lifetimes.size());
 
 	for (int i = 0; i < new_lifetimes.size(); i++)
-		new_lifetimes[i] = raw_lifetimes[i]; // min(raw_lifetimes[i], sp.default_max_lifetime);
+		//new_lifetimes[i] = raw_lifetimes[i]; 
+		new_lifetimes[i] = min(raw_lifetimes[i], sp.default_max_lifetime);
 
 	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
 	b.sigmas             = ComputeSigmas(new_lifetimes);
@@ -43,7 +44,7 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 
 SigmaResult SimulationCPU::ComputeSigmas(const std::vector<double>& current_lifetimes)
 {
-	const double w = (sp.is_clockwise == 1) ? -sp.angular_speed : sp.angular_speed;
+	const double w = sp.is_clockwise ? -sp.angular_speed : sp.angular_speed;
 	const int limit = sp.dim - 1;
 	
 	//@Todo, check of dit correct is.
@@ -109,7 +110,7 @@ std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& 
 
 Sigma SimulationCPU::IntegrateResult(const std::vector<double>& current_lifetimes)
 {
-	const double w = (sp.is_clockwise == 1) ? -sp.angular_speed : sp.angular_speed;
+	const double w = sp.is_clockwise ? -sp.angular_speed : sp.angular_speed;
 	const int limit = sp.dim - 1;
 
 	Sigma sigma;

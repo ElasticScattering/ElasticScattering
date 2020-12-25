@@ -73,6 +73,8 @@ struct IterationResult {
 struct SampleResult {
     std::vector<std::vector<Sigma>> results;
 
+    SampleResult() {}
+
     SampleResult(int T, int N)
     {
         results.resize(T);

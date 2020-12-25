@@ -48,7 +48,7 @@ quadrant_apply_sigma_component(global double* lifetimes, constant ScatteringPara
 
 	unsigned int base_idx = GET_BASE_INDEX(i, j, q);
 
-	const double w = (sp->is_clockwise == 1) ? -sp->angular_speed : sp->angular_speed;
+	const double w = (sp->clockwise == 1) ? -sp->angular_speed : sp->angular_speed;
 
 	for (int p = 0; p < sp->integrand_steps; p++)
 	{

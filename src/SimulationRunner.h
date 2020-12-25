@@ -13,9 +13,9 @@ private:
 
 	inline double GetElapsedTime() { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
-	std::string GetImagePathBase(int t_idx, int m_idx) const;
-	std::string GetImagePath(int t_idx, int m_idx, int s_idx, bool incoherent) const;
-	std::string GetMetricsPath(int m_idx) const;
+	std::string GetSamplePath(int sample_idx) const;
+	std::string GetImagePath(int t_idx, int m_idx, int sample_idx, bool incoherent) const;
+	std::string GetMetricsPath(int m_idx, bool incoherent) const;
 	std::string GetResultPath(int t_idx) const;
 
 	void CompleteSimulationParameters(ScatteringParameters& sp);

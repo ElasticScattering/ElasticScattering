@@ -9,17 +9,15 @@
 
 void DecideFinalParameters(ScatteringParameters& sp)
 {
-	if (sp.is_incoherent == 1) sp.tau = HBAR / (KB * sp.temperature);
+	if (!sp.is_coherent) sp.tau = HBAR / (KB * sp.temperature);
 	sp.default_max_lifetime = 15.0 * sp.tau;
 
 	{
-		bool incoherent = (sp.is_incoherent == 1);
-
 		const double incoherent_area = sp.alpha * 2.0;
-		sp.integrand_angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+		sp.integrand_angle_area = !sp.is_coherent ? incoherent_area : (PI / 2.0 - incoherent_area);
 		sp.integrand_step_size = sp.integrand_angle_area / (sp.integrand_steps - 1);
 
-		sp.integrand_start_angle = (incoherent ? -sp.alpha : sp.alpha);
+		sp.integrand_start_angle = (!sp.is_coherent ? -sp.alpha : sp.alpha);
 	}
 }
 
@@ -37,7 +35,6 @@ TEST_CASE("Lifetime tests")
 	sp.region_size = 1e-6;
 	sp.impurity_radius = 1e-8;
 	sp.impurity_spawn_range = { -sp.region_extends, sp.region_size + sp.region_extends };
-	double t = sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell);
 	sp.cells_per_row = (int)ceil(sqrt(sp.impurity_count / (double)sp.max_expected_impurities_in_cell));
 	sp.cell_size = (sp.impurity_spawn_range.y - sp.impurity_spawn_range.x) / (double)sp.cells_per_row;
 
@@ -47,12 +44,12 @@ TEST_CASE("Lifetime tests")
 
 	Grid grid(impurities, sp.impurity_spawn_range, sp.impurity_radius, sp.cells_per_row);
 
-	Metrics m;
+	Metrics m(sp.magnetic_field);
 
 	SUBCASE("Intersect in the second box")
 	{
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 1;
+		sp.is_coherent = true;
+		sp.is_clockwise = true;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -64,8 +61,8 @@ TEST_CASE("Lifetime tests")
 
 	SUBCASE("Intersect in the second box, incoherent -> boundtime")
 	{
-		sp.is_incoherent = 1;
-		sp.is_clockwise = 1;
+		sp.is_coherent = false;
+		sp.is_clockwise = true;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -76,8 +73,8 @@ TEST_CASE("Lifetime tests")
 
 	SUBCASE("Intersect in first box")
 	{
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -89,8 +86,8 @@ TEST_CASE("Lifetime tests")
 
 	SUBCASE("Boundary limited.")
 	{
-		sp.is_incoherent = 1;
-		sp.is_clockwise = 1;
+		sp.is_coherent = false;
+		sp.is_clockwise = true;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -102,8 +99,8 @@ TEST_CASE("Lifetime tests")
 
 	SUBCASE("Coherent, late intersect.")
 	{
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 1;
+		sp.is_coherent = true;
+		sp.is_clockwise = true;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -117,8 +114,8 @@ TEST_CASE("Lifetime tests")
 	{
 		sp.magnetic_field = 50;
 		sp.angular_speed = E * sp.magnetic_field / M;
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -131,8 +128,8 @@ TEST_CASE("Lifetime tests")
 	{
 		sp.magnetic_field = 50;
 		sp.angular_speed = E * sp.magnetic_field / M;
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 
@@ -146,8 +143,8 @@ TEST_CASE("Lifetime tests")
 	{
 		sp.magnetic_field = 8;
 		sp.angular_speed = E * sp.magnetic_field / M;
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;
@@ -161,8 +158,8 @@ TEST_CASE("Lifetime tests")
 	{
 		sp.magnetic_field = 8;
 		sp.angular_speed = E * sp.magnetic_field / M;
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;
@@ -176,8 +173,8 @@ TEST_CASE("Lifetime tests")
 	{
 		sp.magnetic_field = 8;
 		sp.angular_speed = E * sp.magnetic_field / M;
-		sp.is_incoherent = 0;
-		sp.is_clockwise = 0;
+		sp.is_coherent = true;
+		sp.is_clockwise = false;
 		DecideFinalParameters(sp);
 		sp.integrand_start_angle = 0;
 		sp.integrand_step_size = 1.57079633e+00;

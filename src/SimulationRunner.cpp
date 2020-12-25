@@ -31,11 +31,11 @@ void SimulationRunner::Run(const InitParameters& init)
     ScatteringParameters sp_inc, sp_coh;
     
     sp_inc = cfg.scattering_params;
-    sp_inc.is_incoherent = 1;
+    sp_inc.is_coherent = false;
     CompleteSimulationParameters(sp_inc);
 
     sp_coh = cfg.scattering_params;
-    sp_coh.is_incoherent = 0;
+    sp_coh.is_coherent = true;
     CompleteSimulationParameters(sp_coh);
     
     const int S = cfg.num_samples;
@@ -52,22 +52,27 @@ void SimulationRunner::Run(const InitParameters& init)
         QueryPerformanceCounter(&endClock);
 
         GlobalMetrics gm;
-        gm.particles_per_row     = sp.dim - 1;
-        gm.cells_per_row         = sp.cells_per_row;
-        gm.phi_values            = 4 * sp.integrand_steps;
-        gm.unique_impurity_count = sp.impurity_count;
-        gm.additional_impurities = grid.GetImpurities().size() - gm.unique_impurity_count;
-        gm.grid_time_elapsed     = GetElapsedTime();
+        gm.coherent = sp.is_coherent;
+        gm.particles_per_row                   = sp.dim - 1;
+        gm.cells_per_row                       = sp.cells_per_row;
+        gm.phi_values                          = 4 * sp.integrand_steps;
+        gm.unique_impurity_count               = sp.impurity_count;
+        gm.additional_impurities               = grid.GetImpurities().size() - gm.unique_impurity_count;
+        gm.grid_time_elapsed                   = GetElapsedTime();
+        gm.avg_impurities_in_cell              = grid.GetImpurities().size() / (double)(sp.cells_per_row * sp.cells_per_row);
+        gm.avg_impuritiies_in_cell_overlapping = gm.avg_impurities_in_cell - sp.max_expected_impurities_in_cell;
 
-        Logger::CreateMetricsLog(GetMetricsPath(i), gm);
+        Logger::CreateMetricsLog(GetMetricsPath(i, gm.coherent), gm);
+
+        printf(" ");
 
         auto sample_coh = RunSample(i, es, sp_coh, grid);
-        sample_results_coh.push_back(sample_coh);
+        sample_results_coh[i] = sample_coh;
 
         auto sample_inc = RunSample(i, es, sp_inc, grid);
-        sample_results_inc.push_back(sample_inc);
+        sample_results_inc[i] = sample_inc;
 
-        printf("Sample completed!\n");
+        printf("\n");
     }
 
     // Sommeer alle samples en log resultaat.
@@ -114,11 +119,11 @@ SampleResult SimulationRunner::RunSample(const int sample_index, Simulation& es,
     const int N = cfg.magnetic_field_range.n;
     SampleResult sr(T, N);
 
-    auto metrics_path = GetMetricsPath(sample_index);
+    auto metrics_path = GetMetricsPath(sample_index, sp.is_coherent);
 
     for (int j = 0; j < N; j++) {
         UpdateMagneticField(sp, cfg.magnetic_field_range.min + j * cfg.magnetic_field_range.step_size);
-        Metrics metrics;
+        Metrics metrics(j);
 
         QueryPerformanceCounter(&beginClock);
         es.ComputeLifetimes(sp, grid, metrics);
@@ -131,24 +136,23 @@ SampleResult SimulationRunner::RunSample(const int sample_index, Simulation& es,
             auto iteration = es.DeriveTemperature(sp.temperature);
 
             sr.results[i][j] = iteration.result;
-            auto image_path = GetImagePath(i, j, sample_index, sp.is_incoherent == 1);
+            auto image_path = GetImagePath(i, j, sample_index, sp.is_coherent);
             Logger::LogImages(image_path, sp.dim - 1, iteration);
         }
         QueryPerformanceCounter(&endClock);
         metrics.time_elapsed_temperatures = GetElapsedTime();
-
-        double particle_count = pow(sp.dim - 1, 2);
-        double n_lt = particle_count * 4.0 * sp.integrand_steps;
-
-        metrics.particles_inside_impurity     /= (4.0 * sp.integrand_steps);
-        metrics.pct_particles_inside_impurity  = 100 * metrics.particles_inside_impurity / particle_count;
-        metrics.pct_particles_escaped          = 100 * metrics.particles_escaped / particle_count;
+        
+        double n_lt = pow(sp.dim - 1, 2) * 4.0 * sp.integrand_steps;
+        metrics.pct_particles_inside_impurity  = (double)(100 * metrics.particles_inside_impurity) / n_lt;
         metrics.prt_cells_passed               = (double)metrics.cells_passed / n_lt;
         metrics.pct_prt_cells_passed           = 100 * metrics.prt_cells_passed / pow(sp.cells_per_row, 2);
         metrics.prt_impurity_intersections     = (double)metrics.impurity_intersections / n_lt;
         metrics.pct_prt_impurity_intersections = 100 * metrics.prt_impurity_intersections / sp.impurity_count;
+        metrics.mln_cells_passed               = (double)metrics.cells_passed / 1'000'000.0;
+        metrics.mln_impurity_intersections     = (double)metrics.impurity_intersections / 1'000'000.0;
 
         Logger::LogMetrics(metrics_path, metrics);
+        printf(".");
     }
 
     return sr;
@@ -162,7 +166,7 @@ void SimulationRunner::UpdateMagneticField(ScatteringParameters& sp, const doubl
 void SimulationRunner::UpdateTemperature(ScatteringParameters& sp, const double temperature) {
     sp.temperature = temperature;
 
-    if (sp.is_incoherent == 1) {
+    if (!sp.is_coherent) {
         sp.tau = HBAR / (KB * sp.temperature);
         sp.default_max_lifetime = 15.0 * sp.tau;
     }
@@ -171,7 +175,7 @@ void SimulationRunner::UpdateTemperature(ScatteringParameters& sp, const double 
 void SimulationRunner::CompleteSimulationParameters(ScatteringParameters& sp) {
     sp.angular_speed = E * sp.magnetic_field / M;
 
-    if (sp.is_incoherent == 1) sp.tau = HBAR / (KB * sp.temperature);
+    if (!sp.is_coherent) sp.tau = HBAR / (KB * sp.temperature);
     sp.default_max_lifetime = 15.0 * sp.tau;
 
     {
@@ -183,20 +187,21 @@ void SimulationRunner::CompleteSimulationParameters(ScatteringParameters& sp) {
     }
 
     {
-        bool incoherent = (sp.is_incoherent == 1);
-
         const double incoherent_area = sp.alpha * 2.0;
-        sp.integrand_angle_area = incoherent ? incoherent_area : (PI / 2.0 - incoherent_area);
+        sp.integrand_angle_area = !sp.is_coherent ? incoherent_area : (PI / 2.0 - incoherent_area);
         sp.integrand_step_size = sp.integrand_angle_area / (sp.integrand_steps - 1);
 
-        sp.integrand_start_angle = (incoherent ? -sp.alpha : sp.alpha);
+        sp.integrand_start_angle = (!sp.is_coherent ? -sp.alpha : sp.alpha);
     }
 }
 
 void SimulationRunner::PrintSimulationInfo() const
 {
-    printf("Starting simulation...\n");
+    printf("Starting simulation (%i samples)\n", cfg.num_samples);
     printf("\tWriting to: %s\n\n", cfg.base_output_directory.c_str());
+
+
+    printf("/%s\\\n", std::string(cfg.magnetic_field_range.n * 2, '-').c_str());
 }
 
 std::string SimulationRunner::GetAvailableDirectory(std::string base)
@@ -288,7 +293,7 @@ void SimulationRunner::ParseConfig(std::string file)
     sp.region_size = atof(values.at("region_size").c_str());
     sp.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
 
-    sp.is_clockwise = atoi(values.at("is_clockwise").c_str());
+    sp.is_clockwise = values.at("clockwise").c_str() == "true";
 
     CompleteSimulationParameters(sp);
 
@@ -297,34 +302,33 @@ void SimulationRunner::ParseConfig(std::string file)
 
 void SimulationRunner::CreateOutputDirectories() const
 {
-    std::filesystem::create_directory(cfg.base_output_directory + "/Metrics");
-
-    for (int i = 0; i < cfg.temperatures.size(); i++) {
-        Logger::CreateTemperatureLog(GetResultPath(i), cfg, cfg.temperatures[i]);
-
-        auto temp_dir = cfg.base_output_directory + "/Images T" + std::to_string(i);
-        std::filesystem::create_directory(temp_dir);
-
-        for (int i = 0; i < cfg.magnetic_field_range.n; i++) {
-            std::filesystem::create_directory(temp_dir + "/MF" + std::to_string(i));
-        }
+    for (int i = 0; i < cfg.num_samples; i++)
+    {
+        auto sample_path = GetSamplePath(i);
+        std::filesystem::create_directory(sample_path);
+        std::filesystem::create_directory(sample_path + "/Incoherent/");
+        std::filesystem::create_directory(sample_path + "/Coherent/");
     }
+
+    for (int i = 0; i < cfg.temperatures.size(); i++)
+        Logger::CreateResultLog(GetResultPath(i), cfg, cfg.temperatures[i]);
 }
 
-std::string SimulationRunner::GetImagePathBase(int t_idx, int m_idx) const
+std::string SimulationRunner::GetSamplePath(int sample_idx) const
 {
-    return cfg.base_output_directory + "/Images T" + std::to_string(t_idx) + "/MF" + std::to_string(m_idx);
+    return cfg.base_output_directory + "/Sample " + std::to_string(sample_idx);
 }
 
-std::string SimulationRunner::GetImagePath(int t_idx, int m_idx, int s_idx, bool incoherent) const
+std::string SimulationRunner::GetImagePath(int t_idx, int m_idx, int sample_idx, bool coherent) const
 {
-    auto type = incoherent ? " Incoherent" : " Coherent";
-    return GetImagePathBase(t_idx, m_idx) + "/S" + std::to_string(s_idx) + type + ".png";
+    auto type = coherent ? "/Coherent/" : "/Incoherent/";
+    return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
 }
 
-std::string SimulationRunner::GetMetricsPath(int s_idx) const
+std::string SimulationRunner::GetMetricsPath(int sample_idx, bool coherent) const
 {
-    return cfg.base_output_directory + "/Metrics/Metrics S" + std::to_string(s_idx) + ".txt";
+    auto type = coherent ? "Coherent" : "Incoherent";
+    return GetSamplePath(sample_idx) + "/Metrics " + type + ".txt";
 }
 
 std::string SimulationRunner::GetResultPath(int t_idx) const

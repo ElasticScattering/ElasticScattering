@@ -204,9 +204,9 @@ InsideImpurity(const double2 pos, const double2 impurity, const double impurity_
 ///
 
 ESCL_INLINE double 
-GetBoundTime(const double phi, const double alpha, const double w, const bool is_incoherent, const bool is_electron, const bool is_future)
+GetBoundTime(const double phi, const double alpha, const double w, const bool coherent, const bool is_electron, const bool is_future)
 {
-    if (!is_incoherent) return INF;
+    if (coherent) return INF;
 
     const double remaining = smod(phi + alpha, HALF_PI);
 

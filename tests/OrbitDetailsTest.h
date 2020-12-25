@@ -62,25 +62,25 @@ TEST_CASE("BoundTime Direction")
 
 	SUBCASE("Clockwise")
 	{
-		double t = GetBoundTime(phi, w, alpha, true, false, true);
+		double t = GetBoundTime(phi, w, alpha, false, false, true);
 		CHECK(t == 0.25);
 	}
 
 	SUBCASE("Counter-is_clockwise")
 	{
-		double t = GetBoundTime(phi, w, alpha, true, true, true);
+		double t = GetBoundTime(phi, w, alpha, false, true, true);
 		CHECK(t == 0.75);
 	}
 
 	SUBCASE("Clockwise")
 	{
-		double t = GetBoundTime(phi, w, alpha, true, true, false);
+		double t = GetBoundTime(phi, w, alpha, false, true, false);
 		CHECK(t == 0.25);
 	}
 
 	SUBCASE("Counter-is_clockwise")
 	{
-		double t = GetBoundTime(phi, w, alpha, true, false, false);
+		double t = GetBoundTime(phi, w, alpha, false, false, false);
 		CHECK(t == 0.75);
 	}
 }
@@ -90,16 +90,16 @@ TEST_CASE("BoundTime Sectors")
 	double alpha = 1;
 	double w = 0.5;
 
-	double t = GetBoundTime(-0.25, w, alpha, true, false, true);
+	double t = GetBoundTime(-0.25, w, alpha, false, false, true);
 	CHECK(t == 0.25);
 
-	t = GetBoundTime(PI / 2 - 0.25, w, alpha, true, false, true);
+	t = GetBoundTime(PI / 2 - 0.25, w, alpha, false, false, true);
 	CHECK(t == 0.25);
 
-	t = GetBoundTime(PI - 0.25, w, alpha, true, false, true);
+	t = GetBoundTime(PI - 0.25, w, alpha, false, false, true);
 	CHECK(t == 0.25);
 
-	t = GetBoundTime(3 * PI / 2 - 0.25, w, alpha, true, false, true);
+	t = GetBoundTime(3 * PI / 2 - 0.25, w, alpha, false, false, true);
 	CHECK(t == 0.25);
 }
 
@@ -108,10 +108,10 @@ TEST_CASE("BoundTime Corners")
 	double alpha = 1;
 	double w = 0.5;
 
-	double t = GetBoundTime(0.5, w, alpha, true, false, true);
+	double t = GetBoundTime(0.5, w, alpha, false, false, true);
 	CHECK(t == 1);
 
-	t = GetBoundTime(0.5, w, alpha, true, false, false);
+	t = GetBoundTime(0.5, w, alpha, false, false, false);
 	CHECK(t == 0);
 }
 
