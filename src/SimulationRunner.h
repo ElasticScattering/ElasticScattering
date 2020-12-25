@@ -1,16 +1,17 @@
 #pragma once
 
-#pragma once
-
 #include "SimulationConfiguration.h"
 #include "scattering/Simulation.h"
 
 #include <string>
 
-
 class SimulationRunner {
 private:
 	SimulationConfiguration cfg;
+
+	LARGE_INTEGER beginClock, endClock, clockFrequency;
+
+	inline double GetElapsedTime() { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
 	std::string GetImagePathBase(int t_idx, int m_idx) const;
 	std::string GetImagePath(int t_idx, int m_idx, int s_idx, bool incoherent) const;
@@ -26,7 +27,7 @@ private:
 	void CreateOutputDirectories() const;
 	void PrintSimulationInfo() const;
 
-	void RunIteration(const int magnetic_index, Simulation& es);
+	SampleResult RunSample(const int sample_index, Simulation& es, ScatteringParameters& sp, const Grid& grid);
 
 public:
 	void Run(const InitParameters& init);

@@ -32,7 +32,7 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 	std::vector<double> new_lifetimes(raw_lifetimes.size());
 
 	for (int i = 0; i < new_lifetimes.size(); i++)
-		new_lifetimes[i] = min(raw_lifetimes[i], sp.default_max_lifetime);
+		new_lifetimes[i] = raw_lifetimes[i]; // min(raw_lifetimes[i], sp.default_max_lifetime);
 
 	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
 	b.sigmas             = ComputeSigmas(new_lifetimes);

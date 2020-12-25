@@ -82,7 +82,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, const Orbit* const orbit,
         metrics->particles_escaped += 1;
 #endif
 
-    return min(lifetime, orbit->bound_time);
+    return lifetime; // min(lifetime, orbit->bound_time);
 }
 
 ESCL_INLINE double lifetime(const int quadrant, const int step, const double2 pos, BUFFER_ARGS)

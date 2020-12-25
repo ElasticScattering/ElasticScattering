@@ -17,6 +17,7 @@ public:
     
     static void LogImages(const std::string file_path, const int dim, const IterationResult iteration);
 
-    static void CreateMetricsLog(const std::string file_path, const ScatteringParameters& sp);
+    static void CreateMetricsLog(const std::string file_path, const GlobalMetrics& gm);
     static void LogMetrics(const std::string file_path, const SampleMetrics& metrics, const int sample_id);
+    static void LogMetrics(const std::string file_path, const Metrics& metrics);
 };

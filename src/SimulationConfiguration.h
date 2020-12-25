@@ -27,7 +27,7 @@ typedef struct Range
 
 typedef struct SimulationConfiguration
 {
-    int samples_per_run;
+    int num_samples;
     Range magnetic_field_range;
     std::vector<double> temperatures;
 

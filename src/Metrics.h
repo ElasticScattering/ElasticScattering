@@ -4,7 +4,21 @@
 #include <windows.h>
 #endif // !DEVICE_PROGRAM
 
+struct GlobalMetrics
+{
+    int particles_per_row;
+    int phi_values;
+    int unique_impurity_count;
+    int additional_impurities;
+    int cells_per_row;
+
+    double grid_time_elapsed;
+};
+
 struct Metrics {
+    bool incoherent;
+    double magnetic_field;
+
     int cells_passed;
     int impurity_intersections;
     

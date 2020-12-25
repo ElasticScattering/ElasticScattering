@@ -1,6 +1,11 @@
 
 
 
+Samples > MF > T
+
+Incoherent resultaten fixen
+	Lijkt onafhankelijk van MF?
+
 Loggen
 	- Gem. integrated_particles. (simpson integratie)
 	- Particle waardes die niet botsen. (karakteristieken...)

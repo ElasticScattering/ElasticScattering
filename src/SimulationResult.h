@@ -52,6 +52,14 @@ struct DataRow {
         incoherent.xx = _incoherent.xx / s;
         incoherent.xy = _incoherent.xy / s;
     }
+
+    DataRow(double temp, double mf, Sigma _coherent, Sigma _incoherent)
+    {
+        temperature = temp;
+        magnetic_field = mf;
+        coherent = _coherent;
+        incoherent = _incoherent;
+    }
 };
 
 struct IterationResult {
@@ -62,14 +70,13 @@ struct IterationResult {
     IterationResult() {}
 };
 
+struct SampleResult {
+    std::vector<std::vector<Sigma>> results;
 
-class SampleResult {
-public:
-    void AddSample();
-};
-
-class SimulationResult {
-    double time_elapsed;
-    //SimulationConfiguration cfg;
-    std::vector<SampleResult> samples;
+    SampleResult(int T, int N)
+    {
+        results.resize(T);
+        for (int i = 0; i < T; i++)
+            results[i].resize(N);
+    }
 };
