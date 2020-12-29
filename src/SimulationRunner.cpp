@@ -6,12 +6,7 @@
 #include "Logger.h"
 
 #include <string>
-#include <iostream>
-
-#include <fstream>
-#include <sstream>
 #include <filesystem>
-#include <unordered_map>
 
 #include <random>
 
@@ -19,21 +14,23 @@ void SimulationRunner::Run(const InitParameters& init)
 {
     QueryPerformanceFrequency(&clockFrequency);
 
-    ParseConfig(init.config_file);
+    cfg = SimulationConfiguration::ParseFromeFile(init.config_file);
+
+    std::cout << "Starting simulation (" << cfg.num_samples << " samples)\n";
+    std::cout << "   Output directory: " << cfg.output_directory << "\n\n";
+    std::cout << "/" << std::string(cfg.magnetic_fields.size() * 2, '-') << "\\\n";
+
     CreateOutputDirectories();
-    PrintSimulationInfo();
 
-    const int S = cfg.num_samples;
-
-    std::vector<SampleResult> sample_results_coh(S);
-    std::vector<SampleResult> sample_results_inc(S);
+    std::vector<SampleResult> sample_results_coh(cfg.num_samples);
+    std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
     SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
 
     const Settings& ss = cfg.settings;
 
-    for (int i = 0; i < S; i++) {
+    for (int i = 0; i < cfg.num_samples; i++) {
         std::cout << " ";
         
         QueryPerformanceCounter(&beginClock);
@@ -112,16 +109,12 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
                 dxx_squared += pow(coh.xx + inc.xx, 2);
             }
 
-            coherent.xx /= S;
-            coherent.xy /= S;
+            coherent.xx   /= S;
+            coherent.xy   /= S;
             incoherent.xx /= S;
             incoherent.xy /= S;
 
-            DataRow row;
-            row.temperature = temperature;
-            row.magnetic_field = cfg.magnetic_fields[j];
-            row.coherent = coherent;
-            row.coherent = incoherent;
+            DataRow row(temperature, cfg.magnetic_fields[j], coherent, incoherent);
 
             double sxx_sq_exp = dxx_squared / S + 1e-15;
             double sxx_exp = (coherent.xx + incoherent.xx) / S;
@@ -133,110 +126,13 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
     }
 }
 
-void SimulationRunner::ParseConfig(std::string file)
-{
-    std::unordered_map<std::string, std::string> values;
-
-    std::filebuf fb;
-    if (!fb.open(file, std::ios::in)) {
-        std::cout << "Could not load config file.";
-        exit(-1);
-    }
-
-    std::istream is_file(&fb);
-
-    std::string line;
-    while (std::getline(is_file, line))
-    {
-        std::istringstream is_line(line);
-        std::string line;
-        if (std::getline(is_line, line))
-        {
-            if (line.size() == 0 || line[0] == '\n' || line[0] == '#' || (line.size() > 1 && line[0] == ':' && line[1] == '/'))
-                continue;
-
-            auto pos = line.find(' ', 0);
-            std::string key = line.substr(0, pos);
-            std::string value = line.substr(pos + 1, line.size() - 1);
-
-            values.insert(std::unordered_map<std::string, std::string>::value_type(key, value));
-        }
-    }
-    fb.close();
-
-    base_output_directory = GetAvailableDirectory(values.at("output_directory"));
-
-    cfg.num_samples             = atoi(values.at("num_samples").c_str());
-    cfg.quadrant_integral_steps = atoi(values.at("integrand_steps").c_str());
-    cfg.particles_per_row       = atoi(values.at("dimension").c_str());;
-
-    {
-        Range magnetic_field;
-        magnetic_field.min       = atof(values.at("magnetic_field_min").c_str());
-        magnetic_field.max       = atof(values.at("magnetic_field_max").c_str());
-        magnetic_field.n         = atoi(values.at("magnetic_field_n").c_str());
-        magnetic_field.step_size = (magnetic_field.max - magnetic_field.min) / (double)(magnetic_field.n - 1);
-
-        cfg.magnetic_fields.resize(magnetic_field.n);
-        for (int i = 0; i < magnetic_field.n; i++) {
-            cfg.magnetic_fields[i] = magnetic_field.min + i * magnetic_field.step_size;
-        }
-    }
-
-    {
-        std::stringstream string_stream(values.at("temperatures"));
-
-        int i = 0;
-        while (string_stream.good())
-        {
-            std::string a;
-            std::getline(string_stream, a, ' ');
-            cfg.temperatures.push_back(atof(a.c_str()));
-            i++;
-        }
-    }
-
-    cfg.settings.particle_speed                  = atof(values.at("particle_speed").c_str());
-    cfg.settings.tau                             = atof(values.at("tau").c_str());
-    cfg.settings.alpha                           = atof(values.at("alpha").c_str());
-    cfg.settings.is_clockwise                    = atoi(values.at("clockwise").c_str()) > 0;
-
-    cfg.settings.region_size                     = atof(values.at("region_size").c_str());
-    cfg.settings.region_extends                  = atof(values.at("region_extends").c_str());
-    cfg.settings.impurity_density                = atof(values.at("impurity_density").c_str());
-    cfg.settings.impurity_radius                 = atof(values.at("impurity_radius").c_str());
-    cfg.settings.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
-}
-
-void SimulationRunner::PrintSimulationInfo() const
-{
-    std::cout << "Starting simulation (" << cfg.num_samples << "samples)\n";
-    std::cout << "\tWriting to:" << base_output_directory << "\n\n";
-
-    std::cout << "/" << std::string(cfg.magnetic_fields.size() * 2, '-') << "\\\n";
-}
-
-std::string SimulationRunner::GetAvailableDirectory(std::string base)
-{
-    std::filesystem::create_directory(base);
-    std::string base_dir_name = base + "/Result_";
-
-    unsigned int n = 0;
-    while (true)
-    {
-        std::string dir = base_dir_name + std::to_string(n);
-        if (!std::filesystem::exists(dir))
-        {
-            std::filesystem::create_directory(dir);
-            return dir;
-        }
-
-        n++;
-    }
-}
-
 void SimulationRunner::CreateOutputDirectories() const
 {
+    if (!std::filesystem::exists(cfg.base_output_directory))
+        std::filesystem::create_directory(cfg.base_output_directory);
+
+    std::filesystem::create_directory(cfg.output_directory);
+
     for (int i = 0; i < cfg.num_samples; i++)
     {
         auto sample_path = GetSamplePath(i);

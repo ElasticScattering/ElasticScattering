@@ -41,6 +41,7 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 		new_lifetimes[i] = min(raw_lifetimes[i], default_max_lifetime);
 
 	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
+
 	b.sigmas             = ApplySigma(tau, new_lifetimes);
 	b.result.xx          = IntegrateSigma(tau, b.sigmas.xx_buffer);
 	b.result.xy          = IntegrateSigma(tau, b.sigmas.xy_buffer);
@@ -115,7 +116,7 @@ double SimulationCPU::IntegrateSigma(const double tau, const std::vector<double>
 		}
 	}
 	
-	double integral_factor = 1.0; //@Todo: = integrand_angle_area / (4 * (values_per_quadrant - 1) * (particles_per_row * particles_per_row));
-	double factor = integral_factor * SigmaFactor(tau, region_size); //double tau, double region_size
-	return integral_total * factor / 1e8;
+	double integral_factor = pow(1.0 / (3.0 * (particles_per_row - 1)), 2);
+	double factor = integral_factor * SigmaFactor(tau);
+	return integral_total * factor * 1e-8;
 }

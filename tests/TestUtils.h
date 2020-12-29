@@ -10,10 +10,10 @@
 #include "src/scattering/escl/v2.h"
 
 
-std::vector<v2> GetTestImpurities()
+std::vector<v2> GetTestImpurities(std::string file_path)
 {
     std::filebuf fb;
-    if (!fb.open("tests/data/test_impurities.dat", std::ios::in)) {
+    if (!fb.open(file_path, std::ios::in)) {
         printf("Could not load test_impurities.");
         return std::vector<v2>();
     }

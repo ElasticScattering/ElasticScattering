@@ -8,16 +8,14 @@
 
 //Repeatedly starts simulations based on a config file, and logs the results.
 class SimulationRunner {
-	std::string base_output_directory;
-
 	SimulationConfiguration cfg;
 
 	LARGE_INTEGER beginClock, endClock, clockFrequency;
 
 	inline double GetElapsedTime() { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
-	std::string GetResultPath(int t_idx) const { return base_output_directory + "/T" + std::to_string(t_idx) + ".dat"; }
-	std::string GetSamplePath(int sample_idx) const { return base_output_directory + "/Sample " + std::to_string(sample_idx); }
+	std::string GetResultPath(int t_idx) const { return cfg.output_directory + "/T" + std::to_string(t_idx) + ".dat"; }
+	std::string GetSamplePath(int sample_idx) const { return cfg.output_directory + "/Sample " + std::to_string(sample_idx); }
 
 	std::string GetImagePath(int t_idx, int m_idx, int sample_idx, bool coherent) const { 
 		auto type = coherent ? "/Coherent/" : "/Incoherent/";
@@ -28,8 +26,6 @@ class SimulationRunner {
 		return GetSamplePath(sample_idx) + "/Metrics.txt";
 	}
 
-	void ParseConfig(std::string file);
-	std::string GetAvailableDirectory(std::string base);
 	void CreateOutputDirectories() const;
 	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
 	void PrintSimulationInfo() const;

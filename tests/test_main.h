@@ -8,11 +8,13 @@
 #include "AngleTests.h"
 #include "OrbitDetailsTest.h"
 
+#include "SimpsonWeightsTest.h"
+
 #include "IndexTests.h"
 #include "GridMovementTests.h"
-#include "LifetimeTests.h"
 
-#include "SimpsonWeightsTest.h"
+#include "LifetimeTests.h"
+#include "IntegrationTest.h"
 
 //#include "BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"

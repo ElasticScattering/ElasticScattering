@@ -25,12 +25,13 @@ ESCL_INLINE Particle CreateParticle(const int quadrant, const int step, const do
     const double bound_angle = GetBoundAngle(p.phi, ps->alpha, ps->is_clockwise);
 
     Orbit orbit;
+    orbit.clockwise      = ps->is_clockwise;
     orbit.radius         = ps->particle_speed / ps->angular_speed;
     orbit.radius_squared = orbit.radius * orbit.radius;
     orbit.center         = GetCyclotronOrbitCenter(p.starting_position, vel, orbit.radius, ps->particle_speed, ps->is_clockwise);
     orbit.bound_time     = GetBoundTime(p.phi, ps->alpha, ps->angular_speed, ps->is_coherent, ps->is_clockwise, false);
     orbit.bound_phi      = ps->is_coherent ? INF : GetCrossAngle(p.phi, bound_angle, ps->is_clockwise);
-    orbit.particle_angle = GetAngle(p.starting_position, &orbit); //@Refactor: name?
+    orbit.particle_angle = p.phi; //GetAngle(p.starting_position, &orbit); //@Refactor: name?
 
     p.orbit = orbit;
 
@@ -64,6 +65,18 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
     next_intersection.dphi           = PI2;
     next_intersection.incident_angle = p->phi;
     
+    double particle_cell_index = get_index(next_intersection.entering_cell, settings->cells_per_row);
+
+    int impurity_start = (particle_cell_index == 0) ? 0 : cell_indices[particle_cell_index - 1];	
+    int impurity_end = cell_indices[particle_cell_index];
+    for (int i = impurity_start; i < impurity_end; i++)
+    {
+        if (InsideImpurity(p->starting_position, impurities[i], settings->impurity_radius)) {
+            METRIC_INC(metrics->particles_inside_impurity);
+            return 0;
+        }
+    }
+
     while (1) {
         // Move to the next cell.
         Intersection entry_point = next_intersection;
@@ -100,5 +113,5 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
 
     METRIC_INC_COND(lifetime > 1, metrics->particles_escaped);
 
-    return lifetime; // min(lifetime, orbit->bound_time);
+    return min(lifetime, p->orbit.bound_time);
 }

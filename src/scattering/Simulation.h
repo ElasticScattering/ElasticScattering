@@ -38,9 +38,9 @@ protected:
 		return (j * values_per_row) + (i * values_per_particle) + (q * values_per_quadrant) + p;
 	};
 	
-	double SigmaFactor(double tau, double region_size) const {
+	double SigmaFactor(double tau) const {
 		double kf = M * particle_settings.particle_speed / HBAR;
-		double outside = (E * E * kf * kf) / (2.0 * PI * PI * M * region_size * region_size * C1);
+		double outside = (E * E * kf * kf) / (2.0 * PI * PI * M * C1);
 		double wct = particle_settings.angular_speed * tau;
 		outside *= tau / (1.0 + wct * wct);
 
@@ -74,7 +74,6 @@ public:
 		const double base_area = ss.alpha * 2.0;
 		integrand_angle_area   = !coherent ? base_area : (PI / 2.0 - base_area);
 		phi_integrand_factor   = integrand_angle_area / ((values_per_quadrant - 1) * 3.0);
-		//voor volledige integratie: double factor = integrand_angle_area / (4 * (ss.integrand_steps - 1) * (limit * limit));
 
 		particle_settings.particle_speed = ss.particle_speed;
 		particle_settings.is_clockwise   = ss.is_clockwise ? 1 : 0;
@@ -99,12 +98,11 @@ public:
 
 
 class SimulationCPU : public Simulation {
-private:
+public:
 	SigmaResult ApplySigma(const double tau, const std::vector<double>& current_lifetimes);
 	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes);
 	double IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas);
 
-public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
 	virtual IterationResult DeriveTemperature(const double temperature) override;
 
