@@ -219,7 +219,7 @@ void SimulationCL::UploadImpurities(const Grid& grid)
     CL_FAIL_CONDITION(clStatus, "Couldn't upload cell indices.");
 }
 
-void SimulationCL::PrepareKernels(const UserSettings& ss, const size_t items_in_workgroup)
+void SimulationCL::PrepareKernels(const Settings& ss, const size_t items_in_workgroup)
 {
 }
 

@@ -388,7 +388,7 @@
     <ClInclude Include="src\scattering\escl\util.h" />
     <ClInclude Include="src\scattering\Grid.h" />
     <ClInclude Include="src\SimulationRunner.h" />
-    <ClInclude Include="src\UserSettings.h" />
+    <ClInclude Include="src\Settings.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />

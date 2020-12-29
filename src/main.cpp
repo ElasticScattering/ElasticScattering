@@ -5,6 +5,8 @@
 #include "SimulationRunner.h"
 
 #include <string>
+#include <io.h>    // for _setmode()
+#include <fcntl.h> // for _O_U16TEXT
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     p_init->use_gpu = true;
@@ -39,6 +41,8 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
 
 int main(int argc, char **argv)
 {
+    //_setmode(_fileno(stdout), _O_U16TEXT);
+
     InitParameters init;
     ParseArgs(argc, argv, &init);
 

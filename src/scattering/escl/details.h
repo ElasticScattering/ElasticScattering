@@ -111,17 +111,6 @@ AngleInRange(const double phi, const double2 phi_range, const bool clockwise)
 
     high = (high < low) ? (high + PI2) : high;
     
-    /*
-    bool first = (low < phi&& phi < high);
-    bool second = (low < (phi + PI2) && (phi + PI2) < high);
-
-    if (!first) {
-        printf("Second branch taken attempted: ");
-        if (second) printf("True\n");
-        else        printf("False\n");
-    }
-    */
-
     return (low < phi && phi < high) || (low < (phi + PI2) && (phi + PI2) < high);
 }
 

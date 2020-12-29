@@ -3,10 +3,11 @@
 
 #include "TestMacros.h"
 
+#include "GridGenerationTests.h"
+
 #include "AngleTests.h"
 #include "OrbitDetailsTest.h"
 
-#include "GridGenerationTests.h"
 #include "IndexTests.h"
 #include "GridMovementTests.h"
 #include "LifetimeTests.h"

@@ -8,18 +8,20 @@
 
 void TestGridMovement(Orbit& o, Intersection& exit, std::vector<Intersection>& expected_intersections)
 {
-
 	Intersection entry;
 
-	int cells_per_row = 10;
 	v2 spawn_range = { -1e-6, 2e-6 };
-	double cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+	ImpuritySettings settings;
+	settings.cells_per_row      = 10;
+	settings.spawn_region_start = spawn_range.x;
+	settings.spawn_region_size  = spawn_range.y - spawn_range.x;
+	settings.cell_size          = settings.spawn_region_size / (double)settings.cells_per_row;
 
 	int i = 0;
 	while (1)
 	{
 		entry = exit;
-		bool cell_available = GetNextCell(&o, 0, cell_size, cells_per_row, spawn_range, &entry, &exit);
+		bool cell_available = GetNextCell(&o, 0, &settings, &entry, &exit);
 
 		if (!cell_available)
 		{

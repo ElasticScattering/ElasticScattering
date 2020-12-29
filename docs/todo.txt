@@ -1,10 +1,10 @@
-
+﻿
 
 
 - Incoherent resultaten fixen (Lijkt onafhankelijk van MF?)
 x Gem. integrated_particles. (simpson integratie)
 
-Idee�n
+Ideeën
 	(impurity randomness model per materiaal)
 	- Particle waardes die niet botsen. (karakteristieken...)
 
@@ -19,3 +19,15 @@ Tellers
 	#ifdef EFFICIENCY_METRICS
 		atomic_inc(intersectCounter);
 	#endif // EFFICIENCY_METRICS
+
+
+	logging
+	/*
+#define WRITE_METRIC(name, metric, m_precision, m_unit)                  \
+file << L'│' << std::setw(metric_width) << std::left << name;   \
+for (int i = 0; i < metrics.size(); i++)                        \
+{                                                               \
+    file << L'│' << std::setw(value_width - m_unit.size()) << std::right << std::setprecision(m_precision) << metric << m_unit; \
+} \
+file << L'│' << std::endl;
+*/

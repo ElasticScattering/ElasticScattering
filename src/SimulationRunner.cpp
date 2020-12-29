@@ -1,23 +1,19 @@
 #include "SimulationRunner.h"
 
-#include "Logger.h"
-#include "SimulationResult.h"
 #include "scattering/Simulation.h"
 #include "scattering/Grid.h"
-#include "scattering/escl/constants.h"
+#include "SimulationResult.h"
+#include "Logger.h"
 
 #include <string>
-#include <unordered_map>
-
 #include <iostream>
+
 #include <fstream>
 #include <sstream>
-#include <cstdlib>
 #include <filesystem>
-#include <iomanip> 
+#include <unordered_map>
 
 #include <random>
-#include <windows.h>
 
 void SimulationRunner::Run(const InitParameters& init)
 {
@@ -35,10 +31,10 @@ void SimulationRunner::Run(const InitParameters& init)
     std::random_device random_device;
     SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
 
-    const UserSettings& ss = cfg.user_settings;
+    const Settings& ss = cfg.settings;
 
     for (int i = 0; i < S; i++) {
-        printf(" ");
+        std::cout << " ";
         
         QueryPerformanceCounter(&beginClock);
         auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
@@ -48,26 +44,27 @@ void SimulationRunner::Run(const InitParameters& init)
         sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
         sample_results_inc[i] = RunSample(es, ss, i, false, grid);
 
-        printf("\n");
+        std::cout << std::endl;
     }
 
     FinishResults(sample_results_coh, sample_results_inc);
 }
 
-SampleResult SimulationRunner::RunSample(Simulation& es, const UserSettings &settings, const int sample_index, const bool coherent, const Grid& grid)
+SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &settings, const int sample_index, const bool coherent, const Grid& grid)
 {
     const int T = cfg.temperatures.size();
     const int N = cfg.magnetic_fields.size();
     SampleResult sr(T, N);
 
-    auto metrics_path = GetMetricsPath(sample_index, coherent);
+    auto metrics_path = GetMetricsPath(sample_index);
     double nlifetimes = pow(cfg.particles_per_row - 1, 2) * 4.0 * cfg.quadrant_integral_steps;
-    auto impurity_settings = grid.GetSettings();
 
     es.InitSample(grid, settings, coherent);
+
+    SampleMetrics sample_metrics(coherent, N, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
     
     for (int j = 0; j < N; j++) {
-        Metrics metrics(j, nlifetimes, impurity_settings.cells_per_row, impurity_settings.impurity_count);
+        Metrics metrics(j, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
     
         // Main compute method.
         QueryPerformanceCounter(&beginClock);
@@ -75,7 +72,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const UserSettings &set
         QueryPerformanceCounter(&endClock);
         
         metrics.time_elapsed_lifetimes = GetElapsedTime();
-        Logger::LogMetrics(metrics_path, metrics);
+        sample_metrics.iteration_metrics[j] = metrics;
 
         for (int i = 0; i < T; i++) {
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
@@ -84,8 +81,10 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const UserSettings &set
             Logger::LogImages(GetImagePath(i, j, sample_index, coherent), cfg.particles_per_row - 1, iteration);
         }
 
-        printf(".");
+        std::cout << ".";
     }
+
+    Logger::LogSampleMetrics(metrics_path, sample_metrics);
 
     return sr;
 }
@@ -140,7 +139,7 @@ void SimulationRunner::ParseConfig(std::string file)
 
     std::filebuf fb;
     if (!fb.open(file, std::ios::in)) {
-        printf("Could not load config file.");
+        std::cout << "Could not load config file.";
         exit(-1);
     }
 
@@ -197,25 +196,24 @@ void SimulationRunner::ParseConfig(std::string file)
         }
     }
 
-    cfg.user_settings.particle_speed                  = atof(values.at("particle_speed").c_str());
-    cfg.user_settings.tau                             = atof(values.at("tau").c_str());
-    cfg.user_settings.alpha                           = atof(values.at("alpha").c_str());
-    cfg.user_settings.is_clockwise                    = atoi(values.at("clockwise").c_str()) > 0;
+    cfg.settings.particle_speed                  = atof(values.at("particle_speed").c_str());
+    cfg.settings.tau                             = atof(values.at("tau").c_str());
+    cfg.settings.alpha                           = atof(values.at("alpha").c_str());
+    cfg.settings.is_clockwise                    = atoi(values.at("clockwise").c_str()) > 0;
 
-    cfg.user_settings.region_size                     = atof(values.at("region_size").c_str());
-    cfg.user_settings.region_extends                  = atof(values.at("region_extends").c_str());
-    cfg.user_settings.impurity_density                = atof(values.at("impurity_density").c_str());
-    cfg.user_settings.impurity_radius                 = atof(values.at("impurity_radius").c_str());
-    cfg.user_settings.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
+    cfg.settings.region_size                     = atof(values.at("region_size").c_str());
+    cfg.settings.region_extends                  = atof(values.at("region_extends").c_str());
+    cfg.settings.impurity_density                = atof(values.at("impurity_density").c_str());
+    cfg.settings.impurity_radius                 = atof(values.at("impurity_radius").c_str());
+    cfg.settings.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
 }
 
 void SimulationRunner::PrintSimulationInfo() const
 {
-    printf("Starting simulation (%i samples)\n", cfg.num_samples);
-    printf("\tWriting to: %s\n\n", base_output_directory.c_str());
+    std::cout << "Starting simulation (" << cfg.num_samples << "samples)\n";
+    std::cout << "\tWriting to:" << base_output_directory << "\n\n";
 
-
-    printf("/%s\\\n", std::string(cfg.magnetic_fields.size() * 2, '-').c_str());
+    std::cout << "/" << std::string(cfg.magnetic_fields.size() * 2, '-') << "\\\n";
 }
 
 std::string SimulationRunner::GetAvailableDirectory(std::string base)
@@ -253,18 +251,15 @@ void SimulationRunner::CreateOutputDirectories() const
 
 void SimulationRunner::CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const
 {
-    auto settings = grid.GetSettings();
-
     GlobalMetrics gm;
     gm.particles_per_row                  = cfg.particles_per_row - 1;
     gm.phi_values                         = 4 * cfg.quadrant_integral_steps;
-    gm.cells_per_row                      = settings.cells_per_row;
-    gm.unique_impurity_count              = settings.impurity_count;
+    gm.cells_per_row                      = grid.GetCellsPerRow();
+    gm.unique_impurity_count              = grid.GetUniqueImpurityCount();
     gm.additional_impurities              = grid.GetTotalImpurityCount() - gm.unique_impurity_count;
     gm.grid_time_elapsed                  = elapsed_time; 
-    gm.avg_impurities_in_cell             = gm.unique_impurity_count / (double)(gm.cells_per_row * gm.cells_per_row);
-    gm.avg_impurities_in_cell_overlapping = gm.avg_impurities_in_cell - cfg.user_settings.max_expected_impurities_in_cell;
+    gm.avg_impurities_in_cell             = grid.GetTotalImpurityCount() / (double)(gm.cells_per_row * gm.cells_per_row);
+    gm.avg_impurities_in_cell_overlapping = gm.avg_impurities_in_cell - cfg.settings.max_expected_impurities_in_cell;
 
-    Logger::CreateMetricsLog(GetMetricsPath(sample_index, true), gm);
-    Logger::CreateMetricsLog(GetMetricsPath(sample_index, false), gm);
+    Logger::CreateMetricsLog(GetMetricsPath(sample_index), gm);
 }

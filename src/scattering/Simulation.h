@@ -6,7 +6,7 @@
 #include "escl/ScatteringParameters.h"
 #include "escl/constants.h"
 
-#include "src/UserSettings.h"
+#include "src/Settings.h"
 #include "src/SimulationResult.h"
 #include "src/Metrics.h"
 
@@ -32,7 +32,6 @@ protected:
 	int values_per_row;
 
 	ImpuritySettings impurity_settings;
-
 	ParticleSettings particle_settings;
 
 	int GetIndex(int i, int j, int q, int p) const {
@@ -64,7 +63,7 @@ public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) = 0;
 	virtual IterationResult DeriveTemperature(const double temperature) = 0;
 
-	void InitSample(const Grid& grid, const UserSettings& ss, const bool coherent)
+	void InitSample(const Grid& grid, const Settings& ss, const bool coherent)
 	{
 		impurity_settings    = grid.GetSettings();
 		region_size          = ss.region_size;
@@ -83,7 +82,7 @@ public:
 		particle_settings.phi_start      = (!coherent ? -ss.alpha : ss.alpha);
 		particle_settings.phi_step_size  = integrand_angle_area / (values_per_quadrant - 1);
 
-		coherent_tau         = ss.tau;
+		coherent_tau = ss.tau;
 	}
 
 	Simulation(int p_particles_per_row, int p_values_per_quadrant)
@@ -114,7 +113,7 @@ public:
 
 
 class SimulationCL : public Simulation {
-	void PrepareKernels(const UserSettings& ss, const size_t items_in_workgroup);
+	void PrepareKernels(const Settings& ss, const size_t items_in_workgroup);
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;

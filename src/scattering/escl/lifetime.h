@@ -60,7 +60,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
 
     Intersection next_intersection;
     next_intersection.position       = p->starting_position;
-    next_intersection.entering_cell  = get_cell(p->starting_position, settings->impurity_spawn_range, settings->cells_per_row);
+    next_intersection.entering_cell  = get_cell(p->starting_position, settings->spawn_region_start, settings->spawn_region_size, settings->cells_per_row);
     next_intersection.dphi           = PI2;
     next_intersection.incident_angle = p->phi;
     
@@ -68,7 +68,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         // Move to the next cell.
         Intersection entry_point = next_intersection;
 
-        bool next_cell_available = GetNextCell(&p->orbit, p->phi, settings->cell_size, settings->cells_per_row, settings->impurity_spawn_range, &entry_point, &next_intersection);
+        bool next_cell_available = GetNextCell(&p->orbit, p->phi, settings, &entry_point, &next_intersection);
         double2 valid_phi_range = MAKE_DOUBLE2(entry_point.incident_angle, next_cell_available ? next_intersection.incident_angle : p->phi); // move to Intersection?
 
         // Use the grid index to get the impurities in the current cell.

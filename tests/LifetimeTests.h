@@ -12,7 +12,7 @@ TEST_CASE("Lifetime tests")
 	auto impurities = GetTestImpurities();
 	REQUIRE(impurities.size() > 0);
 
-	Grid grid(impurities, 1e-6, 1e-6, 1e-8, 10);
+	auto grid = Grid(impurities, 1e-6, 1e-6, 1e-8, 10);
 	auto impurity_settings = grid.GetSettings();
 
 	double magnetic_field = 10;

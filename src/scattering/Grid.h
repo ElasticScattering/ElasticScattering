@@ -49,15 +49,15 @@ public:
 
 	int GetUniqueImpurityCount() const { return unique_impurity_count; };
 	int GetTotalImpurityCount() const { return total_indexed_impurities; };
-
+	int GetCellsPerRow() const { return cells_per_row; };
 	ImpuritySettings GetSettings() const
 	{
 		ImpuritySettings is;
-		is.impurity_radius      = impurity_radius;
-		is.impurity_spawn_range = spawn_range;
-		is.cells_per_row        = cells_per_row;
-		is.cell_size            = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-		is.impurity_count		= unique_impurity_count;
+		is.impurity_radius    = impurity_radius;
+		is.spawn_region_start = spawn_range.x;
+		is.spawn_region_size  = spawn_range.y - spawn_range.x;
+		is.cells_per_row      = cells_per_row;
+		is.cell_size          = is.spawn_region_size / (double)cells_per_row;
 		return is;
 	}
 

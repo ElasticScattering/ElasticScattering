@@ -4,7 +4,9 @@
 #include "scattering/Simulation.h"
 
 #include <string>
+#include <vector>
 
+//Repeatedly starts simulations based on a config file, and logs the results.
 class SimulationRunner {
 	std::string base_output_directory;
 
@@ -22,9 +24,8 @@ class SimulationRunner {
 		return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
 	}
 
-	std::string GetMetricsPath(int sample_idx, bool coherent) const {
-		auto type = coherent ? "Coherent" : "Incoherent";
-		return GetSamplePath(sample_idx) + "/Metrics " + type + ".txt";
+	std::string GetMetricsPath(int sample_idx) const {
+		return GetSamplePath(sample_idx) + "/Metrics.txt";
 	}
 
 	void ParseConfig(std::string file);
@@ -33,7 +34,7 @@ class SimulationRunner {
 	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
 	void PrintSimulationInfo() const;
 
-	SampleResult RunSample(Simulation& es, const UserSettings& settings, const int sample_index, const bool coherent, const Grid& grid);
+	SampleResult RunSample(Simulation& es, const Settings& settings, const int sample_index, const bool coherent, const Grid& grid);
 	void FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc);
 
 public:

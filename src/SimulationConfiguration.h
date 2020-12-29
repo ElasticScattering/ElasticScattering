@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UserSettings.h"
+#include "Settings.h"
 
 #include <vector>
 #include <string>
@@ -34,5 +34,5 @@ typedef struct SimulationConfiguration
     int particles_per_row;
     int quadrant_integral_steps;
 
-    UserSettings user_settings;
+    Settings settings;
 } SimulationConfiguration;

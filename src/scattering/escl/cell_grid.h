@@ -29,18 +29,17 @@ ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
 	return p.y * cells_per_row + p.x;
 }
 
-ESCL_INLINE int2 get_cell(const double2 pos, const double2 range, const int cells_per_row)
+ESCL_INLINE int2 get_cell(const double2 pos, const double spawn_region_start, const double spawn_region_size, const int cells_per_row)
 {
 	return MAKE_INT2(
-		(int)((pos.x - range.x) / (range.y - range.x) * (double)(cells_per_row)),
-		(int)((pos.y - range.x) / (range.y - range.x) * (double)(cells_per_row))
+		(int)((pos.x - spawn_region_start) / spawn_region_size * (double)(cells_per_row)),
+		(int)((pos.y - spawn_region_start) / spawn_region_size * (double)(cells_per_row))
 	);
 }
 
-ESCL_INLINE double2 to_world(const int2 current_cell, const int cells_per_row, const double2 spawn_range)
+ESCL_INLINE double2 to_world(const int2 current_cell, const double spawn_region_start, const double cell_size)
 {
-	double factor = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-	return MAKE_DOUBLE2(spawn_range.x + current_cell.x * factor, spawn_range.x + current_cell.y * factor);
+	return MAKE_DOUBLE2(spawn_region_start + current_cell.x * cell_size, spawn_region_start + current_cell.y * cell_size);
 }
 
 ESCL_INLINE bool within_bounds(int2 p, const int cells_per_row) {
@@ -60,7 +59,7 @@ ESCL_INLINE bool DifferentPoint(double2 p1, double2 p2, double L)
 
 #define Update_Best_Intersect(intersection_point) {																			\
 	double incident_angle = GetAngle(intersection_point, orbit);															\
-	double dphi = GetCrossAngle(last_intersection->incident_angle, incident_angle, orbit->clockwise);									\
+	double dphi = GetCrossAngle(last_intersection->incident_angle, incident_angle, orbit->clockwise);						\
 	if (dphi < closest_intersection->dphi && DifferentPoint(intersection_point, last_intersection->position, L)) {			\
 		closest_intersection->position       = intersection_point;															\
 		closest_intersection->entering_cell  = next_cell;																	\
@@ -79,7 +78,6 @@ UpdateFirstBoundaryIntersect(
 	const Intersection* last_intersection,
 	Intersection* closest_intersection)
 {
-
 	double2 u = (p2 - p1) / L;
 	double projection_distance = u.x * (orbit->center.x - p1.x) + u.y * (orbit->center.y - p1.y);
 	double2 proj = p1 + (u * projection_distance);
@@ -114,16 +112,15 @@ UpdateFirstBoundaryIntersect(
 ESCL_INLINE bool 
 GetNextCell(const Orbit* orbit,
 	const double phi,
-	const double L,
-	const int cells_per_row,
-	const double2 spawn_range,
+	const ImpuritySettings *is,
 	Intersection* const last_intersection,
 	Intersection* next_intersection)
 {
 	last_intersection->dphi = PI2;
 	*next_intersection = *last_intersection;
 
-	double2 low_left  = to_world(last_intersection->entering_cell, cells_per_row, spawn_range);
+	const double L = is->cell_size;
+	double2 low_left  = to_world(last_intersection->entering_cell, is->spawn_region_start, L);
 	double2 low_right = low_left + MAKE_DOUBLE2(L, 0);
 	double2 top_right = low_left + MAKE_DOUBLE2(L, L);
 	double2 top_left  = low_left + MAKE_DOUBLE2(0, L);
@@ -158,6 +155,6 @@ GetNextCell(const Orbit* orbit,
 
 	return
 		!same_cell &&
-		within_bounds(next_intersection->entering_cell, cells_per_row) &&
+		within_bounds(next_intersection->entering_cell, is->cells_per_row) &&
 		!AngleInRange(phi, MAKE_DOUBLE2(last_intersection->incident_angle, next_intersection->incident_angle), orbit->clockwise);
 }

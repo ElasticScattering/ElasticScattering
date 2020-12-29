@@ -1,4 +1,4 @@
-
+﻿
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -11,11 +11,12 @@
 #include <filesystem>
 
 #include <iostream>
-#include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <iomanip> 
 #include <ctime>
+
+#include <clocale>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
@@ -25,7 +26,7 @@ void Logger::CreateResultLog(std::string file_path, const SimulationConfiguratio
     std::ofstream file;
     file.open(file_path);
 
-    const auto ss = cfg.user_settings;
+    const auto ss = cfg.settings;
     
     file << "# Elastic Scattering simulation results summary." << std::endl;
     file << "# Simulations " << cfg.magnetic_fields.size() << std::endl;
@@ -79,48 +80,119 @@ void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& 
     file << "Avg. imps/cell " << gm.avg_impurities_in_cell << " (" << gm.avg_impurities_in_cell_overlapping << " from overlapping)" << std::endl;
     file << std::fixed << std::setprecision(4);
     file << "Index time     " << gm.grid_time_elapsed << " seconds" << std::endl;
-    file << std::endl << std::endl << std::endl << std::endl;
+    file << std::endl;
 }
 
-void Logger::LogMetrics(const std::string file_path, const Metrics& metrics)
+void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics sample_metrics)
 {
-    double pct_particles_inside_impurity  = (double)(100 * metrics.particles_inside_impurity) / metrics.nlifetimes;
-    
-    double prt_cells_passed               = (double)metrics.cells_passed / metrics.nlifetimes;
-    double pct_prt_cells_passed           = 100 * prt_cells_passed / pow(metrics.cells_per_row, 2);
-    double mln_cells_passed               = (double)metrics.cells_passed / 1'000'000.0;
+    std::wofstream file;
+    file.open(file_path, std::ios_base::app);
 
-    double prt_impurity_intersections     = (double)metrics.impurity_intersections / metrics.nlifetimes;
-    double pct_prt_impurity_intersections = 100 * prt_impurity_intersections / (double)metrics.impurity_count;
-    double mln_impurity_intersections     = (double)metrics.impurity_intersections / 1'000'000.0;
-
-    auto f = fopen(file_path.c_str(), "a");
     const int metric_width = 26;
-    const int tabbed_width = metric_width - 4;
+    const int value_width = 12;
+    const auto metrics = sample_metrics.iteration_metrics;
 
-    std::string label = "Metric (MF: " + std::to_string(metrics.magnetic_field_index) + ")";
+    const auto loc = std::locale("en_US.UTF-8");
+    file.imbue(loc);
+    //const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
+    
+    file << std::endl << std::endl;
 
-    fprintf(f, "%-*s| %-13s\n", metric_width, label.c_str(), "Value");
-    fprintf(f, "%s|%s\n", std::string(metric_width, '-').c_str(), std::string(14, '-').c_str());
-    fprintf(f, "%-*s| %e\n", metric_width, "Avg. particle lifetime", metrics.avg_particle_lifetime);
-    fprintf(f, "%-*s|\n", metric_width, "Time spent");
-    fprintf(f, "\t%-*s| %.3fs\n", tabbed_width, "Computing lifetimes", metrics.time_elapsed_lifetimes);
-    fprintf(f, "\t%-*s| %.3fs\n", tabbed_width, "Rest", metrics.time_elapsed_temperatures);
-    fprintf(f, "%-*s|\n", metric_width, "");
-    fprintf(f, "%-*s| %.1f mil\n", metric_width, "Impurity intersections", mln_impurity_intersections);
-    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", prt_impurity_intersections);
-    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", pct_prt_impurity_intersections);
-    fprintf(f, "%-*s|\n", metric_width, "");
-    fprintf(f, "%-*s| %.1f mil\n", metric_width, "Cells passed", mln_cells_passed);
-    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", prt_cells_passed);
-    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", pct_prt_cells_passed);
-    fprintf(f, "%-*s|\n", metric_width, "");
-    fprintf(f, "%-*s| %i\n", metric_width, "Escaped", metrics.particles_escaped);
-    fprintf(f, "%-*s| %.2f%%\n", metric_width, "Started inside impurity", pct_particles_inside_impurity);
-    fprintf(f, "%s\n", std::string(metric_width+15, '-').c_str());
-    fprintf(f, "\n\n");
+    // Header
+    file << L'┌' << std::wstring(metric_width, L'─');
+    for (int i = 0; i < metrics.size(); i++) file << L'┬' << std::wstring(value_width, L'─');
+    file << L'┐' << std::endl;
 
-    fclose(f);
+    auto label = (sample_metrics.coherent) ? " Metric (Coherent)" : " Metric (Incoherent)";
+
+    file << L'│' << std::setw(metric_width) << std::left << label;
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::left << std::wstring(L" MF ") + std::to_wstring(i);
+    file << L'│' << std::endl;
+
+    file << L'├' << std::wstring(metric_width, L'─');
+    for (int i = 0; i < metrics.size(); i++) file << L'┼' << std::wstring(value_width, L'─');
+    file << L'┤' << std::endl;
+
+    // Rows
+    file << L'│' << std::setw(metric_width) << std::left << " Avg. particle lifetime";
+    for (int i = 0; i < metrics.size(); i++) file << L'│'  << std::setw(value_width) << std::right << metrics[i].avg_particle_lifetime;
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width) << std::left << " Time spent on lifetimes";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(3) << metrics[i].time_elapsed_lifetimes << "s";
+    file << L'│' << std::endl;
+
+    file << L'│' << std::wstring(metric_width, ' '); // Empty line.
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::wstring(value_width, ' ');
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width) << std::left << " Impurity intersections";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].impurity_intersections / 1'000'000.0) << " mil";
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle average";
+    for (int i = 0; i < metrics.size(); i++)
+    {
+        file << L'│' << std::setw(value_width) << std::right << std::setprecision(2) 
+            << ((double)metrics[i].impurity_intersections / sample_metrics.nlifetimes);
+    }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle percentage";
+    for (int i = 0; i < metrics.size(); i++)
+    {
+        file << L'│' << std::setw(value_width-1) << std::right << std::setprecision(2)
+            << (100 * ((double)metrics[i].impurity_intersections / sample_metrics.nlifetimes) / (double)metrics[i].impurity_count) << "%";
+    }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::wstring(metric_width, ' '); // Empty line.
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::wstring(value_width, ' ');
+    file << L'│' << std::endl;
+
+    // # Cells Passed.
+    file << L'│' << std::setw(metric_width) << std::left << " Cells passed";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].cells_passed / 1'000'000.0) << " mil";
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle average";
+    for (int i = 0; i < metrics.size(); i++)
+    {
+        file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
+            << ((double)metrics[i].cells_passed / sample_metrics.nlifetimes);
+    }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle percentage";
+    for (int i = 0; i < metrics.size(); i++)
+    {
+        file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
+            << (100 * ((double)metrics[i].cells_passed / sample_metrics.nlifetimes) / pow(sample_metrics.cells_per_row, 2)) << "%";
+    }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::wstring(metric_width, ' '); // Empty line.
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::wstring(value_width, ' ');
+    file << L'│' << std::endl;
+
+    // # Particles escaped.
+    file << L'│' << std::setw(metric_width) << std::left << " Particles escaped";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particles_escaped;
+    file << L'│' << std::endl;
+
+    // # Particles inside impurity.
+    file << L'│' << std::setw(metric_width) << std::left << " Started inside impurity";
+    for (int i = 0; i < metrics.size(); i++)
+    {
+        file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
+            << (100 * ((double)metrics[i].particles_inside_impurity / sample_metrics.nlifetimes)) << "%";
+    }
+    file << L'│' << std::endl;
+    
+    // Table end.
+    file << L'└' << std::wstring(metric_width, L'─');
+    for (int i = 0; i < metrics.size(); i++) file << L'┴' << std::wstring(value_width, L'─');
+    file << L'┘' << std::endl;
 }
 
 void Logger::LogResult(const std::string file_path, const DataRow row)

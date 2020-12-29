@@ -5,13 +5,13 @@
 
 typedef struct ImpuritySettings
 {
-    double2 impurity_spawn_range;
-
-    double impurity_radius;
+    double spawn_region_start;
+    double spawn_region_size;
 
     double cell_size;
     int cells_per_row;
-    int impurity_count;
+
+    double impurity_radius;
 } ImpuritySettings;
 
 typedef struct ParticleSettings
