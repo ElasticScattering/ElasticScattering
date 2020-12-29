@@ -17,9 +17,12 @@ typedef struct Orbit {
 	double bound_time;
 	double bound_phi;
 
+    double particle_angle;
+
 	bool clockwise;
 
 #ifndef DEVICE_PROGRAM
+    Orbit() {};
 	Orbit(double2 _center, double _radius, bool _clockwise, double _bound_time, double _bound_phi) {
 		center = _center;
 		radius = _radius;
@@ -44,10 +47,10 @@ typedef struct Orbit {
 
 typedef struct Particle {
 	double phi;
-    double orbit_angle;
-
 	double2 starting_position;
-    int2 starting_cell;
+    double angular_speed;
+
+    Orbit orbit;
 } Particle;
 
 /// 
@@ -167,7 +170,7 @@ GetCrossPoints(const Orbit* orbit, const double2 p2, const double r2)
 * no intersection in those cells.
 */
 ESCL_INLINE double 
-GetFirstCrossTime(const Orbit* orbit, const double particle_phi, const double2 ip, const double ir, const double w, const double2 valid_range)
+GetFirstCrossTime(const Orbit* orbit, const double2 ip, const double ir, const double w, const double2 valid_range)
 {
     const double4 cross_points = GetCrossPoints(orbit, ip, ir);
 
@@ -180,12 +183,12 @@ GetFirstCrossTime(const Orbit* orbit, const double particle_phi, const double2 i
     double traversal_time = INF;
 
     if (AngleInRange(phi1, valid_range, orbit->clockwise)) {
-        const double t = GetCrossAngle(particle_phi, phi1, orbit->clockwise) / w;
+        const double t = GetCrossAngle(orbit->particle_angle, phi1, orbit->clockwise) / w;
         traversal_time = min(traversal_time, t);
     }
 
     if (AngleInRange(phi2, valid_range, orbit->clockwise)) {
-        const double t = GetCrossAngle(particle_phi, phi2, orbit->clockwise) / w;
+        const double t = GetCrossAngle(orbit->particle_angle, phi2, orbit->clockwise) / w;
         traversal_time = min(traversal_time, t);
     }
 

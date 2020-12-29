@@ -24,14 +24,14 @@ void Logger::CreateResultLog(std::string file_path, const SimulationConfiguratio
 {
     std::ofstream file;
     file.open(file_path);
-    
-    ScatteringParameters sp = cfg.scattering_params;
 
+    const auto ss = cfg.user_settings;
+    
     file << "# Elastic Scattering simulation results summary." << std::endl;
-    file << "# Simulations " << cfg.magnetic_field_range.n << std::endl;
+    file << "# Simulations " << cfg.magnetic_fields.size() << std::endl;
     file << "# Samples     " << cfg.num_samples << std::endl;
-    file << "# Particles   " << sp.dim-1 << "x" << sp.dim-1 << std::endl;
-    file << "# Phi steps   " << sp.integrand_steps << std::endl;
+    file << "# Particles   " << cfg.particles_per_row-1 << "x" << cfg.particles_per_row-1 << std::endl;
+    file << "# Phi steps   " << cfg.quadrant_integral_steps << std::endl;
 
     file << std::scientific << std::setprecision(3);
     file << std::endl;
@@ -39,16 +39,15 @@ void Logger::CreateResultLog(std::string file_path, const SimulationConfiguratio
     file << "# Scattering parameters   #" << std::endl;
     file << "#" << std::endl;
     file << "#\t" << "Temperature    " << temperature << std::endl;
-    file << "#\t" << "Tau            " << sp.tau << std::endl;
-    file << "#\t" << "Alpha          " << sp.alpha << std::endl;
-    file << "#\t" << "Particle speed " << sp.particle_speed << std::endl;
-    file << "#\t" << "Clockwise      " << (sp.is_clockwise ? "True" : "False") << std::endl;
+    file << "#\t" << "Tau            " << ss.tau << std::endl;
+    file << "#\t" << "Alpha          " << ss.alpha << std::endl;
+    file << "#\t" << "Particle speed " << ss.particle_speed << std::endl;
+    file << "#\t" << "Clockwise      " << (ss.is_clockwise ? "True" : "False") << std::endl;
     file << "#\n# Impurities:" << std::endl;
-    file << "#\t" << "Count          " << sp.impurity_count << std::endl;
-    file << "#\t" << "Region size    " << sp.region_size << std::endl;
-    file << "#\t" << "Region extends " << sp.region_extends << std::endl;
-    file << "#\t" << "Density        " << sp.impurity_density << std::endl;
-    file << "#\t" << "Radius         " << sp.impurity_radius << std::endl;
+    file << "#\t" << "Region size    " << ss.region_size << std::endl;
+    file << "#\t" << "Region extends " << ss.region_extends << std::endl;
+    file << "#\t" << "Density        " << ss.impurity_density << std::endl;
+    file << "#\t" << "Radius         " << ss.impurity_radius << std::endl;
 
     file << "#\n# Constants:" << std::endl;
     file << "#\t" << "Particle mass  " << M << std::endl;
@@ -77,7 +76,7 @@ void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& 
     file << "Lifetimes      " << lifetimes << std::endl;
     file << "Impurities     " << gm.unique_impurity_count << " (+ " << gm.additional_impurities << " from overlap)" << std::endl;
     file << "Cells          " << gm.cells_per_row << " x " << gm.cells_per_row << std::endl;
-    file << "Avg. imps/cell " << gm.avg_impurities_in_cell << " (" << gm.avg_impuritiies_in_cell_overlapping << " from overlapping)" << std::endl;
+    file << "Avg. imps/cell " << gm.avg_impurities_in_cell << " (" << gm.avg_impurities_in_cell_overlapping << " from overlapping)" << std::endl;
     file << std::fixed << std::setprecision(4);
     file << "Index time     " << gm.grid_time_elapsed << " seconds" << std::endl;
     file << std::endl << std::endl << std::endl << std::endl;
@@ -85,6 +84,16 @@ void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& 
 
 void Logger::LogMetrics(const std::string file_path, const Metrics& metrics)
 {
+    double pct_particles_inside_impurity  = (double)(100 * metrics.particles_inside_impurity) / metrics.nlifetimes;
+    
+    double prt_cells_passed               = (double)metrics.cells_passed / metrics.nlifetimes;
+    double pct_prt_cells_passed           = 100 * prt_cells_passed / pow(metrics.cells_per_row, 2);
+    double mln_cells_passed               = (double)metrics.cells_passed / 1'000'000.0;
+
+    double prt_impurity_intersections     = (double)metrics.impurity_intersections / metrics.nlifetimes;
+    double pct_prt_impurity_intersections = 100 * prt_impurity_intersections / (double)metrics.impurity_count;
+    double mln_impurity_intersections     = (double)metrics.impurity_intersections / 1'000'000.0;
+
     auto f = fopen(file_path.c_str(), "a");
     const int metric_width = 26;
     const int tabbed_width = metric_width - 4;
@@ -93,20 +102,21 @@ void Logger::LogMetrics(const std::string file_path, const Metrics& metrics)
 
     fprintf(f, "%-*s| %-13s\n", metric_width, label.c_str(), "Value");
     fprintf(f, "%s|%s\n", std::string(metric_width, '-').c_str(), std::string(14, '-').c_str());
+    fprintf(f, "%-*s| %e\n", metric_width, "Avg. particle lifetime", metrics.avg_particle_lifetime);
     fprintf(f, "%-*s|\n", metric_width, "Time spent");
     fprintf(f, "\t%-*s| %.3fs\n", tabbed_width, "Computing lifetimes", metrics.time_elapsed_lifetimes);
     fprintf(f, "\t%-*s| %.3fs\n", tabbed_width, "Rest", metrics.time_elapsed_temperatures);
     fprintf(f, "%-*s|\n", metric_width, "");
-    fprintf(f, "%-*s| %f mil\n", metric_width, "Impurity intersections", metrics.mln_impurity_intersections);
-    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", metrics.prt_impurity_intersections);
-    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", metrics.pct_prt_impurity_intersections);
+    fprintf(f, "%-*s| %.1f mil\n", metric_width, "Impurity intersections", mln_impurity_intersections);
+    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", prt_impurity_intersections);
+    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", pct_prt_impurity_intersections);
     fprintf(f, "%-*s|\n", metric_width, "");
-    fprintf(f, "%-*s| %f mil\n", metric_width, "Cells passed", metrics.mln_cells_passed);
-    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", metrics.prt_cells_passed);
-    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", metrics.pct_prt_cells_passed);
+    fprintf(f, "%-*s| %.1f mil\n", metric_width, "Cells passed", mln_cells_passed);
+    fprintf(f, "\t%-*s| %.2f\n", tabbed_width, "Particle average", prt_cells_passed);
+    fprintf(f, "\t%-*s| %.2f%%\n", tabbed_width, "Particle percentage", pct_prt_cells_passed);
     fprintf(f, "%-*s|\n", metric_width, "");
     fprintf(f, "%-*s| %i\n", metric_width, "Escaped", metrics.particles_escaped);
-    fprintf(f, "%-*s| %.2f%%\n", metric_width, "Started inside impurity", metrics.pct_particles_inside_impurity);
+    fprintf(f, "%-*s| %.2f%%\n", metric_width, "Started inside impurity", pct_particles_inside_impurity);
     fprintf(f, "%s\n", std::string(metric_width+15, '-').c_str());
     fprintf(f, "\n\n");
 

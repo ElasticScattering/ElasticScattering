@@ -41,9 +41,7 @@ bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, doub
 
 TEST_CASE("Index should be strictly increasing.")
 {
-	v2 range = { 0.0, 1.0 };
-	int cells_per_row = 4;
-	auto grid = Grid(100, 0, range, 1e-2, cells_per_row);
+	auto grid = Grid(0, 1.0, 0.0, 1e2, 1e-2, 1e-2 / 16);
 	auto index = grid.GetIndex();
 
 	bool in_order = true;
@@ -61,10 +59,10 @@ TEST_CASE("Index should be strictly increasing.")
 
 TEST_CASE("Impurities should be indexed in order.")
 {
-	v2 range = { 0.0, 1.0 };
+	v2 range = { 1.0, 0.0 };
 	int cells_per_row = 4;
 	double impurity_radius = 1e-3;
-	auto grid = Grid(100, 0, range, impurity_radius, cells_per_row);
+	auto grid = Grid(0, range.x, range.y, 1e2, impurity_radius, cells_per_row);
 	auto impurities = grid.GetImpurities();
 	
 	bool in_order = true;
@@ -101,16 +99,14 @@ TEST_CASE("Index should contain all cells.")
 {
 	SUBCASE("Regular number of cells per row should get squared amount.")
 	{
-		int cells_per_row = 5;
-		auto grid = Grid(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
-
+		auto grid = Grid(0, 1.0, 0.0, 1e2, 1e-3, 4);
 		CHECK(grid.GetIndex().size() == 25);
 	}
 
 	SUBCASE("One cell should get all impurities.")
 	{
 		int cells_per_row = 1;
-		auto grid = Grid(100, 0, { 0.0, 1.0 }, 1e-3, cells_per_row);
+		auto grid = Grid(0, 1.0, 0.0, 1e2, 1e-3, 1e2+1);
 		auto index = grid.GetIndex();
 
 		CHECK(index.size() == 1);
@@ -120,10 +116,10 @@ TEST_CASE("Index should contain all cells.")
 
 TEST_CASE("Impurities should be indexed correctly.")
 {
-	v2 range = { 0.0, 1.0 };
-	int cells_per_row = 5;
+	v2 range = { 1.0, 0.0 };
 	double impurity_radius = 1e-3;
-	auto grid = Grid(100, 0, range, impurity_radius, cells_per_row);
+	auto grid = Grid(0, range.x, range.y, 1e2, impurity_radius, 4);
+	int cells_per_row = grid.GetSettings().cells_per_row;
 	auto impurities = grid.GetImpurities();
 	auto index = grid.GetIndex();
 

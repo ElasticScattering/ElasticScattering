@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scattering/escl/ScatteringParameters.h"
+#include "UserSettings.h"
 
 #include <vector>
 #include <string>
@@ -28,12 +28,11 @@ typedef struct Range
 typedef struct SimulationConfiguration
 {
     int num_samples;
-    Range magnetic_field_range;
+    std::vector<double> magnetic_fields;
     std::vector<double> temperatures;
 
-    std::string base_output_directory;
-    std::string current_intermediates_dir;
-    std::string current_metrics_directory;
+    int particles_per_row;
+    int quadrant_integral_steps;
 
-    ScatteringParameters scattering_params;
+    UserSettings user_settings;
 } SimulationConfiguration;

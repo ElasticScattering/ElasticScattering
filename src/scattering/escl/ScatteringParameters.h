@@ -3,40 +3,26 @@
     #include "v2.h"
 #endif
 
-typedef struct ScatteringParameters
+typedef struct ImpuritySettings
 {
-    int dim;
-    int integrand_steps; 
-    int values_per_particle;
+    double2 impurity_spawn_range;
+
+    double impurity_radius;
+
+    double cell_size;
+    int cells_per_row;
     int impurity_count;
+} ImpuritySettings;
 
-    double magnetic_field;
-    double tau;
-    double temperature;
-    double default_max_lifetime;
-
+typedef struct ParticleSettings
+{
     double particle_speed;
     double angular_speed;
     double alpha;
-#ifdef DEVICE_PROGRAM
+
     int is_clockwise;
     int is_coherent;
-#else
-    bool is_clockwise;
-    bool is_coherent;
-#endif
-    double integrand_step_size;
-    double integrand_start_angle;
-    double integrand_angle_area;
 
-    double region_size;
-    double region_extends;
-    double impurity_density;
-    double impurity_radius;
-
-    int max_expected_impurities_in_cell;
-    int cells_per_row;
-    double cell_size;
-
-    double2 impurity_spawn_range;
-} ScatteringParameters;
+    double phi_step_size;
+    double phi_start;
+} ParticleSettings;

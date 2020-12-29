@@ -33,6 +33,7 @@ private:
 	int total_indexed_impurities;
 	int cells_per_row;
 	v2 spawn_range;
+	double impurity_radius;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
 	v2i get_cell(const double x, double y);
@@ -46,6 +47,20 @@ public:
 	const std::vector<v2>& GetImpurities() const { return ordered_impurities; };
 	const std::vector<int>& GetIndex() const { return imp_index; };
 
-	Grid(int count, int seed, v2 spawn_range, double impurity_radius, int cells_per_row);
-	Grid(std::vector<v2> impurities, v2 _spawn_range, double impurity_radius, int _cells_per_row);
+	int GetUniqueImpurityCount() const { return unique_impurity_count; };
+	int GetTotalImpurityCount() const { return total_indexed_impurities; };
+
+	ImpuritySettings GetSettings() const
+	{
+		ImpuritySettings is;
+		is.impurity_radius      = impurity_radius;
+		is.impurity_spawn_range = spawn_range;
+		is.cells_per_row        = cells_per_row;
+		is.cell_size            = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
+		is.impurity_count		= unique_impurity_count;
+		return is;
+	}
+
+	Grid(int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell);
+	Grid(std::vector<v2> impurities, double region_size, double region_extends, double impurity_radius, int target_impurity_count_per_cell);
 };

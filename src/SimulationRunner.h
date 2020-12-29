@@ -6,28 +6,35 @@
 #include <string>
 
 class SimulationRunner {
-private:
+	std::string base_output_directory;
+
 	SimulationConfiguration cfg;
 
 	LARGE_INTEGER beginClock, endClock, clockFrequency;
 
 	inline double GetElapsedTime() { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
-	std::string GetSamplePath(int sample_idx) const;
-	std::string GetImagePath(int t_idx, int m_idx, int sample_idx, bool incoherent) const;
-	std::string GetMetricsPath(int m_idx, bool incoherent) const;
-	std::string GetResultPath(int t_idx) const;
+	std::string GetResultPath(int t_idx) const { return base_output_directory + "/T" + std::to_string(t_idx) + ".dat"; }
+	std::string GetSamplePath(int sample_idx) const { return base_output_directory + "/Sample " + std::to_string(sample_idx); }
 
-	void CompleteSimulationParameters(ScatteringParameters& sp);
-	void UpdateMagneticField(ScatteringParameters& sp, double magnetic_field);
-	void UpdateTemperature(ScatteringParameters& sp, double temperature);
+	std::string GetImagePath(int t_idx, int m_idx, int sample_idx, bool coherent) const { 
+		auto type = coherent ? "/Coherent/" : "/Incoherent/";
+		return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
+	}
+
+	std::string GetMetricsPath(int sample_idx, bool coherent) const {
+		auto type = coherent ? "Coherent" : "Incoherent";
+		return GetSamplePath(sample_idx) + "/Metrics " + type + ".txt";
+	}
 
 	void ParseConfig(std::string file);
 	std::string GetAvailableDirectory(std::string base);
 	void CreateOutputDirectories() const;
+	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
 	void PrintSimulationInfo() const;
 
-	SampleResult RunSample(const int sample_index, Simulation& es, ScatteringParameters& sp, const Grid& grid);
+	SampleResult RunSample(Simulation& es, const UserSettings& settings, const int sample_index, const bool coherent, const Grid& grid);
+	void FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc);
 
 public:
 	void Run(const InitParameters& init);

@@ -1,15 +1,12 @@
 
 
 
-Incoherent resultaten fixen
-	Lijkt onafhankelijk van MF?
-
-Loggen
-	- Gem. integrated_particles. (simpson integratie)
-	- Particle waardes die niet botsen. (karakteristieken...)
+- Incoherent resultaten fixen (Lijkt onafhankelijk van MF?)
+x Gem. integrated_particles. (simpson integratie)
 
 Ideeën
 	(impurity randomness model per materiaal)
+	- Particle waardes die niet botsen. (karakteristieken...)
 
 Optimalisaties
 	Bereken phi, BoundTime waardes vooraf?

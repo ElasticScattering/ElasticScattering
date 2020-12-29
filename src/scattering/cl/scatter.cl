@@ -6,10 +6,16 @@
 #define GET_INDEX(i, j, q, p) GET_BASE_INDEX(i, j, q) + p
 #define GET_PRT_INDEX(i, j) j * limit + i
 
-#define GET_PHI(q, p) sp->integrand_start_angle + q * HALF_PI + p * sp->integrand_step_size
+#define GET_PHI(q, p) ps->phi_start + q * HALF_PI + p * sp->phi_step_size
 
 
-kernel void quadrant_lifetime(constant ScatteringParameters* sp, global double2* impurities, global int* imp_index, global double* lifetimes)
+kernel void 
+quadrant_lifetime(constant ParticleSettings* particle_settings, 
+				  constant ImpuritySettings* impurity_settings, 
+				  constant double2* impurities, 
+				  constant int* imp_index,
+				  global double* lifetimes
+				  global Metrics* metrics)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -27,12 +33,13 @@ kernel void quadrant_lifetime(constant ScatteringParameters* sp, global double2*
 
 	for (int p = 0; p < sp->integrand_steps; p++)
 	{
-		lifetimes[base_idx + p] = lifetime(q, p, pos, sp, impurities, imp_index);
+		Particle particle = CreateParticle(q, p, pos, &particle_settings);
+		lifetimes[base_idx + p] = TraceOrbit(&particle, &impurity_settings, impurities, imp_index, metrics);
 	}
 }
 
 kernel void 
-quadrant_apply_sigma_component(global double* lifetimes, constant ScatteringParameters* sp, int mode, global double* sigma_component)
+quadrant_apply_sigma_component(constant double* lifetimes, constant ParticleSettings* ps, int mode, global double* sigma_component)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -60,7 +67,7 @@ quadrant_apply_sigma_component(global double* lifetimes, constant ScatteringPara
 }
 
 kernel void 
-integrate_to_particle(global double* values, constant ScatteringParameters* sp, global double* particle_results)
+integrate_to_particle(global double* values, double values_per_quadrant, double integrand_factor, global double* particle_results)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -76,16 +83,15 @@ integrate_to_particle(global double* values, constant ScatteringParameters* sp, 
 	{
 		unsigned int base_idx = GET_BASE_INDEX(i, j, q);
 	
-		for (int p = 0; p < sp->integrand_steps; p++)
-			total += values[base_idx + p] * SimpsonWeight(p, sp->integrand_steps);
+		for (int p = 0; p < values_per_quadrant; p++)
+			total += values[base_idx + p] * SimpsonWeight(p, values_per_quadrant);
 	}
 	
-	const double integrand_factor = sp->integrand_angle_area / ((sp->integrand_steps - 1) * 3.0);
-	particle_results[GET_PRT_INDEX(i,j)] = totals.x * integrand_factor;
+	particle_results[GET_PRT_INDEX(i,j)] = total * integrand_factor;
 }
 
 kernel void 
-apply_simpson_weights_particles(global double* particle_values, constant ScatteringParameters* sp, global double* particle_results)
+apply_simpson_weights_particles(global double* particle_values, global double* particle_results)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
