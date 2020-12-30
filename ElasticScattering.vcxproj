@@ -396,7 +396,7 @@
     <ClInclude Include="tests\GridGenerationTests.h" />
     <ClInclude Include="tests\GridMovementTests.h" />
     <ClInclude Include="tests\IndexTests.h" />
-    <ClInclude Include="tests\IntegrationTest.h" />
+    <ClInclude Include="tests\SigmaIntegrationTest.h" />
     <ClInclude Include="tests\LifetimeTests.h" />
     <ClInclude Include="tests\SimpsonWeightsTest.h" />
     <ClInclude Include="tests\data\kernels\test_cpp.h" />

@@ -149,3 +149,70 @@ TEST_CASE("Impurities should be indexed correctly.")
 
 	CHECK(in_order == true);
 }
+
+
+
+TEST_CASE("Impurities should be indexed diagonally.")
+{
+	SUBCASE("Impurity in the middle.")
+	{
+		auto impurities = std::vector<v2>{ { 0.5, 0.5 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+
+		/*
+		for (int i = 0; i < grid.GetImpurities().size(); i++)
+		{
+			auto imp = grid.GetImpurities()[i];
+			printf("Impurity: %f, %f\n", imp.x, imp.y);
+		}
+		*/
+	}
+	
+	SUBCASE("Impurity off centered.")
+	{
+		auto impurities = std::vector<v2>{ { 0.505, 0.4999 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+	}
+
+	SUBCASE("Impurity off centered low right.")
+	{
+		auto impurities = std::vector<v2>{ { 0.508, 0.4999 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+	}
+
+	SUBCASE("Impurity off centered low left.")
+	{
+		auto impurities = std::vector<v2>{ { 0.492, 0.4999 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+	}
+
+	SUBCASE("Impurity off centered top right.")
+	{
+		auto impurities = std::vector<v2>{ { 0.508, 0.501 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+	}
+
+	SUBCASE("Impurity off centered top left.")
+	{
+		auto impurities = std::vector<v2>{ { 0.492, 0.501 }, { 0.1, 0.1 }, { 0.9, 0.9 }, { 0.9, 0.8 } };
+		auto grid = Grid(impurities, 1, 0, 1e-2, 1);
+		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
+
+		CHECK(grid.GetTotalImpurityCount() == 7);
+	}
+}

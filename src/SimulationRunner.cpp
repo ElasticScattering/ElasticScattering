@@ -38,8 +38,8 @@ void SimulationRunner::Run(const InitParameters& init)
         QueryPerformanceCounter(&endClock);
         CreateMetricsLogs(i, GetElapsedTime(), grid);
 
-        sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
         sample_results_inc[i] = RunSample(es, ss, i, false, grid);
+        sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
 
         std::cout << std::endl;
     }

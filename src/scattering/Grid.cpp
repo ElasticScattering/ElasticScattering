@@ -14,6 +14,7 @@ Grid::Grid(int seed, double region_size, double region_extends, double density, 
 	double area_length = spawn_range.y - spawn_range.x;
 	unique_impurity_count = max(1, (int)ceil(area_length * area_length * density));
 	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_impurity_count_per_cell)), 1);
+	cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
 
 	auto impurities = GenerateImpurities(unique_impurity_count, seed);
 	GenerateImpurityCells(impurities, impurity_radius);
@@ -27,6 +28,7 @@ Grid::Grid(std::vector<v2> impurities, double region_size, double region_extends
 	spawn_range = v2(-region_extends, region_size + region_extends);
 	unique_impurity_count = impurities.size();
 	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_impurity_count_per_cell)), 1);
+	cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
 
 	GenerateImpurityCells(impurities, impurity_radius);
 	ConvertToIndex();
@@ -89,15 +91,11 @@ int Grid::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const
 	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
 
 	std::vector<v2i> possible_overlapping_positions = {
-		get_cell(pos.x, pos.y					  ),
-		get_cell(pos.x + impurity_radius, pos.y	  ),
-		get_cell(pos.x - impurity_radius, pos.y	  ),
-		get_cell(pos.x, pos.y + impurity_radius	  ),
-		get_cell(pos.x, pos.y - impurity_radius	  ),
-		get_cell(pos.x + offset.x, pos.y + offset.y),
-		get_cell(pos.x - offset.x, pos.y + offset.y),
-		get_cell(pos.x + offset.x, pos.y - offset.y),
-		get_cell(pos.x - offset.x, pos.y - offset.y)
+		get_cell(pos.x, pos.y),
+		get_cell(pos.x + impurity_radius, pos.y),
+		get_cell(pos.x - impurity_radius, pos.y),
+		get_cell(pos.x, pos.y + impurity_radius),
+		get_cell(pos.x, pos.y - impurity_radius),
 	};
 
 	std::set<v2i> added_cells;
@@ -110,8 +108,75 @@ int Grid::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const
 			cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
 		}
 	}
+
+	int cells_added = added_cells.size();
+
+	v2 low_left  = to_world(possible_overlapping_positions[0]);
+	v2 low_right = low_left + v2(cell_size, 0);
+	v2 top_left  = low_left + v2(0, cell_size);
+	v2 top_right = low_left + v2(cell_size, cell_size);
+
+	double ir2 = impurity_radius * impurity_radius;
+	auto cell = get_cell(pos.x, pos.y);
+
+	/*
+	std::vector<v2> possible_overlapping_diagonals = {
+		low_left,
+		low_left + v2(cell_size, 0),
+		low_left + v2(0, cell_size),
+		low_left + v2(cell_size, cell_size)
+	};
+
+	for (int i = 0; i < possible_overlapping_diagonals.size(); i++) {
+		auto cell_world_pos = possible_overlapping_diagonals[i];
+		double d_squared = pow(cell_world_pos.x - pos.x, 2) + pow(cell_world_pos.y - pos.y, 2);
+		if (d_squared < ir2) {
+			auto new_cell = get_cell(cell_world_pos.x, cell_world_pos.y);
+			if (within_bounds(v2i(new_cell))) {
+				cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
+				cells_added++;
+			}
+		}
+	}
+	*/
 	
-	return added_cells.size();
+	double d_topleft_squared = pow(top_left.x - pos.x, 2) + pow(top_left.y - pos.y, 2);
+	if (d_topleft_squared < ir2) {
+		auto new_cell = v2i(cell.x - 1, cell.y + 1);
+		if (within_bounds(v2i(new_cell))) {
+			cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
+			cells_added++;
+		}
+	}
+
+	double d_topright_squared = pow(top_right.x - pos.x, 2) + pow(top_right.y - pos.y, 2);
+	if (d_topright_squared < ir2) {
+		auto new_cell = v2i(cell.x + 1, cell.y + 1);
+		if (within_bounds(v2i(new_cell))) {
+			cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
+			cells_added++;
+		}
+	}
+
+	double d_lowleft_squared = pow(low_left.x - pos.x, 2) + pow(low_left.y - pos.y, 2);
+	if (d_lowleft_squared < ir2) {
+		auto new_cell = v2i(cell.x - 1, cell.y - 1);
+		if (within_bounds(v2i(new_cell))) {
+			cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
+			cells_added++;
+		}
+	}
+
+	double d_lowright_squared = pow(low_right.x - pos.x, 2) + pow(low_right.y - pos.y, 2);
+	if (d_lowright_squared < ir2) {
+		auto new_cell = v2i(cell.x + 1, cell.y - 1);
+		if (within_bounds(v2i(new_cell))) {
+			cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
+			cells_added++;
+		}
+	}
+
+	return cells_added;
 }
 
 v2i Grid::get_cell(const double x, const double y)

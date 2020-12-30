@@ -2,9 +2,15 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <cstdlib>
+#include <iomanip> 
+
 void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics)
 {
-	ps.angular_speed		= E * magnetic_field / M;
+	ps.angular_speed = E * magnetic_field / M;
 	ss.signed_angular_speed = ps.is_clockwise ? -ps.angular_speed : ps.angular_speed;
 
 	raw_lifetimes.clear();
@@ -23,6 +29,18 @@ void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& gr
 			}
 		}
 	}
+	
+	/*	
+	if (!ps.is_coherent) {
+		std::ofstream file;
+		file.open("ESLogs/mf " + std::to_string(magnetic_field) + ".txt");
+
+		for (int i = 0; i < ss.total_lifetimes; i++)
+		{
+			file << std::scientific << std::setprecision(15) << raw_lifetimes[i] << std::endl;
+		}
+	}
+	*/
 
 	metrics.avg_particle_lifetime = AverageLifetime();
 }
@@ -65,7 +83,7 @@ SigmaResult SimulationCPU::ApplySigma(const double tau, const std::vector<double
 				for (int p = 0; p < ss.values_per_quadrant; p++) {
 					double lt = current_lifetimes[GetIndex(i, j, q, p)];
 
-					double phi = ps.phi_start + q * (PI * 0.5) + p * ps.phi_step_size;
+					double phi = ps.phi_start + q * HALF_PI + p * ps.phi_step_size;
 					double sigma_base = GetSigma(lt, phi, tau, ss.signed_angular_speed) * SimpsonWeight(p, ss.values_per_quadrant);
 
 					totals.xx += sigma_base * cos(phi);

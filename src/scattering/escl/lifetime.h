@@ -18,7 +18,7 @@ ESCL_INLINE Particle CreateParticle(const int quadrant, const int step, const do
 {
     Particle p;
     p.starting_position = pos;
-    p.phi               = ps->phi_start + quadrant * (PI * 0.5) + step * ps->phi_step_size;
+    p.phi               = ps->phi_start + quadrant * HALF_PI + step * ps->phi_step_size;
     p.angular_speed     = ps->angular_speed;
 
     const double2 vel        = MAKE_DOUBLE2(cos(p.phi), sin(p.phi)) * ps->particle_speed;
@@ -65,7 +65,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
     next_intersection.dphi           = PI2;
     next_intersection.incident_angle = p->phi;
     
-    double particle_cell_index = get_index(next_intersection.entering_cell, settings->cells_per_row);
+    int particle_cell_index = get_index(next_intersection.entering_cell, settings->cells_per_row);
 
     int impurity_start = (particle_cell_index == 0) ? 0 : cell_indices[particle_cell_index - 1];	
     int impurity_end = cell_indices[particle_cell_index];

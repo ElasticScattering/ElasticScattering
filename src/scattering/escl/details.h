@@ -209,7 +209,7 @@ GetBoundTime(const double phi, const double alpha, const double w, const bool co
 ESCL_INLINE double 
 GetBoundAngle(const double phi, const double alpha, const bool clockwise)
 {
-    const double v = floor(phi + alpha / HALF_PI) * HALF_PI;
+    const double v = floor((phi + alpha) / HALF_PI) * HALF_PI;
     const double bound1 = v - alpha;
     const double bound2 = v + alpha;
 

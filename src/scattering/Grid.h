@@ -31,13 +31,21 @@ private:
 
 	int unique_impurity_count;
 	int total_indexed_impurities;
-	int cells_per_row;
+	
 	v2 spawn_range;
+	int cells_per_row;
+	double cell_size;
+
 	double impurity_radius;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
 	v2i get_cell(const double x, double y);
 	bool within_bounds(const v2i p);
+
+	v2 to_world(const v2i current_cell)
+	{
+		return v2(spawn_range.x + current_cell.x * cell_size, spawn_range.x + current_cell.y * cell_size);
+	}
 
 	std::vector<v2> GenerateImpurities(int count, int seed);
 	void GenerateImpurityCells(std::vector<v2> impurities, double impurity_radius);

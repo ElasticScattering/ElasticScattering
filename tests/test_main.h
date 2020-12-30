@@ -14,7 +14,7 @@
 #include "GridMovementTests.h"
 
 #include "LifetimeTests.h"
-#include "IntegrationTest.h"
+#include "SigmaIntegrationTest.h"
 
 //#include "BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"

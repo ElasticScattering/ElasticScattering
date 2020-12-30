@@ -54,15 +54,15 @@ public:
 		
 		ss.region_size                = s.region_size;
 		ss.region_extended_area       = s.region_extends;
-		ss.small_offset               = v2(is.cell_size * 0.01, is.cell_size * 0.005);
 		ss.distance_between_particles = ss.region_size / (double)(ss.particles_per_row - 1);
+		ss.small_offset               = v2(ss.distance_between_particles * 0.01, ss.distance_between_particles * 0.005);
 
 		const double base_area = s.alpha * 2.0;
 		ss.integrand_angle_area = !coherent ? base_area : (PI / 2.0 - base_area);
 		ss.phi_integrand_factor = ss.integrand_angle_area / ((ss.values_per_quadrant - 1) * 3.0);
 		ss.coherent_tau         = s.tau;
 
-
+		ps.alpha		  = s.alpha;
 		ps.particle_speed = s.particle_speed;
 		ps.is_clockwise   = s.is_clockwise ? 1 : 0;
 		ps.is_coherent    = coherent ? 1 : 0;
