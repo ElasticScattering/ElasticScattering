@@ -4,7 +4,6 @@
 #include "TestMacros.h"
 #include "TestUtils.h"
 
-
 #include "src/SimulationConfiguration.h"
 #include "src/scattering/Simulation.h"
 
@@ -49,8 +48,8 @@ void RunTestSample(const std::string file_path, const std::vector<DataRow> &expe
 
 			auto expected_row = expected_results[j * cfg.temperatures.size() + i];
 			//printf("(%i, %i), mf (%.2f, %.2f), tmp (%.2f, %.2f)\n", i, j, row.magnetic_field, expected_row.magnetic_field, row.temperature, expected_row.temperature);
-			REQUIRE(row.temperature    == expected_row.temperature);
-			REQUIRE(row.magnetic_field == expected_row.magnetic_field);
+			REQUIRE_ALMOST(row.temperature,    expected_row.temperature);
+			REQUIRE_ALMOST(row.magnetic_field, expected_row.magnetic_field);
 
 			CHECK_ALMOST(row.coherent.xx, expected_row.coherent.xx);
 			CHECK_ALMOST(row.coherent.xy, expected_row.coherent.xy);

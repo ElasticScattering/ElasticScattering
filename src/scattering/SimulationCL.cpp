@@ -9,16 +9,17 @@ typedef struct
     cl_program program;
     cl_command_queue queue;
 
-    cl_kernel quadrant_lifetimes_kernel;
-    cl_kernel quadrant_apply_sigma_comp_kernel;
+    //cl_kernel quadrant_lifetimes_kernel;
+    //cl_kernel quadrant_apply_sigma_comp_kernel;
+    cl_kernel lifetimes_kernel;
+    cl_kernel apply_sigma_comp_kernel;
     cl_kernel integrate_particle_kernel;
     cl_kernel simpson_weight_particle_kernel;
     cl_kernel sum_kernel;
 
-    //cl_mem parameters; //oud
-
     cl_mem particle_settings;
     cl_mem impurity_settings;
+    cl_mem simulation_settings;
 
     cl_mem impurities;
     cl_mem cell_indices;
@@ -38,7 +39,7 @@ typedef struct
 OCLSimResources ocl;
 
 
-IterationResult SimulationCL::DeriveTemperature(const double temperature)
+IterationResult SimulationCL::DeriveTemperature(const double temperature) const
 {
 
     IterationResult ir;
@@ -175,31 +176,43 @@ IterationResult SimulationCL::DeriveTemperature(const double temperature)
 
 void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics)
 {
-    cl_int clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.particle_settings, CL_TRUE, 0, sizeof(ParticleSettings), (void*)&particle_settings, 0, nullptr, nullptr);
+    cl_int clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.particle_settings, CL_TRUE, 0, sizeof(ParticleSettings), (void*)&ps, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurity_settings, CL_TRUE, 0, sizeof(ImpuritySettings), (void*)&impurity_settings, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.impurity_settings, CL_TRUE, 0, sizeof(ImpuritySettings), (void*)&is, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
+
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.simulation_settings, CL_TRUE, 0, sizeof(SimulationSettings), (void*)&ss, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.metrics, CL_TRUE, 0, sizeof(Metrics), (void*)&metrics, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     {
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl.particle_settings);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl.impurity_settings);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl.impurities);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl.cell_indices);
-        clStatus = clSetKernelArg(ocl.quadrant_lifetimes_kernel, 4, sizeof(cl_mem), (void*)&ocl.lifetimes);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl.simulation_settings);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl.particle_settings);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl.impurity_settings);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl.impurities);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 4, sizeof(cl_mem), (void*)&ocl.cell_indices);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 5, sizeof(cl_mem), (void*)&ocl.lifetimes);
+        clStatus = clSetKernelArg(ocl.lifetimes_kernel, 6, sizeof(cl_mem), (void*)&ocl.metrics);
     }
     
-    const size_t items_in_work_group = min(particles_per_row, 256);
+    size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
+    const size_t values_in_work_group = min(ss.values_per_particle, 256);
+    size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group }; // @Todo, dit verifiëren!
 
-    size_t global_work_size[3] = { (size_t)particles_per_row, (size_t)particles_per_row, 4 };
-    size_t local_work_size[3] = { items_in_work_group, 256 / items_in_work_group, 1 };
+    //const size_t items_in_work_group = min(ss.particles_per_row, 256);
+    //size_t local_work_size[3] = { items_in_work_group, 256 / items_in_work_group, 1 };
 
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.quadrant_lifetimes_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel execution.");
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl.lifetimes_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel.");
     clFinish(ocl.queue);
+
+    std::vector<Metrics> metrics_holder(1);
+    clEnqueueReadBuffer(ocl.queue, ocl.metrics, CL_TRUE, 0, sizeof(Metrics), metrics_holder.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+    metrics = metrics_holder[0];
 }
 
 void SimulationCL::UploadImpurities(const Grid& grid)
@@ -237,7 +250,7 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
 
     cl_int clStatus;
 
-    ocl.quadrant_lifetimes_kernel      = clCreateKernel(ocl.program, "quadrant_lifetime", &clStatus);
+    ocl.lifetimes_kernel      = clCreateKernel(ocl.program, "lifetime", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
     /*
@@ -247,19 +260,27 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     ocl.sum_kernel                     = clCreateKernel(ocl.program, "sum", &clStatus);
     */
  
-    ocl.particle_settings = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ParticleSettings), nullptr, &clStatus);
-    ocl.impurity_settings = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ImpuritySettings), nullptr, &clStatus);
+    ocl.particle_settings   = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ParticleSettings), nullptr, &clStatus);
+    ocl.impurity_settings   = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(ImpuritySettings), nullptr, &clStatus);
+    ocl.simulation_settings = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(SimulationSettings), nullptr, &clStatus);
 }
 
 SimulationCL::~SimulationCL()
 {
     clReleaseMemObject(ocl.particle_settings);
     clReleaseMemObject(ocl.impurity_settings);
+    clReleaseMemObject(ocl.simulation_settings);
     clReleaseMemObject(ocl.impurities);
     clReleaseMemObject(ocl.sigma_xx);
     clReleaseMemObject(ocl.sigma_xy);
     clReleaseMemObject(ocl.incomplete_sum);
-    clReleaseKernel(ocl.quadrant_lifetimes_kernel);
+    
+    clReleaseKernel(ocl.lifetimes_kernel);
+    clReleaseKernel(ocl.apply_sigma_comp_kernel);
+    clReleaseKernel(ocl.integrate_particle_kernel);
+    clReleaseKernel(ocl.simpson_weight_particle_kernel);
+    clReleaseKernel(ocl.sum_kernel);
+    
     clReleaseProgram(ocl.program);
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);

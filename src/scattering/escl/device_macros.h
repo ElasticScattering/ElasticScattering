@@ -13,9 +13,9 @@
 	#define MAKE_DOUBLE2(px, py) (double2)(px, py)
 	#define MAKE_INT2(px, py) (int2)(px, py)
 
-	#define METRIC_INC_COND(cond, metric_name) if ((cond)) atomic_inc(&metric_name)
-	#define METRIC_INC(metric_name) atomic_inc(&metric_name)
-	#define METRIC_ADD(metric_name, m_value) atomic_add(&metric_name, (m_value))
+	#define METRIC_INC_COND(cond, metric_name) if ((cond)) atomic_inc(metric_name)
+	#define METRIC_INC(metric_name) atomic_inc(metric_name)
+	#define METRIC_ADD(metric_name, m_value) atomic_add(metric_name, (m_value))
 
 #else
 	#include "v2.h"

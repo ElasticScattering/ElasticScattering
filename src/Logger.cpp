@@ -115,7 +115,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics s
 
     // Rows
     file << L'│' << std::setw(metric_width) << std::left << " Avg. particle lifetime";
-    for (int i = 0; i < metrics.size(); i++) file << L'│'  << std::setw(value_width) << std::right << metrics[i].avg_particle_lifetime;
+    for (int i = 0; i < metrics.size(); i++) file << L'│'  << std::setw(value_width) << std::right << std::setprecision(3) << metrics[i].avg_particle_lifetime;
     file << L'│' << std::endl;
 
     file << L'│' << std::setw(metric_width) << std::left << " Time spent on lifetimes";

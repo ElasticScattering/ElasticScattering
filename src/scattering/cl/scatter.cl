@@ -1,17 +1,46 @@
 #include "src/scattering/escl/lifetime.h"
-//#include "src/scattering/escl/constants.h"
 
+//#define GET_INDEX(m_i, m_j, m_q, m_p) ((m_j * ss->values_per_row) + (m_i * ss->values_per_particle) + (m_q * ss->values_per_quadrant) + m_p)
+#define GET_INDEX(m_i, m_j, m_v) ((m_j * ss->values_per_row) + (m_i * ss->values_per_particle) + m_v)
+#define GET_PARTICLE_INDEX(i, j) (j * limit + i)
 
-#define GET_BASE_INDEX(i, j, q) j * ((sp->dim-1) * sp->values_per_particle) + (i * sp->values_per_particle) + (q * sp->integrand_steps)
-#define GET_INDEX(i, j, q, p) GET_BASE_INDEX(i, j, q) + p
-#define GET_PRT_INDEX(i, j) j * limit + i
+#define GET_PHI(m_q, m_p) (ps->phi_start + m_q * HALF_PI + m_p * ps->phi_step_size)
 
-#define GET_PHI(q, p) ps->phi_start + q * HALF_PI + p * sp->phi_step_size
 
 
 kernel void 
-quadrant_lifetime(constant ParticleSettings* particle_settings, 
-				  constant ImpuritySettings* impurity_settings, 
+lifetime(constant SimulationSettings* ss, // Settings used for generic simulation settings, scaling etc.
+		 constant ParticleSettings* ps,   // Settings used for creating the particle and orbit.
+		 constant ImpuritySettings* is,   // Settings used for calculating intersections and grid movement.
+		 constant double2* impurities, 
+		 constant int* imp_index,
+		 global double* lifetimes
+		 global Metrics* metrics)
+{
+	int i = get_global_id(0);
+    int j = get_global_id(1);
+	int v = get_global_id(2);
+    
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
+		return;
+
+	const int q = (int)(v / ss->integrand_steps);
+	const int p =       v % ss->integrand_steps;
+    const double2 pos = ((double2)(i, j) * ss->distance_between_particles) + ss->small_offset;
+	
+	Particle particle = CreateParticle(q, p, pos, &ps);
+	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, &is, impurities, imp_index, metrics);
+}
+
+/* 
+
+Oude variant, met alle phi waardes van één quadrant in één WI. Dit betekend dat er op ruime sprongen naar lifetimes geschreven wordt.
+Nadeel is dat phi/quadrant berekend moet worden, en ook de positie.
+
+kernel void 
+quadrant_lifetime(constant ParticleSettings* particle_settings,     // Settings used for creating the particle and orbit.
+				  constant ImpuritySettings* impurity_settings,     // Settings used for calculating intersections and grid movement.
+				  constant SimulationSettings* ss, // Settings used for generic simulation settings, scaling etc.
 				  constant double2* impurities, 
 				  constant int* imp_index,
 				  global double* lifetimes
@@ -20,18 +49,14 @@ quadrant_lifetime(constant ParticleSettings* particle_settings,
 	int i = get_global_id(0);
     int j = get_global_id(1);
 	int q = get_global_id(2);
-	int row_size = get_global_size(0);
     
-	int limit = row_size-1;
-	if (i >= limit || j >= limit)
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
-	const double s = sp->region_size / (row_size - 2); 
-    const double2 pos = ((double2)(i, j) * s) + (double2)(sp->cell_size * 0.01, sp->cell_size * 0.005);
+    const double2 pos = ((double2)(i, j) * ss->distance_between_particles) + ss->small_offset;
+	unsigned int base_idx = GET_INDEX(i, j, q);
 
-	unsigned int base_idx = GET_BASE_INDEX(i, j, q);
-
-	for (int p = 0; p < sp->integrand_steps; p++)
+	for (int p = 0; p < ss->integrand_steps; p++)
 	{
 		Particle particle = CreateParticle(q, p, pos, &particle_settings);
 		lifetimes[base_idx + p] = TraceOrbit(&particle, &impurity_settings, impurities, imp_index, metrics);
@@ -39,31 +64,45 @@ quadrant_lifetime(constant ParticleSettings* particle_settings,
 }
 
 kernel void 
-quadrant_apply_sigma_component(constant double* lifetimes, constant ParticleSettings* ps, int mode, global double* sigma_component)
+quadrant_apply_sigma_component(constant double* lifetimes, constant SimulationSettings* ss, constant ParticleSettings* ps, int mode, global double* sigma_component)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
 	int q = get_global_id(2);
-	int row_size = get_global_size(0);
-    
-	int limit = row_size-1;
-	if (i >= limit || j >= limit)
+	
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
-	const double s = sp->region_size / (row_size - 2); 
-    const double2 pos = ((double2)(i, j) * s) + (double2)(sp->cell_size * 0.01, sp->cell_size * 0.005);
-
-	unsigned int base_idx = GET_BASE_INDEX(i, j, q);
-
-	const double w = (sp->clockwise == 1) ? -sp->angular_speed : sp->angular_speed;
+	//double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
+	
+	unsigned int base_idx = GET_INDEX(i, j, q);
 
 	for (int p = 0; p < sp->integrand_steps; p++)
 	{
-		double phi = GET_PHI(q, p);
-
 		double f = (mode == MODE_SIGMA_XX) cos(p) : sin(p); 
-		sigma_component[base_idx + p] = GetSigma(lifetimes[base_idx + p], p, sp->tau, w);
+		sigma_component[base_idx + p] = GetSigma(lifetimes[base_idx + p], GET_PHI(q, p), tau, ss->signed_angular_speed);
 	}
+}
+*/
+
+kernel void 
+apply_sigma_component(constant double* lifetimes, constant SimulationSettings* ss, constant ParticleSettings* ps, int mode, global double* sigma_component)
+{
+	int i = get_global_id(0);
+    int j = get_global_id(1);
+	int v = get_global_id(2);
+	
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
+		return;
+
+	unsigned int idx = GET_INDEX(i, j, v);
+	const int q = (int)(v / ss->integrand_steps);
+	const int p =       v % ss->integrand_steps;
+
+	//double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
+
+	double f = (mode == MODE_SIGMA_XX) cos(p) : sin(p); 
+	sigma_component[idx] = GetSigma(lifetimes[idx], GET_PHI(q, p), tau, ss->signed_angular_speed);
 }
 
 kernel void 
@@ -81,13 +120,13 @@ integrate_to_particle(global double* values, double values_per_quadrant, double 
 	double total = 0;
 	for (int q = 0; q < 4; q++)
 	{
-		unsigned int base_idx = GET_BASE_INDEX(i, j, q);
+		unsigned int base_idx = GET_INDEX(i, j, q);
 	
 		for (int p = 0; p < values_per_quadrant; p++)
 			total += values[base_idx + p] * SimpsonWeight(p, values_per_quadrant);
 	}
 	
-	particle_results[GET_PRT_INDEX(i,j)] = total * integrand_factor;
+	particle_results[GET_PARTICLE_INDEX(i, j)] = total * integrand_factor;
 }
 
 kernel void 
@@ -102,7 +141,7 @@ apply_simpson_weights_particles(global double* particle_values, global double* p
 		return;
 	}
 
-	const int idx = GET_PRT_INDEX(i,j);
+	const int idx = GET_PARTICLE_INDEX(i, j);
 	particle_results[idx] = particle_values[idx] * SimpsonWeight2D(x, y, row_size-1);
 }
 

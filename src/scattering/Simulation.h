@@ -16,32 +16,18 @@ class Simulation {
 protected:
 	std::vector<double> raw_lifetimes;
 
-	double integrand_angle_area;
-	double phi_integrand_factor;
-	double signed_angular_speed; //?
-	double coherent_tau;
-
-	double region_size;
-	double region_extended_area;
-
-	v2 small_offset;
-
-	int particles_per_row;
-	int values_per_quadrant;
-	int values_per_particle;
-	int values_per_row;
-
-	ImpuritySettings impurity_settings;
-	ParticleSettings particle_settings;
+	SimulationSettings ss;
+	ImpuritySettings is;
+	ParticleSettings ps;
 
 	int GetIndex(int i, int j, int q, int p) const {
-		return (j * values_per_row) + (i * values_per_particle) + (q * values_per_quadrant) + p;
+		return (j * ss.values_per_row) + (i * ss.values_per_particle) + (q * ss.values_per_quadrant) + p;
 	};
 	
 	double SigmaFactor(double tau) const {
-		double kf = M * particle_settings.particle_speed / HBAR;
+		double kf = M * ps.particle_speed / HBAR;
 		double outside = (E * E * kf * kf) / (2.0 * PI * PI * M * C1);
-		double wct = particle_settings.angular_speed * tau;
+		double wct = ps.angular_speed * tau;
 		outside *= tau / (1.0 + wct * wct);
 
 		return outside;
@@ -49,49 +35,51 @@ protected:
 
 	double AverageLifetime() const
 	{
-		const int count = raw_lifetimes.size();
-		if (count == 0) return 0;
+		if (ss.total_lifetimes == 0) return 0;
 
 		double total = 0;
-		for (int i = 0; i < count; i++) {
+		for (int i = 0; i < ss.total_lifetimes; i++)
 			total += raw_lifetimes[i];
-		}
-		return total / (double)count;
+		
+		return total / (double)ss.total_lifetimes;
 	}
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) = 0;
-	virtual IterationResult DeriveTemperature(const double temperature) = 0;
+	virtual IterationResult DeriveTemperature(const double temperature) const = 0;
 
-	void InitSample(const Grid& grid, const Settings& ss, const bool coherent)
+	void InitSample(const Grid& grid, const Settings& s, const bool coherent)
 	{
-		impurity_settings    = grid.GetSettings();
-		region_size          = ss.region_size;
-		region_extended_area = ss.region_extends;
+		is = grid.GetSettings();
+		
+		ss.region_size                = s.region_size;
+		ss.region_extended_area       = s.region_extends;
+		ss.small_offset               = v2(is.cell_size * 0.01, is.cell_size * 0.005);
+		ss.distance_between_particles = ss.region_size / (double)(ss.particles_per_row - 1);
 
-		small_offset = v2(impurity_settings.cell_size * 0.01, impurity_settings.cell_size * 0.005);
+		const double base_area = s.alpha * 2.0;
+		ss.integrand_angle_area = !coherent ? base_area : (PI / 2.0 - base_area);
+		ss.phi_integrand_factor = ss.integrand_angle_area / ((ss.values_per_quadrant - 1) * 3.0);
+		ss.coherent_tau         = s.tau;
 
-		const double base_area = ss.alpha * 2.0;
-		integrand_angle_area   = !coherent ? base_area : (PI / 2.0 - base_area);
-		phi_integrand_factor   = integrand_angle_area / ((values_per_quadrant - 1) * 3.0);
 
-		particle_settings.particle_speed = ss.particle_speed;
-		particle_settings.is_clockwise   = ss.is_clockwise ? 1 : 0;
-		particle_settings.is_coherent    = coherent ? 1 : 0;
-		particle_settings.phi_start      = (!coherent ? -ss.alpha : ss.alpha);
-		particle_settings.phi_step_size  = integrand_angle_area / (values_per_quadrant - 1);
-
-		coherent_tau = ss.tau;
+		ps.particle_speed = s.particle_speed;
+		ps.is_clockwise   = s.is_clockwise ? 1 : 0;
+		ps.is_coherent    = coherent ? 1 : 0;
+		ps.phi_start      = (!coherent ? -s.alpha : s.alpha);
+		ps.phi_step_size  = ss.integrand_angle_area / (ss.values_per_quadrant - 1);
 	}
 
 	Simulation(int p_particles_per_row, int p_values_per_quadrant)
 	{
-		particles_per_row   = p_particles_per_row;
-		values_per_quadrant = p_values_per_quadrant;
-		values_per_particle = values_per_quadrant * 4;
-		values_per_row      = particles_per_row * values_per_particle;
+		ss.particles_per_row   = p_particles_per_row;
+		ss.values_per_quadrant = p_values_per_quadrant;
+		ss.values_per_particle = ss.values_per_quadrant * 4;
+		ss.values_per_row      = ss.particles_per_row * ss.values_per_particle;
+		ss.total_lifetimes     = ss.particles_per_row * ss.values_per_row;
+		ss.total_particles	   = ss.particles_per_row * ss.particles_per_row;
 
-		//raw_lifetimes.resize(particles_per_row * values_per_row);
+		//raw_lifetimes.resize(ss.particles_per_row * ss.values_per_row);
 	}
 };
 
@@ -99,12 +87,12 @@ public:
 
 class SimulationCPU : public Simulation {
 public:
-	SigmaResult ApplySigma(const double tau, const std::vector<double>& current_lifetimes);
-	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes);
-	double IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas);
+	SigmaResult ApplySigma(const double tau, const std::vector<double>& current_lifetimes) const;
+	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes) const;
+	double IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas) const;
 
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
-	virtual IterationResult DeriveTemperature(const double temperature) override;
+	virtual IterationResult DeriveTemperature(const double temperature) const override;
 
 	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
 };
@@ -115,7 +103,7 @@ class SimulationCL : public Simulation {
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
-	virtual IterationResult DeriveTemperature(const double temperature) override;
+	virtual IterationResult DeriveTemperature(const double temperature) const override;
 
 	void UploadImpurities(const Grid& grid);
 

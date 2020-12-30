@@ -26,3 +26,26 @@ typedef struct ParticleSettings
     double phi_step_size;
     double phi_start;
 } ParticleSettings;
+
+typedef struct SimulationSettings
+{
+    int values_per_quadrant;
+    int values_per_particle;
+    int values_per_row;
+    int total_lifetimes;
+    int particles_per_row;
+    int total_particles;
+
+    double integrand_angle_area;
+    double phi_integrand_factor;
+
+    double region_size;
+    double region_extended_area;
+    
+    double distance_between_particles;
+    double2 small_offset;
+
+    double signed_angular_speed; //?
+    double coherent_tau;
+} SimulationSettings;
+

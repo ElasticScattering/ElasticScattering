@@ -4,21 +4,21 @@
 
 void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics)
 {
-	particle_settings.angular_speed = E * magnetic_field / M;
-	signed_angular_speed            = particle_settings.is_clockwise ? -particle_settings.angular_speed : particle_settings.angular_speed;
+	ps.angular_speed		= E * magnetic_field / M;
+	ss.signed_angular_speed = ps.is_clockwise ? -ps.angular_speed : ps.angular_speed;
 
 	raw_lifetimes.clear();
-	raw_lifetimes.resize(particles_per_row * values_per_row);
+	raw_lifetimes.resize(ss.total_lifetimes);
 
-	for (int j = 0; j < particles_per_row; j++) {
-		for (int i = 0; i < particles_per_row; i++) {
-			const v2 pos = v2(i, j) * (region_size / (double)(particles_per_row - 1)) + small_offset;
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		for (int i = 0; i < ss.particles_per_row; i++) {
+			const v2 pos = v2(i, j) * ss.distance_between_particles + ss.small_offset;
 
 			for (int q = 0; q < 4; q++) {
-				for (int p = 0; p < values_per_quadrant; p++) {
-					auto particle = CreateParticle(q, p, pos, &particle_settings);
+				for (int p = 0; p < ss.values_per_quadrant; p++) {
+					auto particle = CreateParticle(q, p, pos, &ps);
 
-					raw_lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &metrics);
+					raw_lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), &metrics);
 				}
 			}
 		}
@@ -27,9 +27,9 @@ void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& gr
 	metrics.avg_particle_lifetime = AverageLifetime();
 }
 
-IterationResult SimulationCPU::DeriveTemperature(const double temperature)
+IterationResult SimulationCPU::DeriveTemperature(const double temperature) const
 {
-	double tau = (particle_settings.is_coherent) ? coherent_tau : HBAR / (KB * temperature);
+	double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
 	double default_max_lifetime = 15.0 * tau;
 
 	IterationResult b;
@@ -49,32 +49,32 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature)
 	return b;
 }
 
-SigmaResult SimulationCPU::ApplySigma(const double tau, const std::vector<double>& current_lifetimes)
+SigmaResult SimulationCPU::ApplySigma(const double tau, const std::vector<double>& current_lifetimes) const
 {
-	std::vector<double> sigma_xx(particles_per_row * particles_per_row);
-	std::vector<double> sigma_xy(particles_per_row * particles_per_row);
+	std::vector<double> sigma_xx(ss.total_particles);
+	std::vector<double> sigma_xy(ss.total_particles);
 
 	double integral_total = 0;
-	for (int j = 0; j < particles_per_row; j++) {
-		for (int i = 0; i < particles_per_row; i++) {
-			int particle_idx = j * particles_per_row + i;
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		for (int i = 0; i < ss.particles_per_row; i++) {
+			int particle_idx = j * ss.particles_per_row + i;
 
 			Sigma totals;
 
 			for (int q = 0; q < 4; q++) {
-				for (int p = 0; p < values_per_quadrant; p++) {
+				for (int p = 0; p < ss.values_per_quadrant; p++) {
 					double lt = current_lifetimes[GetIndex(i, j, q, p)];
 
-					double phi = particle_settings.phi_start + q * (PI * 0.5) + p * particle_settings.phi_step_size;
-					double sigma_base = GetSigma(lt, phi, tau, signed_angular_speed) * SimpsonWeight(p, values_per_quadrant);
+					double phi = ps.phi_start + q * (PI * 0.5) + p * ps.phi_step_size;
+					double sigma_base = GetSigma(lt, phi, tau, ss.signed_angular_speed) * SimpsonWeight(p, ss.values_per_quadrant);
 
 					totals.xx += sigma_base * cos(phi);
 					totals.xy += sigma_base * sin(phi);
 				}
 			}
 			
-			sigma_xx[particle_idx] = totals.xx * phi_integrand_factor;
-			sigma_xy[particle_idx] = totals.xy * phi_integrand_factor;
+			sigma_xx[particle_idx] = totals.xx * ss.phi_integrand_factor;
+			sigma_xy[particle_idx] = totals.xy * ss.phi_integrand_factor;
 		}
 	}
 
@@ -84,39 +84,39 @@ SigmaResult SimulationCPU::ApplySigma(const double tau, const std::vector<double
 	return result;
 }
 
-std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& current_lifetimes)
+std::vector<double> SimulationCPU::IntegrateParticle(const std::vector<double>& current_lifetimes) const
 {
-	std::vector<double> particle_lifetimes(particles_per_row * particles_per_row);
+	std::vector<double> particle_lifetimes(ss.total_particles);
 
-	for (int j = 0; j < particles_per_row; j++) {
-		for (int i = 0; i < particles_per_row; i++) {
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		for (int i = 0; i < ss.particles_per_row; i++) {
 			double particle_total = 0;
 			
 			for (int q = 0; q < 4; q++) {
-				for (size_t p = 0; p < values_per_quadrant; p++) {
-					particle_total += current_lifetimes[GetIndex(i, j, q, p)] * SimpsonWeight(p, values_per_quadrant);
+				for (size_t p = 0; p < ss.values_per_quadrant; p++) {
+					particle_total += current_lifetimes[GetIndex(i, j, q, p)] * SimpsonWeight(p, ss.values_per_quadrant);
 				}
 			}
 
-			int particle_idx = j * particles_per_row + i;
-			particle_lifetimes[particle_idx] = particle_total * phi_integrand_factor;
+			int particle_idx = j * ss.particles_per_row + i;
+			particle_lifetimes[particle_idx] = particle_total * ss.phi_integrand_factor;
 		}
 	}
 	
 	return particle_lifetimes;
 }
 
-double SimulationCPU::IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas)
+double SimulationCPU::IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas) const
 {
 	double integral_total = 0;
-	for (int j = 0; j < particles_per_row; j++) {
-		double wy = SimpsonWeight(j, particles_per_row);
-		for (int i = 0; i < particles_per_row; i++) {
-			integral_total += particle_sigmas[j * particles_per_row + i] * (wy * SimpsonWeight(i, particles_per_row));
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		double wy = SimpsonWeight(j, ss.particles_per_row);
+		for (int i = 0; i < ss.particles_per_row; i++) {
+			integral_total += particle_sigmas[j * ss.particles_per_row + i] * (wy * SimpsonWeight(i, ss.particles_per_row));
 		}
 	}
 	
-	double integral_factor = pow(1.0 / (3.0 * (particles_per_row - 1)), 2);
+	double integral_factor = pow(1.0 / (3.0 * (ss.particles_per_row - 1)), 2);
 	double factor = integral_factor * SigmaFactor(tau);
 	return integral_total * factor * 1e-8;
 }

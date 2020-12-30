@@ -1,8 +1,9 @@
 ﻿
+OpenCL
+	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?
 
 
 - Incoherent resultaten fixen (Lijkt onafhankelijk van MF?)
-x Gem. integrated_particles. (simpson integratie)
 
 Ideeën
 	(impurity randomness model per materiaal)

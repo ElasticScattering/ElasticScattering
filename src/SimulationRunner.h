@@ -28,7 +28,6 @@ class SimulationRunner {
 
 	void CreateOutputDirectories() const;
 	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
-	void PrintSimulationInfo() const;
 
 	SampleResult RunSample(Simulation& es, const Settings& settings, const int sample_index, const bool coherent, const Grid& grid);
 	void FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc);
