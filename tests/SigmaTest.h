@@ -2,15 +2,16 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
-#include "src/ElasticScattering.h"
-#include "src/ParametersFactory.h"
+#include "src/scattering/Simulation.h"
+#include "src/scattering/escl/constants.h"
+#include "src/utils/ParametersFactory.h"
 
 
 /* TODO: Get full results not 1.231e07
 TEST_CASE("Compare Sigma XX/XY results to verified results") {
     ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
 
-    auto es = new GPUElasticScattering();
+    auto es = new GPUSimulation();
 
 
 
@@ -29,14 +30,15 @@ TEST_CASE("Compare Sigma XX/XY results to verified results") {
         CHECK(result2 == result2);
     }
 }
-*/
+
 
 TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 	ScatteringParameters sp = ParametersFactory::GenerateNoImpurities();
     sp.mode = MODE_SIGMA_XX;
 
-	auto e = new CPUElasticScattering;
-    double result = e->Compute(sp);
+	auto e = new SimulationCPU;
+    double result;
+    e->Compute(sp, result);
 
 	double kf = M * sp.particle_speed / HBAR;
 	double n = (kf * kf) / (PI2 * C1);
@@ -44,3 +46,4 @@ TEST_CASE("Compare Sigma XX to formula (no impurities)") {
 
 	CHECK_RELATIVE(result, formula);
 }
+*/

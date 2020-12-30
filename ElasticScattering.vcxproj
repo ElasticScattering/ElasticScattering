@@ -161,12 +161,19 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)bin\intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Temp|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>escl</TargetName>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)bin\intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)bin\intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -176,9 +183,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)bin\intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)bin\intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -238,7 +249,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)/lib/x64;$(SolutionDir)libs;$(SolutionDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenGL32.lib;glew32.lib;glfw3.lib;OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Temp|x64'">
@@ -254,7 +265,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)/lib/x64;$(SolutionDir)libs;$(SolutionDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenGL32.lib;glew32.lib;glfw3.lib;OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
@@ -270,7 +281,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)/lib/x64;$(SolutionDir)libs;$(SolutionDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenGL32.lib;glew32.lib;glfw3.lib;OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -328,7 +339,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)/lib/x64;$(SolutionDir)libs;$(SolutionDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenGL32.lib;glew32.lib;glfw3.lib;OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Simulation|x64'">
@@ -348,66 +359,67 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(INTELOCLSDKROOT)/lib/x64;$(SolutionDir)libs;$(SolutionDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenGL32.lib;glew32.lib;glfw3.lib;OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="libs\imgui\imgui.cpp" />
-    <ClCompile Include="libs\imgui\imgui_demo.cpp" />
-    <ClCompile Include="libs\imgui\imgui_draw.cpp" />
-    <ClCompile Include="libs\imgui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="libs\imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="libs\implot\implot.cpp" />
-    <ClCompile Include="libs\implot\implot_demo.cpp" />
-    <ClCompile Include="libs\implot\implot_items.cpp" />
-    <ClCompile Include="src\app_main.cpp" />
-    <ClCompile Include="src\CPUElasticScattering.cpp" />
-    <ClCompile Include="src\ElasticScattering.cpp" />
-    <ClCompile Include="src\GPUElasticScattering.cpp" />
     <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\scattering\SimulationCPU.cpp" />
+    <ClCompile Include="src\scattering\SimulationCL.cpp" />
+    <ClCompile Include="src\scattering\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\OpenGLUtils.cpp" />
-    <ClCompile Include="src\ParametersFactory.cpp" />
-    <ClCompile Include="src\SimulationElasticScattering.cpp" />
-    <ClCompile Include="src\sim_main.cpp" />
+    <ClCompile Include="src\SimulationRunner.cpp" />
+    <ClCompile Include="tests\AngleTests.h" />
+    <ClCompile Include="tests\data\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="libs\imgui\imconfig.h" />
-    <ClInclude Include="libs\imgui\imgui.h" />
-    <ClInclude Include="libs\imgui\imgui_impl_glfw.h" />
-    <ClInclude Include="libs\imgui\imgui_impl_opengl3.h" />
-    <ClInclude Include="libs\imgui\imgui_internal.h" />
-    <ClInclude Include="libs\imgui\imstb_rectpack.h" />
-    <ClInclude Include="libs\imgui\imstb_textedit.h" />
-    <ClInclude Include="libs\imgui\imstb_truetype.h" />
-    <ClInclude Include="libs\implot\implot.h" />
-    <ClInclude Include="libs\implot\implot_internal.h" />
-    <ClInclude Include="src\app_main.h" />
-    <ClInclude Include="src\ElasticScattering.h" />
-    <ClInclude Include="src\escl\common.h" />
-    <ClInclude Include="src\escl\constants.h" />
-    <ClInclude Include="src\escl\util.h" />
     <ClInclude Include="src\Logger.h" />
-    <ClInclude Include="src\OpenGLUtils.h" />
-    <ClInclude Include="src\ParametersFactory.h" />
-    <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\SimulationParameters.h" />
+    <ClInclude Include="src\Metrics.h" />
+    <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
+    <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
-    <ClInclude Include="src\sim_main.h" />
+    <ClInclude Include="src\scattering\escl\v2.h" />
+    <ClInclude Include="src\scattering\Simulation.h" />
+    <ClInclude Include="src\scattering\escl\constants.h" />
+    <ClInclude Include="src\scattering\escl\details.h" />
+    <ClInclude Include="src\scattering\escl\device_macros.h" />
+    <ClInclude Include="src\scattering\escl\cell_grid.h" />
+    <ClInclude Include="src\scattering\escl\lifetime.h" />
+    <ClInclude Include="src\scattering\escl\util.h" />
+    <ClInclude Include="src\scattering\Grid.h" />
+    <ClInclude Include="src\SimulationRunner.h" />
+    <ClInclude Include="src\Settings.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
-    <ClInclude Include="tests\CPUComparisonTest.h" />
+    <ClInclude Include="tests\BasicOpenCLTest.h" />
+    <ClInclude Include="tests\ElasticScatteringTests.h" />
+    <ClInclude Include="tests\GridGenerationTests.h" />
+    <ClInclude Include="tests\GridMovementTests.h" />
+    <ClInclude Include="tests\IndexTests.h" />
+    <ClInclude Include="tests\SigmaIntegrationTest.h" />
+    <ClInclude Include="tests\LifetimeTests.h" />
+    <ClInclude Include="tests\SimpsonWeightsTest.h" />
+    <ClInclude Include="tests\data\kernels\test_cpp.h" />
     <ClInclude Include="tests\SigmaTest.h" />
     <ClInclude Include="tests\Test.h" />
-    <ClInclude Include="tests\TestDetails.h" />
+    <ClInclude Include="tests\OrbitDetailsTest.h" />
     <ClInclude Include="tests\TestMacros.h" />
+    <ClInclude Include="tests\TestUtils.h" />
     <ClInclude Include="tests\test_main.h" />
     <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\escl\scatter.cl" />
-    <None Include="src\escl\test.cl" />
+    <None Include="cpp.hint" />
+    <None Include="src\scattering\cl\scatter.cl" />
+    <None Include="src\scattering\cl\util_kernels.cl" />
+    <None Include="tests\data\kernels\test_cpp.cl" />
+    <None Include="tests\data\kernels\test_precision.cl" />
+    <None Include="tests\data\kernels\test_double2.cl" />
+    <None Include="tests\data\kernels\test_printf.cl" />
+    <None Include="tests\data\test_impurities.dat" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="docs\todo.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,10 +1,11 @@
 #ifndef TEST_H
 #define TEST_H
 
-#include "src/ElasticScattering.h"
-#include "src/escl/common.h"
+#include "src/scattering/Simulation.h"
+#include "src/scattering/escl/lifetime.h"
+#include "src/scattering/escl/util.h"
 #include "src/utils/OpenCLUtils.h"
-#include "src/ParametersFactory.h"
+#include "src/utils/ParametersFactory.h"
 
 #include <assert.h>
 #include <random>
@@ -13,12 +14,14 @@
 #include "doctest.h"
 #include "TestMacros.h"
 
+
+/*
 TEST_CASE("Different scatter modes")
 {
 	ScatteringParameters sp = ParametersFactory::GenerateDefault();
 	
-	auto e  = new CPUElasticScattering();
-	auto e2 = new GPUElasticScattering();
+	auto e  = new SimulationCPU();
+	auto e2 = new GPUSimulation();
 
 	double cpu_result, gpu_result, diff;
 	
@@ -34,12 +37,16 @@ TEST_CASE("Different scatter modes")
 	sp.mode = MODE_SIGMA_XY;
 	CHECK_CPU_GPU_APPROX("Sigma XY Lifetime")
 }
+*/
+
+
+
 
 /*
 TEST_CASE("Comparing kernel results on CPU and GPU")
 {
-	auto e  = new CPUElasticScattering();
-	auto e2 = new GPUElasticScattering();
+	auto e  = new SimulationCPU();
+	auto e2 = new GPUSimulation();
 
 	ScatteringParameters sp;
 	sp.region_size     = 1e-6;
@@ -54,7 +61,6 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 	sp.integrand_steps = 9;
 	sp.is_clockwise    = 1;
 	sp.region_extends  = sp.particle_speed * sp.tau;
-	sp.is_diag_regions = false;
 	sp.is_incoherent = true;
 
 	sp.mode            = MODE_DIR_LIFETIME;
@@ -62,7 +68,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 
 	double cpu_result, gpu_result, diff;
 
-	SUBCASE("Directional lifetime") {
+	SUBCASE("Directional lifetime_old") {
 		CHECK_CPU_GPU_ALMOST("Default parameters")
 
 		sp.phi = -sp.alpha - 1e-10;
@@ -84,7 +90,7 @@ TEST_CASE("Comparing kernel results on CPU and GPU")
 		CHECK_CPU_GPU_ALMOST("Clockwise off")
 	}
 
-	SUBCASE("Phi integrated lifetime") {
+	SUBCASE("Phi integrated lifetime_old") {
 		sp.mode = MODE_PHI_LIFETIME;
 
 		CHECK_CPU_GPU_APPROX("PHI - Default parameters")

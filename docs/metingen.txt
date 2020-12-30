@@ -1,0 +1,42 @@
+256x256
+
+1.24e-5 region
+2.8e+12 density
+
+3.25e-7 radius
+13 integrand steps 
+
+=
+	~= 1200 impurities
+	~= 1 mlj particle/impurity intersections.
+
+	[CPU]
+	One Path: 0.25
+	Phi Inte: 17.5
+	Sigma XX: 18.7
+
+	218.686.973 i/s
+
+
+	[GPU]
+	One Path: 0.03
+	Phi Inte: 1.67
+	Sigma XX: 1.69
+
+	2.419.790.769 i/s
+
+	...
+	(~25000 impurities)
+	~= 21 mlj intersecties.
+
+
+	One Path: 5.64 / 0.73
+
+
+
+	Lange test
+
+	dim * dim * phi_steps * 4 * imp_count * iterations * 4 * n_runs 
+
+	26.206.535.680.000
+	Intersects/seconde = 2.092.839.457 i/s

@@ -1,0 +1,14 @@
+
+- Veranderd:
+ - OpenGL/IMGUI code verwijdert
+
+ Toegevoegd:
+ - Configuratie inlezen via tekstbestand (incl temp + mf)
+ - Resultaat wordt direct naar bestand geschreven
+ - Bij elk resultaat horen ook zes afbeeldingen (coherent, incoherent) x (particle lt, sigma xx, sigma xy)
+ - Tests voor impurity grid en wat daarmee te maken heeft.
+ - (WIP) reintegratie CL versie.
+
+
+ Fixed:
+ - Impurity grid index getest en verbeterd.

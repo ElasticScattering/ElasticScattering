@@ -2,30 +2,25 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/ElasticScattering.h"
+#include "src/scattering/Simulation.h"
 #include "src/utils/OpenCLUtils.h"
+#include <vector>
 
 TEST_CASE("Sum kernel")
 {
-	int buffer_size = 4096;
-
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "util.h", &program);
+	CompileOpenCLProgram(device, context, "src/scattering/escl/scatter.cl", &program);
+
+	int buffer_size = 4096;
+	std::vector<double> A(buffer_size, 1);
 
 	size_t global_work_size = buffer_size / 2;
 	size_t local_work_size = 128;
-
-	std::vector<double> A;
-	A.clear();
-	A.resize(buffer_size);
-
-	for (int i = 0; i < buffer_size; i++)
-		A[i] = 1.0;
 
 	cl_int clStatus;
 	cl_mem in_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size, nullptr, &clStatus);
@@ -35,7 +30,7 @@ TEST_CASE("Sum kernel")
 	CL_FAIL_CONDITION(clStatus, "Couldn't enqueue buffer.");
 
 	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * buffer_size / local_work_size, nullptr, &clStatus);
-	CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes buffer.");
+	CL_FAIL_CONDITION(clStatus, "Couldn't create particle_lifetimes buffer.");
 
 	cl_kernel main_kernel = clCreateKernel(program, "sum", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
@@ -73,59 +68,6 @@ TEST_CASE("Sum kernel")
 	CHECK_ALMOST(cpu_result, gpu_result, "Sums on cpu and gpu should be equal.");
 }
 
-TEST_CASE("Weights function") {
-	int dim = 7;
-
-	double w = GetWeight1D(0, dim);
-	CHECK(w == 1);
-
-	w = GetWeight1D(dim - 1, dim);
-	CHECK(w == 1);
-
-	w = GetWeight1D(1, dim);
-	CHECK(w == 4);
-
-	w = GetWeight1D(dim - 2, dim);
-	CHECK(w == 4);
-
-	w = GetWeight1D(dim - 3, dim);
-	CHECK(w == 2);
-
-
-	w = GetWeight2D(dim - 1, 0, dim);
-	CHECK(w == 1);
-
-	w = GetWeight2D(0, 0, dim);
-	CHECK(w == 1);
-
-	w = GetWeight2D(1, 0, dim);
-	CHECK(w == 4);
-
-	w = GetWeight2D(2, 0, dim);
-	CHECK(w == 2);
-
-	w = GetWeight2D(3, 0, dim);
-	CHECK(w == 4);
-
-	w = GetWeight2D(0, 1, dim);
-	CHECK(w == 4);
-
-	w = GetWeight2D(1, 1, dim);
-	CHECK(w == 16);
-
-	w = GetWeight2D(3, 3, dim);
-	CHECK(w == 16);
-
-	w = GetWeight2D(1, 2, dim);
-	CHECK(w == 8);
-
-	w = GetWeight2D(2, 1, dim);
-	CHECK(w == 8);
-
-	w = GetWeight2D(0, dim - 1, dim);
-	CHECK(w == 1);
-}
-
 TEST_CASE("Add weights kernel")
 {
 	cl_device_id device;
@@ -134,10 +76,10 @@ TEST_CASE("Add weights kernel")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "common.h", &program);
+	CompileOpenCLProgram(device, context, "src/scattering/escl/util_kernels.cl", &program);
 
 	cl_int clStatus;
-	cl_kernel main_kernel = clCreateKernel(program, "add_integral_weights_2d", &clStatus);
+	cl_kernel main_kernel = clCreateKernel(program, "add_simpson_weights_2d", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
 
@@ -179,7 +121,7 @@ TEST_CASE("Add weights kernel")
 
 	for (int j = 0; j < limit; j++) {
 		for (int i = 0; i < limit; i++) {
-			cpu_result = A[j * dim + i] * GetWeight2D(i, j, limit);
+			cpu_result = A[j * dim + i] * SimpsonWeight2D(i, j, limit);
 			gpu_result = gpu_results[j * dim + i];
 
 			CHECK_ALMOST(cpu_result, gpu_result, "Each weight should be the same")
@@ -192,4 +134,3 @@ TEST_CASE("Add weights kernel")
 	std::cout << "[Weights] CPU: " << total_cpu << ", GPU: " << total_gpu << ", diff: " << abs(total_gpu - total_cpu) << std::endl;
 	CHECK_ALMOST(total_cpu, total_gpu, "Weights on cpu and gpu should be the same.");
 }
-

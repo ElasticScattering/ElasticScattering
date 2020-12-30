@@ -1,6 +1,8 @@
 #ifndef OPENCL_UTIL_H
 #define OPENCL_UTIL_H
 
+#define CL_TARGET_OPENCL_VERSION 220
+
 #include "ErrorMacros.h"
 
 #include <CL/cl.h>
@@ -11,17 +13,6 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-
-#ifndef NO_WINDOW
-#include <CL/cl_gl.h>
-#include <GL/glew.h>
-#include <GL/wglew.h>
-#include <GL/glfw3.h>
-#endif
-
-#ifndef NO_WINDOW
-GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* window);
-#endif
 
 static std::string CLErrorString(int err) {
     switch (err) {
@@ -127,25 +118,12 @@ static void InitializeOpenCL(bool prefer_gpu, cl_device_id *p_deviceID, cl_conte
         }
     }
 
-#ifndef NO_WINDOW
-    cl_context_properties props[] =
-    {
-        CL_CONTEXT_PLATFORM,
-        (cl_context_properties)selected_platform,
-        CL_GL_CONTEXT_KHR,
-        (cl_context_properties)wglGetCurrentContext(),
-        CL_WGL_HDC_KHR,
-        (cl_context_properties)wglGetCurrentDC(),
-        0
-    };
-#else
     cl_context_properties props[] =
     {
         CL_CONTEXT_PLATFORM,
         (cl_context_properties)selected_platform,
         0
     };
-#endif
 
     ctx = clCreateContext(props, 1, &selected_device, nullptr, nullptr, &cl_status);
     CL_FAIL_CONDITION(cl_status, "Couldn't create context.");
@@ -162,9 +140,8 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
 {
     cl_int clStatus;
     
-    std::string relative_path("src/escl/");
-    relative_path.append(p_soure_file);
-    std::fstream kernelFile(relative_path);
+    std::string path(p_soure_file);
+    std::fstream kernelFile(path);
     std::string content((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
     const char *code = new char[content.size()];
     code = content.c_str();
@@ -172,12 +149,8 @@ static void CompileOpenCLProgram(const cl_device_id p_device_id, const cl_contex
     cl_program program = clCreateProgramWithSource(p_ocl_context, 1, (const char**)&code, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create program.");
 
-    if (true) {
-        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM -D NO_WINDOW", NULL, NULL);
-    }
-    else {
-        clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
-    }
+    clStatus = clBuildProgram(program, 1, &p_device_id, "-D DEVICE_PROGRAM", NULL, NULL);
+
     if (clStatus != CL_SUCCESS) {
         size_t len;
         char buffer[4086];
@@ -204,10 +177,10 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     cl_uint     max_device_frequency;
     cl_uint     max_num_samplers = 0;
     cl_uint     min_base_addr_align_size_bits = 0;
-    cl_uint     min_base_addr_align_size_bytes = 0;
     cl_ulong    local_mem_size;
     cl_ulong    global_mem_size;
     cl_long	    max_mem_alloc_size;
+    cl_long	    max_constant_buffer_size;
 
     size_t      num_bytes = 0;
     cl_int      cl_status;
@@ -245,9 +218,6 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof(cl_uint), &min_base_addr_align_size_bits, &num_bytes);
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
-    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, sizeof(cl_uint), &min_base_addr_align_size_bytes, &num_bytes);
-    CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
-    
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &max_device_frequency, &num_bytes);
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
@@ -258,6 +228,9 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
     cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_long), &max_mem_alloc_size, &num_bytes);
+    CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
+
+    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_long), &max_constant_buffer_size, &num_bytes);
     CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
 
     size_t info_size;
@@ -277,31 +250,27 @@ static void PrintOpenCLDeviceInfo(const cl_device_id device_id, const cl_context
     bool glinterop  = std::find(extensions.begin(), extensions.end(), "cl_khr_gl_sharing") != extensions.end();
     bool double_sup = std::find(extensions.begin(), extensions.end(), "cl_khr_fp64") != extensions.end();
 
-    /* Doesn't work
-    cl_uint	uMaxImage2DWidth;
-    cl_status = clGetDeviceInfo(device_id, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(cl_uint), &uMaxImage2DWidth, &uNumBytes);
-    CL_FAIL_CONDITION(cl_status, "clGetDeviceInfo() query failed.");
-    */
 
-    std::cout << "OpenCL device info:"              << std::endl;
-    std::cout << "Device vendor:                  " << device_vendor << std::endl;
-    std::cout << "Device name:                    " << device_name << std::endl;
-    std::cout << "Driver version:                 " << driver_version << std::endl;
-    std::cout << "Device profile:                 " << device_profile << std::endl;
-    std::cout << "Device version:                 " << device_version << std::endl;
-    std::cout << "Device OpenCL C version:        " << oclc_version << std::endl;
-    std::cout << "Device max compute units:       " << max_compute_units << std::endl;
-    std::cout << "Device max work item dim.:      " << max_work_items_dim << std::endl;
-    std::cout << "Device max work item sizes:     " << max_work_item_sizes[0] << ", " << max_work_item_sizes[1] << ", " << max_work_item_sizes[2] << std::endl;
-    std::cout << "Device max work group size:     " << max_work_group_size << std::endl;
-    std::cout << "Device mem. base addr. align:   " << min_base_addr_align_size_bits << " (bits)" << std::endl;
-    std::cout << "Device min datatype align size: " << min_base_addr_align_size_bytes << " (bytes)" << std::endl;
-    std::cout << "Device max clock frequency:     " << max_device_frequency << std::endl;
-    std::cout << "Device local mem. size:         " << (float)local_mem_size << std::endl;
-    std::cout << "Device global mem. size:        " << (float)global_mem_size << std::endl;
-    std::cout << "Device max mem alloc size:      " << (float)max_mem_alloc_size << std::endl;
-    std::cout << "GL Interop:                     " << (glinterop ? "True" : "False") << std::endl;
-    std::cout << "Double Precision:               " << (double_sup ? "True" : "False") << std::endl;
+    std::cout << "OpenCL device info:"        << std::endl;
+    std::cout << "Device vendor:            " << device_vendor << std::endl;
+    std::cout << "Device name:              " << device_name << std::endl;
+    std::cout << "Driver version:           " << driver_version << std::endl;
+    std::cout << "Device profile:           " << device_profile << std::endl;
+    std::cout << "Device version:           " << device_version << std::endl;
+    std::cout << "OpenCL C version:         " << oclc_version << std::endl;
+    std::cout << std::endl;
+    std::cout << "Max compute units:        " << max_compute_units << std::endl;
+    std::cout << "Max work item dimension:  " << max_work_items_dim << std::endl;
+    std::cout << "Max work item sizes:      " << max_work_item_sizes[0] << ", " << max_work_item_sizes[1] << ", " << max_work_item_sizes[2] << std::endl;
+    std::cout << "Max work group size:      " << max_work_group_size << std::endl;
+    std::cout << "Largest builtin type:     " << min_base_addr_align_size_bits << " (bits)" << std::endl;
+    std::cout << "Local memory size:        " << (float)local_mem_size << std::endl;
+    std::cout << "Global memory size:       " << (float)global_mem_size << std::endl;
+    std::cout << "Max memory alloc size:    " << (float)max_mem_alloc_size << std::endl;
+    std::cout << "Max constant buffer size: " << max_constant_buffer_size << std::endl;
+    std::cout << "Max clock frequency:      " << max_device_frequency << std::endl;
+    std::cout << "Double Precision:         " << (double_sup ? "True" : "False") << std::endl;
+    //std::cout << "GL Interop:                     " << (glinterop ? "True" : "False") << std::endl;
     //std::cout << "Device image2d max width:       " << uMaxImage2DWidth << std::endl;
 }
 

@@ -1,0 +1,34 @@
+﻿
+OpenCL
+	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?
+
+
+- Incoherent resultaten fixen (Lijkt onafhankelijk van MF?)
+
+Ideeën
+	(impurity randomness model per materiaal)
+	- Particle waardes die niet botsen. (karakteristieken...)
+
+Optimalisaties
+	Bereken phi, BoundTime waardes vooraf?
+	clockwise vooraf bepalen?.
+
+Tellers
+	intersects
+	gebied uit
+	 __kernel ...(__global uint *intersectCounter)
+	#ifdef EFFICIENCY_METRICS
+		atomic_inc(intersectCounter);
+	#endif // EFFICIENCY_METRICS
+
+
+	logging
+	/*
+#define WRITE_METRIC(name, metric, m_precision, m_unit)                  \
+file << L'│' << std::setw(metric_width) << std::left << name;   \
+for (int i = 0; i < metrics.size(); i++)                        \
+{                                                               \
+    file << L'│' << std::setw(value_width - m_unit.size()) << std::right << std::setprecision(m_precision) << metric << m_unit; \
+} \
+file << L'│' << std::endl;
+*/

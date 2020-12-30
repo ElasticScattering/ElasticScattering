@@ -1,34 +1,39 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
-#include "ElasticScattering.h"
+#include "SimulationConfiguration.h"
 #include "tests/test_main.h"
-//#include "app_main.h"
-#include "sim_main.h"
+#include "SimulationRunner.h"
 
 #include <string>
 
 void ParseArgs(int argc, char** argv, InitParameters* p_init) {
-    p_init->mode = ProgramMode::Interactive;
     p_init->use_gpu = true;
-    p_init->dont_show_info = false;
+    p_init->dont_show_info = false; // True?
 
-    if (argc >= 2) {
-        
-        std::string w;
-        w.assign(argv[1], strlen(argv[1]));
+    if (argc < 2) {
+        p_init->config_file = "default.config";
+        p_init->mode = ProgramMode::Simulation;
+        return;
+    }
 
-        if (w == "test") {
-            p_init->mode = ProgramMode::Test;
-        } else if (w == "sim") {
-            p_init->mode = ProgramMode::Simulation;
-        } else {
-            p_init->mode = ProgramMode::Interactive;
-        }
+    std::string w;
+    w.assign(argv[1], strlen(argv[1]));
 
-        if (argc >= 3) {
-            w.assign(argv[2], strlen(argv[2]));
-            p_init->dont_show_info = (w == "silent");
-        }
+    if (w == "help") {
+        printf("Elastic Scattering utility - Usage:\n\n");
+        printf("Running a simulation:\n");
+        printf("\tescl              \t--Run a simulation with default.config as configuration");
+        printf("\tescl [config_file]\t--Use custom config file.");
+
+        printf("\nRunning tests:\n");
+        printf("\tescl test");
+        exit(0);
+    }
+    if (w == "test") {
+        p_init->mode = ProgramMode::Test;
+    } else {
+        p_init->config_file = w;
+        p_init->mode = ProgramMode::Simulation;
     }
 }
 
@@ -38,9 +43,12 @@ int main(int argc, char **argv)
     ParseArgs(argc, argv, &init);
 
     switch (init.mode) {
-        case Test       : test_main();    break;
-        case Simulation : sim_main(init); break;
-        //case Interactive: app_main(init); break;
+        case ProgramMode::Test       : test_main();    break;
+        case ProgramMode::Simulation: {
+            SimulationRunner sr;
+            sr.Run(init);
+            break;
+        }
     }
     
     return 0;

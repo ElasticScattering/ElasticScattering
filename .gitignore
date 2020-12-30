@@ -1,10 +1,6 @@
-Debug/
-Release/
-x64/
-
+bin/
 ES Logs/
-docs/
-
+ESLogs/
 
 .vs/
 *.filters
