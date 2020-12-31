@@ -14,6 +14,8 @@
 
 class Simulation {
 protected:
+	bool log_intermediates;
+
 	std::vector<double> raw_lifetimes;
 
 	SimulationSettings ss;
@@ -70,7 +72,7 @@ public:
 		ps.phi_step_size  = ss.integrand_angle_area / (ss.values_per_quadrant - 1);
 	}
 
-	Simulation(int p_particles_per_row, int p_values_per_quadrant)
+	Simulation(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates)
 	{
 		ss.particles_per_row   = p_particles_per_row;
 		ss.values_per_quadrant = p_values_per_quadrant;
@@ -78,6 +80,8 @@ public:
 		ss.values_per_row      = ss.particles_per_row * ss.values_per_particle;
 		ss.total_lifetimes     = ss.particles_per_row * ss.values_per_row;
 		ss.total_particles	   = ss.particles_per_row * ss.particles_per_row;
+
+		log_intermediates = p_log_intermediates;
 
 		//raw_lifetimes.resize(ss.particles_per_row * ss.values_per_row);
 	}
@@ -94,7 +98,7 @@ public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
 	virtual IterationResult DeriveTemperature(const double temperature) const override;
 
-	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
+	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates) : Simulation(p_particles_per_row, p_values_per_quadrant, p_log_intermediates) {};
 };
 
 
@@ -108,7 +112,7 @@ public:
 	void UploadImpurities(const Grid& grid);
 
 	SimulationCL();
-	SimulationCL(int p_particles_per_row, int p_values_per_quadrant);;
+	SimulationCL(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates);
 	// SimulationCL(bool use_gpu, bool show_info);
 	~SimulationCL();
 };

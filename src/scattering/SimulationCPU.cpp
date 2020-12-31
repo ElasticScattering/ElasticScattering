@@ -58,6 +58,7 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature) const
 		//new_lifetimes[i] = raw_lifetimes[i]; 
 		new_lifetimes[i] = min(raw_lifetimes[i], default_max_lifetime);
 
+	
 	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
 
 	b.sigmas             = ApplySigma(tau, new_lifetimes);

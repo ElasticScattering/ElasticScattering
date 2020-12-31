@@ -44,8 +44,10 @@ typedef struct SimulationConfiguration
 
     Settings settings;
 
+    bool log_intermediates;
     std::string base_output_directory;
     std::string output_directory;
+    int digits_in_sample_num;
 
     static SimulationConfiguration ParseFromeFile(std::string file_path)
     {
@@ -80,7 +82,7 @@ typedef struct SimulationConfiguration
 
         SimulationConfiguration cfg;
 
-        cfg.base_output_directory = values.at("output_directory");
+        cfg.base_output_directory = values.find("output_directory") == values.end() ? "ESLogs" : values.at("output_directory");
         std::string base_dir_name = cfg.base_output_directory + "/Result_";
 
         unsigned int n = 0;
@@ -96,6 +98,7 @@ typedef struct SimulationConfiguration
             n++;
         }
 
+        cfg.log_intermediates = atoi(values.at("log_intermediates").c_str()) == 1;
         cfg.num_samples = atoi(values.at("num_samples").c_str());
         cfg.quadrant_integral_steps = atoi(values.at("integrand_steps").c_str());
         cfg.particles_per_row = atoi(values.at("dimension").c_str());;
@@ -136,6 +139,14 @@ typedef struct SimulationConfiguration
         cfg.settings.impurity_density                = atof(values.at("impurity_density").c_str());
         cfg.settings.impurity_radius                 = atof(values.at("impurity_radius").c_str());
         cfg.settings.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
+
+        int x = cfg.num_samples;
+        cfg.digits_in_sample_num = 0;
+        while (x > 0)
+        {
+            x = floor(x / 10);
+            cfg.digits_in_sample_num++;
+        }
 
         return cfg;
     }

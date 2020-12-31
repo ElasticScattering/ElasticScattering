@@ -16,9 +16,7 @@ void SimulationRunner::Run(const InitParameters& init)
 
     cfg = SimulationConfiguration::ParseFromeFile(init.config_file);
 
-    std::cout << "Starting simulation (" << cfg.num_samples << " samples)\n";
-    std::cout << "   Output directory: " << cfg.output_directory << "\n\n";
-    std::cout << "/" << std::string(cfg.magnetic_fields.size() * 2, '-') << "\\\n";
+    std::cout << "Starting simulation (" << cfg.num_samples << " samples) | Output: " << cfg.output_directory << "\n\n";
 
     CreateOutputDirectories();
 
@@ -26,22 +24,20 @@ void SimulationRunner::Run(const InitParameters& init)
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
+    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps, cfg.log_intermediates);
 
     const Settings& ss = cfg.settings;
 
     for (int i = 0; i < cfg.num_samples; i++) {
-        std::cout << " ";
-        
         QueryPerformanceCounter(&beginClock);
         auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
         QueryPerformanceCounter(&endClock);
-        CreateMetricsLogs(i, GetElapsedTime(), grid);
+        
+        if (cfg.log_intermediates)
+            CreateMetricsLogs(i, GetElapsedTime(), grid);
 
         sample_results_inc[i] = RunSample(es, ss, i, false, grid);
         sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
-
-        std::cout << std::endl;
     }
 
     FinishResults(sample_results_coh, sample_results_inc);
@@ -59,7 +55,13 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     es.InitSample(grid, settings, coherent);
 
     SampleMetrics sample_metrics(coherent, N, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
-    
+
+    auto raw_sample_string = std::to_string(sample_index + 1);
+    auto sample_string = std::string(cfg.digits_in_sample_num - raw_sample_string.length(), '0') + raw_sample_string + (coherent ? " C" : " I") + " [";
+
+    std::cout << '\r' << sample_string << std::string(cfg.magnetic_fields.size(), '.') << "]";
+    std::cout << '\r' << sample_string;
+
     for (int j = 0; j < N; j++) {
         Metrics metrics(j, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
     
@@ -75,13 +77,15 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
             auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
             sr.results[i][j] = iteration.result;
 
-            Logger::LogImages(GetImagePath(i, j, sample_index, coherent), cfg.particles_per_row - 1, iteration);
+            if (cfg.log_intermediates)
+                Logger::LogImages(GetImagePath(i, j, sample_index, coherent), cfg.particles_per_row - 1, iteration);
         }
 
-        std::cout << ".";
+        std::cout << "x";
     }
 
-    Logger::LogSampleMetrics(metrics_path, sample_metrics);
+    if (cfg.log_intermediates)
+        Logger::LogSampleMetrics(metrics_path, sample_metrics);
 
     return sr;
 }
@@ -133,12 +137,14 @@ void SimulationRunner::CreateOutputDirectories() const
 
     std::filesystem::create_directory(cfg.output_directory);
 
-    for (int i = 0; i < cfg.num_samples; i++)
-    {
-        auto sample_path = GetSamplePath(i);
-        std::filesystem::create_directory(sample_path);
-        std::filesystem::create_directory(sample_path + "/Incoherent/");
-        std::filesystem::create_directory(sample_path + "/Coherent/");
+    if (cfg.log_intermediates) {
+        for (int i = 0; i < cfg.num_samples; i++)
+        {
+            auto sample_path = GetSamplePath(i);
+            std::filesystem::create_directory(sample_path);
+            std::filesystem::create_directory(sample_path + "/Incoherent/");
+            std::filesystem::create_directory(sample_path + "/Coherent/");
+        }
     }
 
     for (int i = 0; i < cfg.temperatures.size(); i++)

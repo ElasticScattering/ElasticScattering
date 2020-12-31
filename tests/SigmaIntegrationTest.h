@@ -29,7 +29,7 @@ SampleResult GetSample(Simulation& sim, const Grid& grid, const SimulationConfig
 
 void RunTestSample(const std::string file_path, const std::string imp_path, const std::vector<DataRow>& expected_results)
 {
-	SimulationCPU sim(31, 7);
+	SimulationCPU sim(31, 7, false);
 
 	auto cfg = SimulationConfiguration::ParseFromeFile(file_path);
 

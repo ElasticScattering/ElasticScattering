@@ -236,9 +236,9 @@ void SimulationCL::PrepareKernels(const Settings& ss, const size_t items_in_work
 {
 }
 
-SimulationCL::SimulationCL() : SimulationCL(true, true) {};
+SimulationCL::SimulationCL() : SimulationCL(true, true, true) {};
 
-SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant)
+SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates) : Simulation(p_particles_per_row, p_values_per_quadrant, p_log_intermediates)
 {
     InitializeOpenCL(true, &ocl.deviceID, &ocl.context, &ocl.queue);
     if (true)
