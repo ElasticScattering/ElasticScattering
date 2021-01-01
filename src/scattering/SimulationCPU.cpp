@@ -25,8 +25,19 @@ void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& gr
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < ss.values_per_quadrant; p++) {
 					auto particle = CreateParticle(q, p, pos, &ps);
-
+					
+					int last_cells_passed = metrics.cells_passed;
+					int last_intersections_tested = metrics.impurities_tested;
+					
 					raw_lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), &metrics);
+					
+					int new_cells_passed = metrics.cells_passed - last_cells_passed;
+					if (metrics.max_cells_passed < new_cells_passed)
+						metrics.max_cells_passed = new_cells_passed;
+					
+					int new_intersections_tested = metrics.impurities_tested - last_intersections_tested;
+					if (metrics.max_impurities_tested < new_intersections_tested)
+						metrics.max_impurities_tested = new_intersections_tested;
 				}
 			}
 		}

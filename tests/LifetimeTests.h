@@ -15,15 +15,14 @@ TEST_CASE("Lifetime tests")
 	auto grid = Grid(impurities, 1e-6, 1e-6, 1e-8, 10);
 	auto impurity_settings = grid.GetSettings();
 
-	double magnetic_field = 10;
-	Metrics m(magnetic_field, 1, 1, 1);
+	Metrics m;
 
 	ParticleSettings ps;
 	ps.alpha          = PI / 4.0;
 	ps.particle_speed = 1.68e5;
 	ps.phi_start      = 0;
 	ps.phi_step_size  = 0;
-	ps.angular_speed  = E * magnetic_field / M;
+	ps.angular_speed  = E * 10 / M;
 
 	auto ps50 = ps;
 	ps50.angular_speed = E * 50 / M;

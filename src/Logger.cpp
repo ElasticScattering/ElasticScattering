@@ -158,7 +158,7 @@ void Logger::LogSampleResults(const std::string file_path, const SampleResult co
 
 
 
-void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& gm)
+void Logger::CreateSampleMetricsLog(const std::string file_path, const GlobalMetrics& gm)
 {
     std::ofstream file;
     file.open(file_path);
@@ -173,8 +173,9 @@ void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& 
     file << "Impurities     " << gm.unique_impurity_count << " (+ " << gm.additional_impurities << " from overlap)" << std::endl;
     file << "Cells          " << gm.cells_per_row << " x " << gm.cells_per_row << std::endl;
     file << "Avg. imps/cell " << gm.avg_impurities_in_cell << " (" << gm.avg_impurities_in_cell_overlapping << " from overlapping)" << std::endl;
+    file << "Impurity seed  " << gm.seed << std::endl;
     file << std::fixed << std::setprecision(4);
-    file << "Index time     " << gm.grid_time_elapsed << " seconds" << std::endl;
+    file << "Index time     " << gm.grid_time_elapsed * 1000.0 << "ms" << std::endl;
     file << std::endl;
 }
 
@@ -214,31 +215,35 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
     file << L'│' << std::endl;
 
     file << L'│' << std::setw(metric_width) << std::left << " Time spent on lifetimes";
-    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(3) << metrics[i].time_elapsed_lifetimes << "s";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 2) << std::right << std::setprecision(3) << (metrics[i].time_elapsed_lifetimes*1000.0) << "ms";
     file << L'│' << std::endl;
 
     file << L'│' << std::wstring(metric_width, ' '); // Empty line.
     for (int i = 0; i < metrics.size(); i++) file << L'│' << std::wstring(value_width, ' ');
     file << L'│' << std::endl;
 
-    file << L'│' << std::setw(metric_width) << std::left << " Impurity intersections";
-    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].impurity_intersections / 1'000'000.0) << " mil";
+    file << L'│' << std::setw(metric_width) << std::left << " Total impurities tested";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].impurities_tested / 1'000'000.0) << " mil";
     file << L'│' << std::endl;
 
-    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle average";
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average";
     for (int i = 0; i < metrics.size(); i++)
     {
         file << L'│' << std::setw(value_width) << std::right << std::setprecision(2) 
-            << ((double)metrics[i].impurity_intersections / sample_metrics.nlifetimes);
+            << ((double)metrics[i].impurities_tested / (double)metrics[i].real_lifetimes);
     }
     file << L'│' << std::endl;
 
-    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle percentage";
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average %";
     for (int i = 0; i < metrics.size(); i++)
     {
         file << L'│' << std::setw(value_width-1) << std::right << std::setprecision(2)
-            << (100 * ((double)metrics[i].impurity_intersections / sample_metrics.nlifetimes) / (double)metrics[i].impurity_count) << "%";
+            << (100 * ((double)metrics[i].impurities_tested / (double)metrics[i].real_lifetimes) / (double)sample_metrics.impurity_count) << "%";
     }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << std::setprecision(4) <<  (double)metrics[i].max_impurities_tested;
     file << L'│' << std::endl;
 
     file << L'│' << std::wstring(metric_width, ' '); // Empty line.
@@ -246,24 +251,28 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
     file << L'│' << std::endl;
 
     // # Cells Passed.
-    file << L'│' << std::setw(metric_width) << std::left << " Cells passed";
+    file << L'│' << std::setw(metric_width) << std::left << " Grid cells passed";
     for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].cells_passed / 1'000'000.0) << " mil";
     file << L'│' << std::endl;
 
-    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle average";
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average";
     for (int i = 0; i < metrics.size(); i++)
     {
         file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
-            << ((double)metrics[i].cells_passed / sample_metrics.nlifetimes);
+            << ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes);
     }
     file << L'│' << std::endl;
 
-    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Particle percentage";
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average %";
     for (int i = 0; i < metrics.size(); i++)
     {
         file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-            << (100 * ((double)metrics[i].cells_passed / sample_metrics.nlifetimes) / pow(sample_metrics.cells_per_row, 2)) << "%";
+            << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes) / pow(sample_metrics.cells_per_row, 2)) << "%";
     }
+    file << L'│' << std::endl;
+
+    file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
+    for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].max_cells_passed;
     file << L'│' << std::endl;
 
     file << L'│' << std::wstring(metric_width, ' '); // Empty line.

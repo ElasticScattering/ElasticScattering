@@ -7,53 +7,35 @@
 
 struct Metrics {
     int cells_passed;
-    int impurity_intersections;
+    int impurities_tested;
     int particles_inside_impurity;
     int particles_escaped;
 
+    int max_impurities_tested;
+    int max_cells_passed;
+
 #ifndef DEVICE_PROGRAM
-    int magnetic_field_index;
-    int nlifetimes;
-    int cells_per_row;
-    int impurity_count;
+    int real_lifetimes;
 
     double time_elapsed_lifetimes;
     double time_elapsed_temperatures;
 
     double avg_particle_lifetime;
 
-    Metrics(int mf, int nlt, int cells, int imp_count) {
-        magnetic_field_index      = mf;
-        nlifetimes                = nlt;
-        cells_per_row             = cells;
-        impurity_count            = imp_count;
-
-        cells_passed              = 0;
-        impurity_intersections    = 0;
-        particles_inside_impurity = 0;
-        particles_escaped         = 0;
-
-        avg_particle_lifetime     = 0;
-
-        time_elapsed_lifetimes    = 0;
-        time_elapsed_temperatures = 0;
-    }
-
     Metrics() {
-        magnetic_field_index = 1;
-        nlifetimes = 1;
-        cells_per_row = 1;
-        impurity_count = 1;
-
         cells_passed = 0;
-        impurity_intersections = 0;
+        impurities_tested = 0;
         particles_inside_impurity = 0;
+        real_lifetimes = 0;
         particles_escaped = 0;
 
         avg_particle_lifetime = 0;
 
         time_elapsed_lifetimes = 0;
         time_elapsed_temperatures = 0;
+
+        max_cells_passed = 0;
+        max_impurities_tested = 0;
     }
 #endif // !DEVICE_PROGRAM
 };
@@ -66,6 +48,7 @@ struct GlobalMetrics
     int unique_impurity_count;
     int additional_impurities;
     int cells_per_row;
+    int seed;
 
     double grid_time_elapsed;
     double avg_impurities_in_cell;

@@ -90,7 +90,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         int impurity_end = cell_indices[cell_idx];
 
         METRIC_INC(metrics->cells_passed);
-        METRIC_ADD(metrics->impurity_intersections, (impurity_end - impurity_start));
+        METRIC_ADD(metrics->impurities_tested, (impurity_end - impurity_start));
 
         // Test each impurity.
         for (int i = impurity_start; i < impurity_end; i++) {

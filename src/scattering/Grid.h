@@ -37,6 +37,7 @@ private:
 	double cell_size;
 
 	double impurity_radius;
+	int seed_used;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
 	v2i get_cell(const double x, double y);
@@ -58,6 +59,8 @@ public:
 	int GetUniqueImpurityCount() const { return unique_impurity_count; };
 	int GetTotalImpurityCount() const { return total_indexed_impurities; };
 	int GetCellsPerRow() const { return cells_per_row; };
+	int GetSeed() const { return seed_used; };
+
 	ImpuritySettings GetSettings() const
 	{
 		ImpuritySettings is;

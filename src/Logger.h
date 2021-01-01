@@ -18,7 +18,7 @@ public:
     static void CreateSampleResultLog(const std::string file_path, const SimulationConfiguration& settings);
     static void LogSampleResults(const std::string file_path, const SampleResult coherent, const SampleResult incoherent);
 
-    static void CreateMetricsLog(const std::string file_path, const GlobalMetrics& gm);
+    static void CreateSampleMetricsLog(const std::string file_path, const GlobalMetrics& gm);
     static void LogSampleMetrics(const std::string file_path, const SampleMetrics& metrics);
 
     static void LogImages(const std::string file_path, const int dim, const IterationResult& iteration);

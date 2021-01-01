@@ -37,11 +37,14 @@ protected:
 	{
 		if (ss.total_lifetimes == 0) return 0;
 
+		int total_valid = 0;
 		double total = 0;
-		for (int i = 0; i < ss.total_lifetimes; i++)
+		for (int i = 0; i < ss.total_lifetimes; i++) {
 			total += raw_lifetimes[i];
+			if (raw_lifetimes[i] > 0) total_valid++;
+		}
 		
-		return total / (double)ss.total_lifetimes;
+		return total / (double)total_valid;
 	}
 
 public:

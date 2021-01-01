@@ -31,8 +31,7 @@ void SimulationRunner::Run(const InitParameters& init)
 
 
         QueryPerformanceCounter(&beginClock);
-        auto seed = random_device();
-        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
+        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
         QueryPerformanceCounter(&endClock);
         
         if (cfg.logging_level == LoggingLevel::Everything)
@@ -68,7 +67,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     std::cout << '\r' << sample_string;
 
     for (int j = 0; j < N; j++) {
-        Metrics metrics(j, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
+        Metrics metrics;
     
         // Main compute method.
         QueryPerformanceCounter(&beginClock);
@@ -76,6 +75,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
         QueryPerformanceCounter(&endClock);
         
         metrics.time_elapsed_lifetimes = GetElapsedTime();
+        metrics.real_lifetimes = sample_metrics.nlifetimes - metrics.particles_inside_impurity;
         sample_metrics.iteration_metrics[j] = metrics;
 
         for (int i = 0; i < T; i++) {
@@ -131,10 +131,15 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
 
             DataRow row(temperature, cfg.magnetic_fields[j], coherent, incoherent);
 
-            double sxx_sq_exp = dxx_squared / S + 1e-15;
-            double sxx_exp = (coherent.xx + incoherent.xx) / S;
-            double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(S - 1));
-            row.xxd = sxx_std / sxx_exp;
+            if (cfg.num_samples == 1) {
+                row.xxd = 0;
+            }
+            else {
+                double sxx_sq_exp = dxx_squared / S + 1e-15;
+                double sxx_exp = (coherent.xx + incoherent.xx) / S;
+                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(S - 1));
+                row.xxd = sxx_std / sxx_exp;
+            }
 
             Logger::LogResult(GetResultPath(i), row);
         }
@@ -153,7 +158,6 @@ void SimulationRunner::CreateSampleOutputDirectory(const int sample_index) const
 
 void SimulationRunner::CreateOutputDirectory() const
 {
-
     if (!std::filesystem::exists(cfg.base_output_directory))
         std::filesystem::create_directory(cfg.base_output_directory);
 
@@ -171,6 +175,7 @@ void SimulationRunner::CreateMetricsLogs(const int sample_index, const double el
     gm.grid_time_elapsed                  = elapsed_time; 
     gm.avg_impurities_in_cell             = grid.GetTotalImpurityCount() / (double)(gm.cells_per_row * gm.cells_per_row);
     gm.avg_impurities_in_cell_overlapping = gm.avg_impurities_in_cell - cfg.settings.max_expected_impurities_in_cell;
+    gm.seed                               = grid.GetSeed();
 
-    Logger::CreateMetricsLog(GetMetricsPath(sample_index), gm);
+    Logger::CreateSampleMetricsLog(GetMetricsPath(sample_index), gm);
 }

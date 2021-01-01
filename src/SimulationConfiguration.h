@@ -116,7 +116,6 @@ typedef struct SimulationConfiguration
             else if (log_level == "results") {
                 cfg.logging_level = LoggingLevel::Results;
             }
-            std::cout << log_level << std::endl;
         }
 
         cfg.num_samples = atoi(values.at("num_samples").c_str());

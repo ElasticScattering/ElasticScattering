@@ -8,6 +8,7 @@
 
 Grid::Grid(int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell)
 {
+	seed_used = seed;
 	impurity_radius = _impurity_radius;
 	
 	spawn_range = v2(-region_extends, region_size + region_extends);
