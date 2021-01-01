@@ -3,8 +3,8 @@
 
 #include "Grid.h"
 
-#include "escl/ScatteringParameters.h"
-#include "escl/constants.h"
+#include "es/ScatteringParameters.h"
+#include "es/constants.h"
 
 #include "src/Settings.h"
 #include "src/SimulationResult.h"

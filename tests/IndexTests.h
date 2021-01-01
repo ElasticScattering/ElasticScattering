@@ -1,7 +1,7 @@
 #pragma once
 
 #include <doctest.h>
-#include "src/scattering/escl/cell_grid.h"
+#include "src/sim/es/cell_grid.h"
 
 TEST_CASE("DifferentPoint")
 {

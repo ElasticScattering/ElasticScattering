@@ -1,7 +1,7 @@
 #include "SimulationRunner.h"
 
-#include "scattering/Simulation.h"
-#include "scattering/Grid.h"
+#include "sim/Simulation.h"
+#include "sim/Grid.h"
 #include "SimulationResult.h"
 #include "Logger.h"
 

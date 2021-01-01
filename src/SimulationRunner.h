@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SimulationConfiguration.h"
-#include "scattering/Simulation.h"
+#include "sim/Simulation.h"
 
 #include <string>
 #include <vector>

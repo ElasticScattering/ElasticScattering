@@ -22,11 +22,8 @@ void ParseArgs(int argc, char** argv, InitParameters* p_init) {
     if (w == "help") {
         printf("Elastic Scattering utility - Usage:\n\n");
         printf("Running a simulation:\n");
-        printf("\tescl              \t--Run a simulation with default.config as configuration");
-        printf("\tescl [config_file]\t--Use custom config file.");
-
-        printf("\nRunning tests:\n");
-        printf("\tescl test");
+        printf("\tes              \t--Run a simulation with default.config as configuration");
+        printf("\tes [config_file]\t--Use custom config file.");
         exit(0);
     }
     if (w == "test") {

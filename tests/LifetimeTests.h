@@ -4,8 +4,8 @@
 #include "TestMacros.h"
 #include "TestUtils.h"
 
-#include "src/scattering/Grid.h"
-#include "src/scattering/escl/lifetime.h"
+#include "src/sim/Grid.h"
+#include "src/sim/es/lifetime.h"
 
 TEST_CASE("Lifetime tests")
 {

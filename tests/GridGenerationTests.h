@@ -3,8 +3,8 @@
 #include "TestMacros.h"
 #include "TestUtils.h"
 
-#include "src/scattering/Grid.h"
-#include "src/scattering/escl/cell_grid.h"
+#include "src/sim/Grid.h"
+#include "src/sim/es/cell_grid.h"
 
 //Todo: test test_impurities.
 

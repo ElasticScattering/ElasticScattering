@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
-#include "src/scattering/escl/v2.h"
+#include "src/sim/es/v2.h"
 
 
 std::vector<v2> GetTestImpurities(std::string file_path)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "doctest.h"
-#include "src/scattering/escl/util.h"
+#include "src/sim/es/util.h"
 
 TEST_CASE("Weight1D test") {
 	int dim = 7;

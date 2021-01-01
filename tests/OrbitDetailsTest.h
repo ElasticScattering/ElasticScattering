@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/escl/details.h"
+#include "src/sim/es/details.h"
 
 TEST_CASE("InsideImpurity")
 {

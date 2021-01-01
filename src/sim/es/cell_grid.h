@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef DEVICE_PROGRAM
-	#include "src/scattering/escl/v2.h"
+	#include "src/sim/es/v2.h"
 	#include <cmath>
 #endif
 

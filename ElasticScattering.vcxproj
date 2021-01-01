@@ -364,9 +364,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="src\scattering\SimulationCPU.cpp" />
-    <ClCompile Include="src\scattering\SimulationCL.cpp" />
-    <ClCompile Include="src\scattering\Grid.cpp" />
+    <ClCompile Include="src\sim\SimulationCPU.cpp" />
+    <ClCompile Include="src\sim\SimulationCL.cpp" />
+    <ClCompile Include="src\sim\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\SimulationRunner.cpp" />
     <ClCompile Include="tests\AngleTests.h" />
@@ -375,18 +375,19 @@
   <ItemGroup>
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\Metrics.h" />
-    <ClInclude Include="src\scattering\escl\ScatteringParameters.h" />
+    <ClInclude Include="src\sim\cl\shared_macros.h" />
+    <ClInclude Include="src\sim\es\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
-    <ClInclude Include="src\scattering\escl\v2.h" />
-    <ClInclude Include="src\scattering\Simulation.h" />
-    <ClInclude Include="src\scattering\escl\constants.h" />
-    <ClInclude Include="src\scattering\escl\details.h" />
-    <ClInclude Include="src\scattering\escl\device_macros.h" />
-    <ClInclude Include="src\scattering\escl\cell_grid.h" />
-    <ClInclude Include="src\scattering\escl\lifetime.h" />
-    <ClInclude Include="src\scattering\escl\util.h" />
-    <ClInclude Include="src\scattering\Grid.h" />
+    <ClInclude Include="src\sim\es\v2.h" />
+    <ClInclude Include="src\sim\Simulation.h" />
+    <ClInclude Include="src\sim\es\constants.h" />
+    <ClInclude Include="src\sim\es\details.h" />
+    <ClInclude Include="src\sim\es\device_macros.h" />
+    <ClInclude Include="src\sim\es\cell_grid.h" />
+    <ClInclude Include="src\sim\es\lifetime.h" />
+    <ClInclude Include="src\sim\es\util.h" />
+    <ClInclude Include="src\sim\Grid.h" />
     <ClInclude Include="src\SimulationRunner.h" />
     <ClInclude Include="src\Settings.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
@@ -410,8 +411,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="src\scattering\cl\scatter.cl" />
-    <None Include="src\scattering\cl\util_kernels.cl" />
+    <None Include="src\sim\cl\integration.cl" />
+    <None Include="src\sim\cl\old.cl" />
+    <None Include="src\sim\cl\scatter.cl" />
+    <None Include="src\sim\cl\util_kernels.cl" />
     <None Include="tests\data\kernels\test_cpp.cl" />
     <None Include="tests\data\kernels\test_precision.cl" />
     <None Include="tests\data\kernels\test_double2.cl" />

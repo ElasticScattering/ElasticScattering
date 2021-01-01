@@ -1,4 +1,4 @@
-#include "src/scattering/escl/util.h"
+#include "src/sim/es/util.h"
 
 __kernel void add_simpson_weights_2d(__global double* A)
 {

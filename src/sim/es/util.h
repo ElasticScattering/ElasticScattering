@@ -6,7 +6,7 @@ ESCL_INLINE double SimpsonWeight(const int i, const int dim) {
     return is_edge ? 1.0 : main_multiplier;
 }
 
-ESCL_INLINE double SimpsonWeight2D(int i, int j, int dim) {
+inline double SimpsonWeight2D(int i, int j, int dim) {
     return SimpsonWeight(i, dim) * SimpsonWeight(j, dim);
 }
 

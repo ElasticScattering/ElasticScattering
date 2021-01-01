@@ -1,6 +1,6 @@
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/Simulation.h"
+#include "src/sim/Simulation.h"
 #include <stdio.h>
 
 TEST_CASE("")

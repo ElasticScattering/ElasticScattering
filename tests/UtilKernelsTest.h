@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/Simulation.h"
+#include "src/sim/Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 #include <vector>
 
@@ -14,7 +14,7 @@ TEST_CASE("Sum kernel")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "src/scattering/escl/scatter.cl", &program);
+	CompileOpenCLProgram(device, context, "src/sim/es/scatter.cl", &program);
 
 	int buffer_size = 4096;
 	std::vector<double> A(buffer_size, 1);
@@ -76,7 +76,7 @@ TEST_CASE("Add weights kernel")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "src/scattering/escl/util_kernels.cl", &program);
+	CompileOpenCLProgram(device, context, "src/sim/es/util_kernels.cl", &program);
 
 	cl_int clStatus;
 	cl_kernel main_kernel = clCreateKernel(program, "add_simpson_weights_2d", &clStatus);

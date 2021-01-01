@@ -2,7 +2,7 @@
 
 #include <doctest.h>
 #include "TestMacros.h"
-#include "src/scattering/escl/cell_grid.h"
+#include "src/sim/es/cell_grid.h"
 
 #include <vector>
 

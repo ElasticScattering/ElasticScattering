@@ -1,9 +1,9 @@
 #ifndef TEST_H
 #define TEST_H
 
-#include "src/scattering/Simulation.h"
-#include "src/scattering/escl/lifetime.h"
-#include "src/scattering/escl/util.h"
+#include "src/sim/Simulation.h"
+#include "src/sim/es/lifetime.h"
+#include "src/sim/es/util.h"
 #include "src/utils/OpenCLUtils.h"
 #include "src/utils/ParametersFactory.h"
 

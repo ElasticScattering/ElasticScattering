@@ -1,6 +1,6 @@
 #include "Grid.h"
 
-#include "escl/constants.h"
+#include "es/constants.h"
 
 #include <random>
 #include <windows.h>

@@ -2,8 +2,8 @@
 
 #include "doctest.h"
 #include "TestMacros.h"
-#include "src/scattering/Simulation.h"
-#include "src/scattering/escl/constants.h"
+#include "src/sim/Simulation.h"
+#include "src/sim/es/constants.h"
 #include "src/utils/ParametersFactory.h"
 
 

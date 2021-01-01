@@ -5,7 +5,7 @@
 #include "TestUtils.h"
 
 #include "src/SimulationConfiguration.h"
-#include "src/scattering/Simulation.h"
+#include "src/sim/Simulation.h"
 
 #include <vector>
 
