@@ -17,6 +17,8 @@ class SimulationRunner {
 	std::string GetResultPath(int t_idx) const { return cfg.output_directory + "/T" + std::to_string(t_idx) + ".dat"; }
 	std::string GetSamplePath(int sample_idx) const { return cfg.output_directory + "/Sample " + std::to_string(sample_idx); }
 
+	std::string GetSampleResultsPath(int sample_idx) const { return cfg.output_directory + "/Sample " + std::to_string(sample_idx) + "/sample_results.dat"; }
+
 	std::string GetImagePath(int t_idx, int m_idx, int sample_idx, bool coherent) const { 
 		auto type = coherent ? "/Coherent/" : "/Incoherent/";
 		return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
@@ -26,7 +28,8 @@ class SimulationRunner {
 		return GetSamplePath(sample_idx) + "/Metrics.txt";
 	}
 
-	void CreateOutputDirectories() const;
+	void CreateOutputDirectory() const;
+	void CreateSampleOutputDirectory(const int sample_index) const;
 	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
 
 	SampleResult RunSample(Simulation& es, const Settings& settings, const int sample_index, const bool coherent, const Grid& grid);

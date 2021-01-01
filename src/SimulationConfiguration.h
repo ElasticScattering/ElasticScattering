@@ -33,6 +33,13 @@ typedef struct Range
     int n;
 } Range;
 
+enum class LoggingLevel
+{
+    Silent,
+    Results,
+    Everything
+};
+
 typedef struct SimulationConfiguration
 {
     int num_samples;
@@ -44,7 +51,8 @@ typedef struct SimulationConfiguration
 
     Settings settings;
 
-    bool log_intermediates;
+    LoggingLevel logging_level;
+
     std::string base_output_directory;
     std::string output_directory;
     int digits_in_sample_num;
@@ -98,7 +106,19 @@ typedef struct SimulationConfiguration
             n++;
         }
 
-        cfg.log_intermediates = atoi(values.at("log_intermediates").c_str()) == 1;
+        cfg.logging_level = LoggingLevel::Everything;
+        if (values.find("log_level") != values.end()) {
+            auto log_level = values.at("log_level");
+            
+            if (log_level == "silent") {
+                cfg.logging_level = LoggingLevel::Silent;
+            }
+            else if (log_level == "results") {
+                cfg.logging_level = LoggingLevel::Results;
+            }
+            std::cout << log_level << std::endl;
+        }
+
         cfg.num_samples = atoi(values.at("num_samples").c_str());
         cfg.quadrant_integral_steps = atoi(values.at("integrand_steps").c_str());
         cfg.particles_per_row = atoi(values.at("dimension").c_str());;

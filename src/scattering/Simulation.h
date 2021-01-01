@@ -14,8 +14,6 @@
 
 class Simulation {
 protected:
-	bool log_intermediates;
-
 	std::vector<double> raw_lifetimes;
 
 	SimulationSettings ss;
@@ -48,7 +46,9 @@ protected:
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) = 0;
-	virtual IterationResult DeriveTemperature(const double temperature) const = 0;
+	virtual IterationResult DeriveTemperatureWithImages(const double temperature) const = 0;
+	virtual Sigma			DeriveTemperature(const double temperature) const = 0;
+
 
 	void InitSample(const Grid& grid, const Settings& s, const bool coherent)
 	{
@@ -72,7 +72,7 @@ public:
 		ps.phi_step_size  = ss.integrand_angle_area / (ss.values_per_quadrant - 1);
 	}
 
-	Simulation(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates)
+	Simulation(int p_particles_per_row, int p_values_per_quadrant)
 	{
 		ss.particles_per_row   = p_particles_per_row;
 		ss.values_per_quadrant = p_values_per_quadrant;
@@ -80,8 +80,6 @@ public:
 		ss.values_per_row      = ss.particles_per_row * ss.values_per_particle;
 		ss.total_lifetimes     = ss.particles_per_row * ss.values_per_row;
 		ss.total_particles	   = ss.particles_per_row * ss.particles_per_row;
-
-		log_intermediates = p_log_intermediates;
 
 		//raw_lifetimes.resize(ss.particles_per_row * ss.values_per_row);
 	}
@@ -92,13 +90,18 @@ public:
 class SimulationCPU : public Simulation {
 public:
 	SigmaResult ApplySigma(const double tau, const std::vector<double>& current_lifetimes) const;
+	double IntegrateResult(const double tau, const std::vector<double>& sigma_lifetimes) const;
+
+	SigmaResult ApplySigmaParticle(const double tau, const std::vector<double>& current_lifetimes) const;
 	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes) const;
 	double IntegrateSigma(const double tau, const std::vector<double>& particle_sigmas) const;
 
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
-	virtual IterationResult DeriveTemperature(const double temperature) const override;
+	virtual IterationResult DeriveTemperatureWithImages(const double temperature) const override;
+	virtual Sigma			DeriveTemperature(const double temperature) const override;
 
-	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates) : Simulation(p_particles_per_row, p_values_per_quadrant, p_log_intermediates) {};
+
+	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
 };
 
 
@@ -107,12 +110,13 @@ class SimulationCL : public Simulation {
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;
-	virtual IterationResult DeriveTemperature(const double temperature) const override;
+	virtual IterationResult DeriveTemperatureWithImages(const double temperature) const override;
+	virtual Sigma			DeriveTemperature(const double temperature) const override;
 
 	void UploadImpurities(const Grid& grid);
 
 	SimulationCL();
-	SimulationCL(int p_particles_per_row, int p_values_per_quadrant, bool p_log_intermediates);
+	SimulationCL(int p_particles_per_row, int p_values_per_quadrant);
 	// SimulationCL(bool use_gpu, bool show_info);
 	~SimulationCL();
 };

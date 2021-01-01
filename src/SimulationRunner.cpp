@@ -15,29 +15,34 @@ void SimulationRunner::Run(const InitParameters& init)
     QueryPerformanceFrequency(&clockFrequency);
 
     cfg = SimulationConfiguration::ParseFromeFile(init.config_file);
-
     std::cout << "Starting simulation (" << cfg.num_samples << " samples) | Output: " << cfg.output_directory << "\n\n";
-
-    CreateOutputDirectories();
+    CreateOutputDirectory();
 
     std::vector<SampleResult> sample_results_coh(cfg.num_samples);
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps, cfg.log_intermediates);
+    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
 
     const Settings& ss = cfg.settings;
 
     for (int i = 0; i < cfg.num_samples; i++) {
+        CreateSampleOutputDirectory(i);
+
+
         QueryPerformanceCounter(&beginClock);
-        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
+        auto seed = random_device();
+        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
         QueryPerformanceCounter(&endClock);
         
-        if (cfg.log_intermediates)
+        if (cfg.logging_level == LoggingLevel::Everything)
             CreateMetricsLogs(i, GetElapsedTime(), grid);
 
         sample_results_inc[i] = RunSample(es, ss, i, false, grid);
         sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
+
+        if (cfg.logging_level == LoggingLevel::Everything)
+            Logger::LogSampleResults(GetSampleResultsPath(i), sample_results_coh[i], sample_results_inc[i]);
     }
 
     FinishResults(sample_results_coh, sample_results_inc);
@@ -74,35 +79,41 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
         sample_metrics.iteration_metrics[j] = metrics;
 
         for (int i = 0; i < T; i++) {
-            auto iteration = es.DeriveTemperature(cfg.temperatures[i]);
-            sr.results[i][j] = iteration.result;
+            if (cfg.logging_level == LoggingLevel::Silent) 
+            {
+                sr.results[i][j] = es.DeriveTemperature(cfg.temperatures[i]);
+            }
+            else 
+            {
+                auto iteration = es.DeriveTemperatureWithImages(cfg.temperatures[i]);
+                sr.results[i][j] = iteration.result;
 
-            if (cfg.log_intermediates)
                 Logger::LogImages(GetImagePath(i, j, sample_index, coherent), cfg.particles_per_row - 1, iteration);
+            }
         }
 
         std::cout << "x";
     }
 
-    if (cfg.log_intermediates)
+    if (cfg.logging_level == LoggingLevel::Everything)
         Logger::LogSampleMetrics(metrics_path, sample_metrics);
 
     return sr;
 }
 
-// Finish results by averaging all samples and logging the result.
 void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc)
 {
-    const int S = cfg.num_samples;
+    const double S = (double)cfg.num_samples;
 
     for (int i = 0; i < cfg.temperatures.size(); i++) {
         double temperature = cfg.temperatures[i];
+        Logger::CreateResultLog(GetResultPath(i), cfg, temperature);
 
         for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
             Sigma coherent, incoherent;
             double dxx_squared = 0;
 
-            for (int s = 0; s < S; s++) {
+            for (int s = 0; s < cfg.num_samples; s++) {
                 // Sommeer <MF,T> voor alle samples.
                 auto coh = sample_results_coh[s].results[i][j];
                 auto inc = sample_results_inc[s].results[i][j];
@@ -122,7 +133,7 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
 
             double sxx_sq_exp = dxx_squared / S + 1e-15;
             double sxx_exp = (coherent.xx + incoherent.xx) / S;
-            double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (S - 1));
+            double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(S - 1));
             row.xxd = sxx_std / sxx_exp;
 
             Logger::LogResult(GetResultPath(i), row);
@@ -130,25 +141,23 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
     }
 }
 
-void SimulationRunner::CreateOutputDirectories() const
+void SimulationRunner::CreateSampleOutputDirectory(const int sample_index) const
 {
+    auto sample_path = GetSamplePath(sample_index);
+    std::filesystem::create_directory(sample_path);
+    std::filesystem::create_directory(sample_path + "/Incoherent/");
+    std::filesystem::create_directory(sample_path + "/Coherent/");
+
+    Logger::CreateSampleResultLog(GetSampleResultsPath(sample_index), cfg);
+}
+
+void SimulationRunner::CreateOutputDirectory() const
+{
+
     if (!std::filesystem::exists(cfg.base_output_directory))
         std::filesystem::create_directory(cfg.base_output_directory);
 
     std::filesystem::create_directory(cfg.output_directory);
-
-    if (cfg.log_intermediates) {
-        for (int i = 0; i < cfg.num_samples; i++)
-        {
-            auto sample_path = GetSamplePath(i);
-            std::filesystem::create_directory(sample_path);
-            std::filesystem::create_directory(sample_path + "/Incoherent/");
-            std::filesystem::create_directory(sample_path + "/Coherent/");
-        }
-    }
-
-    for (int i = 0; i < cfg.temperatures.size(); i++)
-        Logger::CreateResultLog(GetResultPath(i), cfg, cfg.temperatures[i]);
 }
 
 void SimulationRunner::CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const

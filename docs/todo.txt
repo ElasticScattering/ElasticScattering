@@ -1,9 +1,9 @@
 ﻿
+Print alle sample results....
+
 OpenCL
 	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?
 
-
-- Incoherent resultaten fixen (Lijkt onafhankelijk van MF?)
 
 Ideeën
 	(impurity randomness model per materiaal)
@@ -22,7 +22,7 @@ Tellers
 	#endif // EFFICIENCY_METRICS
 
 
-	logging
+logging
 	/*
 #define WRITE_METRIC(name, metric, m_precision, m_unit)                  \
 file << L'│' << std::setw(metric_width) << std::left << name;   \

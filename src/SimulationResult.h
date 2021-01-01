@@ -62,13 +62,13 @@ struct DataRow {
     }
 };
 
-struct IterationResult {
+typedef struct IterationResult {
     std::vector<double> particle_lifetimes;
     SigmaResult sigmas;
     Sigma result;
 
     IterationResult() {}
-};
+} IterationResult;
 
 struct SampleResult {
     std::vector<std::vector<Sigma>> results;

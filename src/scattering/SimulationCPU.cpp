@@ -2,6 +2,8 @@
 #include "escl/lifetime.h"
 #include "escl/util.h"
 
+#include "src/Logger.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -45,12 +47,12 @@ void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& gr
 	metrics.avg_particle_lifetime = AverageLifetime();
 }
 
-IterationResult SimulationCPU::DeriveTemperature(const double temperature) const
+IterationResult SimulationCPU::DeriveTemperatureWithImages(const double temperature) const
 {
 	double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
 	double default_max_lifetime = 15.0 * tau;
 
-	IterationResult b;
+	IterationResult ir;
 
 	std::vector<double> new_lifetimes(raw_lifetimes.size());
 
@@ -58,17 +60,105 @@ IterationResult SimulationCPU::DeriveTemperature(const double temperature) const
 		//new_lifetimes[i] = raw_lifetimes[i]; 
 		new_lifetimes[i] = min(raw_lifetimes[i], default_max_lifetime);
 
+	ir.particle_lifetimes = IntegrateParticle(new_lifetimes);
 	
-	b.particle_lifetimes = IntegrateParticle(new_lifetimes);
+	/*
+	auto sigmas		    = ApplySigma(tau, new_lifetimes);
+	ir.sigmas.xx_buffer = IntegrateParticle(sigmas.xx_buffer);
+	ir.sigmas.xy_buffer = IntegrateParticle(sigmas.xy_buffer);
+	ir.result.xx        = IntegrateSigma(tau, ir.sigmas.xx_buffer);
+	ir.result.xy        = IntegrateSigma(tau, ir.sigmas.xy_buffer);
+	*/
+	ir.sigmas = ApplySigmaParticle(tau, new_lifetimes);
+	ir.result.xx = IntegrateSigma(tau, ir.sigmas.xx_buffer);
+	ir.result.xy = IntegrateSigma(tau, ir.sigmas.xy_buffer);
 
-	b.sigmas             = ApplySigma(tau, new_lifetimes);
-	b.result.xx          = IntegrateSigma(tau, b.sigmas.xx_buffer);
-	b.result.xy          = IntegrateSigma(tau, b.sigmas.xy_buffer);
+	return ir;
+}
 
-	return b;
+Sigma SimulationCPU::DeriveTemperature(const double temperature) const
+{
+	double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
+	double default_max_lifetime = 15.0 * tau;
+
+	std::vector<double> new_lifetimes(raw_lifetimes.size());
+
+	for (int i = 0; i < new_lifetimes.size(); i++)
+		//new_lifetimes[i] = raw_lifetimes[i]; 
+		new_lifetimes[i] = min(raw_lifetimes[i], default_max_lifetime);
+
+	auto sigmas = ApplySigma(tau, new_lifetimes);
+
+	Sigma result;
+	result.xx = IntegrateResult(tau, sigmas.xx_buffer);
+	result.xy = IntegrateResult(tau, sigmas.xy_buffer);
+
+	return result;
 }
 
 SigmaResult SimulationCPU::ApplySigma(const double tau, const std::vector<double>& current_lifetimes) const
+{
+	std::vector<double> sigma_xx(ss.total_lifetimes);
+	std::vector<double> sigma_xy(ss.total_lifetimes);
+
+	double integral_total = 0;
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		for (int i = 0; i < ss.particles_per_row; i++) {
+			for (int q = 0; q < 4; q++) {
+				for (int p = 0; p < ss.values_per_quadrant; p++) {
+					int idx = GetIndex(i, j, q, p);
+					double lt = current_lifetimes[idx];
+
+					double phi = ps.phi_start + q * HALF_PI + p * ps.phi_step_size;
+					double sigma_base = GetSigma(lt, phi, tau, ss.signed_angular_speed) * SimpsonWeight(p, ss.values_per_quadrant);
+					sigma_xx[idx] = sigma_base * cos(phi);
+					sigma_xy[idx] = sigma_base * sin(phi);
+				}
+			}
+		}
+	}
+
+	SigmaResult result;
+	result.xx_buffer = sigma_xx;
+	result.xy_buffer = sigma_xy;
+
+	return result;
+}
+
+double SimulationCPU::IntegrateResult(const double tau, const std::vector<double>& sigma_lifetimes) const
+{
+	double integral_total = 0;
+	for (int j = 0; j < ss.particles_per_row; j++) {
+		double wy = SimpsonWeight(j, ss.particles_per_row);
+
+		for (int i = 0; i < ss.particles_per_row; i++) {
+			double wp = wy * SimpsonWeight(i, ss.particles_per_row);
+
+			for (int q = 0; q < 4; q++) {
+				for (int p = 0; p < ss.values_per_quadrant; p++) {
+					integral_total += sigma_lifetimes[GetIndex(i, j, q, p)] * (wp * SimpsonWeight(i, ss.particles_per_row));
+				}
+			}
+		}
+	}
+
+	/*
+		stepsize = integrationwidth / (length - 2)
+		return stepsize / 3
+
+		//phirange = np.pi / 2 - 2 * alpha if iscoh else 2 * alpha
+		const = integration_const(region, dimension)**2 * integration_const(phirange, nr_phi)
+		const /= region**2
+		integralxx *= const
+		integralxy *= const
+	*/
+
+	double integral_factor = pow(1.0 / (3.0 * (ss.particles_per_row - 1)), 2);// *ss.phi_integrand_factor;
+	double factor = integral_factor * SigmaFactor(tau);
+	return integral_total * factor * 1e-8;
+}
+
+SigmaResult SimulationCPU::ApplySigmaParticle(const double tau, const std::vector<double>& current_lifetimes) const
 {
 	std::vector<double> sigma_xx(ss.total_particles);
 	std::vector<double> sigma_xy(ss.total_particles);

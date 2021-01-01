@@ -20,7 +20,8 @@ SampleResult GetSample(Simulation& sim, const Grid& grid, const SimulationConfig
 		sim.ComputeLifetimes(cfg.magnetic_fields[j], grid, metrics);
 
 		for (int i = 0; i < cfg.temperatures.size(); i++) {
-			sample_result.results[i][j] = sim.DeriveTemperature(cfg.temperatures[i]).result;
+			//sample_result.results[i][j] = sim.DeriveTemperature(cfg.temperatures[i]);
+			sample_result.results[i][j] = sim.DeriveTemperatureWithImages(cfg.temperatures[i]).result;
 		}
 	}
 
@@ -29,7 +30,7 @@ SampleResult GetSample(Simulation& sim, const Grid& grid, const SimulationConfig
 
 void RunTestSample(const std::string file_path, const std::string imp_path, const std::vector<DataRow>& expected_results)
 {
-	SimulationCPU sim(31, 7, false);
+	SimulationCPU sim(31, 7);
 
 	auto cfg = SimulationConfiguration::ParseFromeFile(file_path);
 
@@ -50,13 +51,11 @@ void RunTestSample(const std::string file_path, const std::string imp_path, cons
 			REQUIRE_ALMOST(row.temperature, expected_row.temperature);
 			REQUIRE_ALMOST(row.magnetic_field, expected_row.magnetic_field);
 
-			/*
 			printf("(%i, %i)::\n", i, j);
 			printf("coh xx: %.8f <> %.8f, r/e : %.5f\n", row.coherent.xx, expected_row.coherent.xx,     row.coherent.xx   / expected_row.coherent.xx);
 			printf("coh xy: %.8f <> %.8f, r/e : %.5f\n", row.coherent.xy, expected_row.coherent.xy,     row.coherent.xy   / expected_row.coherent.xy);
 			printf("inc xx: %.8f <> %.8f, r/e : %.5f\n", row.incoherent.xx, expected_row.incoherent.xx, row.incoherent.xx / expected_row.incoherent.xx);
 			printf("inc xy: %.8f <> %.8f, r/e : %.5f\n", row.incoherent.xy, expected_row.incoherent.xy, row.incoherent.xy / expected_row.incoherent.xy);
-			*/
 
 			CHECK_RELATIVE(row.coherent.xx, expected_row.coherent.xx);
 			CHECK_RELATIVE(row.coherent.xy, expected_row.coherent.xy);
@@ -105,13 +104,32 @@ TEST_CASE("Integration Test")
 		RunTestSample("tests/data/test_impurities.config", "tests/data/test_impurities.dat", expected_results);
 	}
 
-	/*
 	SUBCASE("File 2")
 	{
 		std::vector<DataRow> expected_results{
 		};
 
-		RunTestSample("tests/data/test_impurities2.config", expected_results);
+		//RunTestSample("tests/data/test_impurities2.config", expected_results);
 	}
-	*/
+}
+
+
+TEST_CASE("DeriveTemperature with and without logging should return same sigma result")
+{
+	auto cfg = SimulationConfiguration::ParseFromeFile("tests/data/test_impurities.config");
+
+	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
+
+	auto s = cfg.settings;
+	auto grid = Grid(21314214, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.max_expected_impurities_in_cell);
+
+	Metrics metrics;
+
+	sim.InitSample(grid, s, true);
+	sim.ComputeLifetimes(10, grid, metrics);
+	auto result  = sim.DeriveTemperature(2);
+	auto result2 = sim.DeriveTemperatureWithImages(2);
+
+	CHECK_ALMOST(result.xx, result2.result.xx);
+	CHECK_ALMOST(result.xy, result2.result.xy);
 }

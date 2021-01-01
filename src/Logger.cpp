@@ -21,7 +21,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 
-void Logger::CreateResultLog(std::string file_path, const SimulationConfiguration& cfg, double temperature)
+void Logger::CreateResultLog(const std::string file_path, const SimulationConfiguration& cfg, double temperature)
 {
     std::ofstream file;
     file.open(file_path);
@@ -60,8 +60,103 @@ void Logger::CreateResultLog(std::string file_path, const SimulationConfiguratio
     file << "###########################" << std::endl;
     file << "# Results                 #" << std::endl;
     file << "#" << std::endl << std::endl;
-    file << "magnetic_field     sigma_xx_inc        sigma_xx_coh       sigma_xy_inc        sigma_xy_coh       delta_xx" << std::endl;
+    file << "magnetic_field  sigma_xx_inc    sigma_xx_coh    sigma_xy_inc    sigma_xy_coh    delta_xx" << std::endl;
 }
+
+
+void Logger::LogResult(const std::string file_path, const DataRow& row)
+{
+    std::ofstream file;
+    file.open(file_path, std::ios_base::app);
+
+    int p = 8;
+    int w = p + 8;
+    file << std::scientific << std::setprecision(p);
+
+    file << std::setw(w) << std::left << row.magnetic_field 
+         << std::setw(w) << std::left << row.incoherent.xx 
+         << std::setw(w) << std::left << row.coherent.xx 
+         << std::setw(w) << std::left << row.incoherent.xy
+         << std::setw(w) << std::left << row.coherent.xy 
+         << std::setw(w) << std::left << row.xxd << std::endl;
+    
+    //std::string s = "   ";
+    //file << row.magnetic_field << s << row.incoherent.xx << s << row.coherent.xx << s << row.incoherent.xy << s << row.coherent.xy << s << row.xxd << std::endl;
+}
+
+
+
+
+void Logger::CreateSampleResultLog(const std::string file_path, const SimulationConfiguration& cfg)
+{
+    std::ofstream file;
+    file.open(file_path);
+
+    const auto ss = cfg.settings;
+
+    file << "# Elastic Scattering sample results summary." << std::endl;
+    file << "# Simulations " << cfg.magnetic_fields.size() << std::endl;
+    file << "# Particles   " << cfg.particles_per_row - 1 << "x" << cfg.particles_per_row - 1 << std::endl;
+    file << "# Phi steps   " << cfg.quadrant_integral_steps << std::endl;
+
+    file << std::scientific << std::setprecision(3);
+    file << std::endl;
+    file << "###########################" << std::endl;
+    file << "# Scattering parameters   #" << std::endl;
+    file << "#" << std::endl;
+    file << "#\t" << "Tau            " << ss.tau << std::endl;
+    file << "#\t" << "Alpha          " << ss.alpha << std::endl;
+    file << "#\t" << "Particle speed " << ss.particle_speed << std::endl;
+    file << "#\t" << "Clockwise      " << (ss.is_clockwise ? "True" : "False") << std::endl;
+    file << "#\n# Impurities:" << std::endl;
+    file << "#\t" << "Region size    " << ss.region_size << std::endl;
+    file << "#\t" << "Region extends " << ss.region_extends << std::endl;
+    file << "#\t" << "Density        " << ss.impurity_density << std::endl;
+    file << "#\t" << "Radius         " << ss.impurity_radius << std::endl;
+
+    file << "###########################" << std::endl;
+    file << "# Sample Results          #" << std::endl;
+    file << "#" << std::endl << std::endl;
+
+    int w = 16;
+    file << std::setw(4) << std::left << "T"
+         << std::setw(4) << std::left << "B"
+         << std::setw(w) << std::left << "sigma_xx_inc"
+         << std::setw(w) << std::left << "sigma_xx_coh"
+         << std::setw(w) << std::left << "sigma_xy_inc" 
+         << std::setw(w) << std::left << "sigma_xy_coh" << std::endl;
+}
+
+void Logger::LogSampleResults(const std::string file_path, const SampleResult coherent, const SampleResult incoherent)
+{
+    std::ofstream file;
+    file.open(file_path, std::ios_base::app);
+
+    int p = 8;
+    int w = p + 8;
+    file << std::scientific << std::setprecision(p);
+
+    for (int j = 0; j < coherent.results.size(); j++) {
+        auto coh = coherent.results[j];
+        auto inc = incoherent.results[j];
+
+        for (int i = 0; i < coherent.results.size(); i++) {
+            file << std::setw(4) << std::left << j
+                 << std::setw(4) << std::left << i
+                 << std::setw(w) << std::left << inc[i].xx
+                 << std::setw(w) << std::left << coh[i].xx
+                 << std::setw(w) << std::left << inc[i].xy
+                 << std::setw(w) << std::left << coh[i].xy << std::endl;
+        }
+        file << std::endl;
+    }
+}
+
+
+
+
+
+
 
 void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& gm)
 {
@@ -83,7 +178,7 @@ void Logger::CreateMetricsLog(const std::string file_path, const GlobalMetrics& 
     file << std::endl;
 }
 
-void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics sample_metrics)
+void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& sample_metrics)
 {
     std::wofstream file;
     file.open(file_path, std::ios_base::app);
@@ -195,16 +290,9 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics s
     file << L'┘' << std::endl;
 }
 
-void Logger::LogResult(const std::string file_path, const DataRow row)
-{
-    std::ofstream file;
-    file.open(file_path, std::ios_base::app);
 
-    std::string s = "   ";
-    file << std::scientific << std::setprecision(10);
 
-    file << row.magnetic_field << s << row.incoherent.xx << s << row.coherent.xx << s << row.incoherent.xy << s << row.coherent.xy << s << row.xxd << std::endl;
-}
+
 
 void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::vector<double> &values, const int dim, const int image_id, const bool colored)
 {
@@ -249,7 +337,7 @@ void Logger::WriteImageSection(std::vector<unsigned char> &pixels, const std::ve
         }
 }
 
-void Logger::LogImages(const std::string file_path, const int dim, const IterationResult iteration)
+void Logger::LogImages(const std::string file_path, const int dim, const IterationResult &iteration)
 {
     const int image_width  = dim * 3;
     const int image_height = dim;
