@@ -27,17 +27,11 @@ typedef struct
     std::string config_file;
 } InitParameters;
 
-typedef struct Range
+enum class OutputType
 {
-    double min, max, step_size;
-    int n;
-} Range;
-
-enum class LoggingLevel
-{
-    Silent,
+    Nothing,
     Results,
-    Everything
+    All
 };
 
 typedef struct SimulationConfiguration
@@ -47,11 +41,11 @@ typedef struct SimulationConfiguration
     std::vector<double> temperatures;
 
     int particles_per_row;
-    int quadrant_integral_steps;
+    int quadrant_phi_steps;
 
     Settings settings;
 
-    LoggingLevel logging_level;
+    OutputType output_type;
 
     std::string base_output_directory;
     std::string output_directory;
@@ -90,48 +84,51 @@ typedef struct SimulationConfiguration
 
         SimulationConfiguration cfg;
 
-        cfg.base_output_directory = values.find("output_directory") == values.end() ? "ESLogs" : values.at("output_directory");
-        std::string base_dir_name = cfg.base_output_directory + "/Result_";
-
-        unsigned int n = 0;
-        while (true)
-        {
-            std::string dir = base_dir_name + std::to_string(n);
-            if (!std::filesystem::exists(dir))
-            {
-                cfg.output_directory = dir;
-                break;
-            }
-
-            n++;
-        }
-
-        cfg.logging_level = LoggingLevel::Everything;
-        if (values.find("log_level") != values.end()) {
-            auto log_level = values.at("log_level");
+        cfg.output_type = OutputType::All;
+        if (values.find("output_type") != values.end()) {
+            auto log_level = values.at("output_type");
             
-            if (log_level == "silent") {
-                cfg.logging_level = LoggingLevel::Silent;
-            }
-            else if (log_level == "results") {
-                cfg.logging_level = LoggingLevel::Results;
+            if      (log_level == "nothing") cfg.output_type = OutputType::Nothing;
+            else if (log_level == "results") cfg.output_type = OutputType::Results;
+        }
+
+        if (cfg.output_type == OutputType::Nothing) 
+        {
+            cfg.base_output_directory = "";
+            cfg.output_directory = "";
+        } 
+        else 
+        {
+            cfg.base_output_directory = values.find("output_directory") == values.end() ? "ESLogs" : values.at("output_directory");
+            std::string base_dir_name = cfg.base_output_directory + "/Result_";
+
+            unsigned int n = 0;
+            while (true)
+            {
+                std::string dir = base_dir_name + std::to_string(n);
+                if (!std::filesystem::exists(dir))
+                {
+                    cfg.output_directory = dir;
+                    break;
+                }
+
+                n++;
             }
         }
 
-        cfg.num_samples = atoi(values.at("num_samples").c_str());
-        cfg.quadrant_integral_steps = atoi(values.at("integrand_steps").c_str());
-        cfg.particles_per_row = atoi(values.at("dimension").c_str());;
+        cfg.num_samples             = atoi(values.at("num_samples").c_str());
+        cfg.quadrant_phi_steps = atoi(values.at("integrand_steps").c_str());
+        cfg.particles_per_row       = atoi(values.at("dimension").c_str());;
 
         {
-            Range magnetic_field;
-            magnetic_field.min       = atof(values.at("magnetic_field_min").c_str());
-            magnetic_field.max       = atof(values.at("magnetic_field_max").c_str());
-            magnetic_field.n         = atoi(values.at("magnetic_field_n").c_str());
-            magnetic_field.step_size = (magnetic_field.max - magnetic_field.min) / (double)(magnetic_field.n - 1);
+            double mf_min       = atof(values.at("magnetic_field_min").c_str());
+            double mf_max       = atof(values.at("magnetic_field_max").c_str());
+            double mf_n         = atoi(values.at("magnetic_field_n").c_str());
+            double mf_step_size = (mf_max - mf_min) / (double)(mf_n - 1);
 
-            cfg.magnetic_fields.resize(magnetic_field.n);
-            for (int i = 0; i < magnetic_field.n; i++) {
-                cfg.magnetic_fields[i] = magnetic_field.min + i * magnetic_field.step_size;
+            cfg.magnetic_fields.resize(mf_n);
+            for (int i = 0; i < mf_n; i++) {
+                cfg.magnetic_fields[i] = mf_min + i * mf_step_size;
             }
         }
 

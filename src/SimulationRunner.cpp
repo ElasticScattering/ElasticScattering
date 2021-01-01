@@ -15,36 +15,56 @@ void SimulationRunner::Run(const InitParameters& init)
     QueryPerformanceFrequency(&clockFrequency);
 
     cfg = SimulationConfiguration::ParseFromeFile(init.config_file);
-    std::cout << "Starting simulation (" << cfg.num_samples << " samples) | Output: " << cfg.output_directory << "\n\n";
-    CreateOutputDirectory();
+    std::cout << "Starting simulation (" << init.config_file << ")";
+    if (cfg.output_type != OutputType::Nothing) {
+        std::cout << " | Output: " << cfg.output_directory << "\n";
+        CreateOutputDirectory();
+    }
+    std::cout << std::endl;
 
     std::vector<SampleResult> sample_results_coh(cfg.num_samples);
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
+    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
 
     const Settings& ss = cfg.settings;
 
+    LARGE_INTEGER beginGridClock, endGridClock;
+    LARGE_INTEGER beginTotalClock, endTotalClock;
+    QueryPerformanceCounter(&beginTotalClock);
+
     for (int i = 0; i < cfg.num_samples; i++) {
-        CreateSampleOutputDirectory(i);
+        if (cfg.output_type == OutputType::All)
+            CreateSampleOutputDirectory(i);
 
-
-        QueryPerformanceCounter(&beginClock);
+        QueryPerformanceCounter(&beginGridClock);
         auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
-        QueryPerformanceCounter(&endClock);
-        
-        if (cfg.logging_level == LoggingLevel::Everything)
-            CreateMetricsLogs(i, GetElapsedTime(), grid);
+        QueryPerformanceCounter(&endGridClock);
+        double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
 
-        sample_results_inc[i] = RunSample(es, ss, i, false, grid);
+        if (i == 0 && cfg.output_type != OutputType::Nothing) {
+            GlobalMetrics gm;
+            gm.particles_per_row = cfg.particles_per_row - 1;
+            gm.phi_values = 4 * cfg.quadrant_phi_steps;
+            gm.cells_per_row = grid.GetCellsPerRow();
+            gm.unique_impurity_count = grid.GetUniqueImpurityCount();
+            gm.grid_creation_time = grid_creation_time;
+
+            Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
+        }
+
         sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
+        sample_results_inc[i] = RunSample(es, ss, i, false, grid);
 
-        if (cfg.logging_level == LoggingLevel::Everything)
+        if (cfg.output_type == OutputType::All)
             Logger::LogSampleResults(GetSampleResultsPath(i), sample_results_coh[i], sample_results_inc[i]);
     }
 
     FinishResults(sample_results_coh, sample_results_inc);
+
+    QueryPerformanceCounter(&endTotalClock);
+    std::cout << std::endl << "Finished! (" << GetElapsedTime(beginTotalClock, endTotalClock) << "s)" << std::endl;
 }
 
 SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &settings, const int sample_index, const bool coherent, const Grid& grid)
@@ -53,12 +73,16 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     const int N = cfg.magnetic_fields.size();
     SampleResult sr(T, N);
 
-    auto metrics_path = GetMetricsPath(sample_index);
-    double nlifetimes = pow(cfg.particles_per_row - 1, 2) * 4.0 * cfg.quadrant_integral_steps;
+    auto metrics_path = GetMetricsPath();
+    double nlifetimes = pow(cfg.particles_per_row - 1, 2) * 4.0 * cfg.quadrant_phi_steps;
 
     es.InitSample(grid, settings, coherent);
 
-    SampleMetrics sample_metrics(coherent, N, nlifetimes, grid.GetCellsPerRow(), grid.GetUniqueImpurityCount());
+    SampleMetrics sample_metrics(sample_index, coherent, N, nlifetimes);
+    sample_metrics.cells_per_row            = grid.GetCellsPerRow();
+    sample_metrics.impurity_count           = grid.GetUniqueImpurityCount();
+    sample_metrics.total_indexed_impurities = grid.GetTotalImpurityCount();
+    sample_metrics.seed                     = grid.GetSeed();
 
     auto raw_sample_string = std::to_string(sample_index + 1);
     auto sample_string = std::string(cfg.digits_in_sample_num - raw_sample_string.length(), '0') + raw_sample_string + (coherent ? " C" : " I") + " [";
@@ -66,20 +90,22 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     std::cout << '\r' << sample_string << std::string(cfg.magnetic_fields.size(), '.') << "]";
     std::cout << '\r' << sample_string;
 
+    LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
+
     for (int j = 0; j < N; j++) {
         Metrics metrics;
     
         // Main compute method.
-        QueryPerformanceCounter(&beginClock);
+        QueryPerformanceCounter(&beginLifetimesClock);
         es.ComputeLifetimes(cfg.magnetic_fields[j], grid, metrics);
-        QueryPerformanceCounter(&endClock);
+        QueryPerformanceCounter(&endLifetimesClock);
         
-        metrics.time_elapsed_lifetimes = GetElapsedTime();
+        metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
         metrics.real_lifetimes = sample_metrics.nlifetimes - metrics.particles_inside_impurity;
         sample_metrics.iteration_metrics[j] = metrics;
 
         for (int i = 0; i < T; i++) {
-            if (cfg.logging_level == LoggingLevel::Silent) 
+            if (cfg.output_type == OutputType::Nothing) 
             {
                 sr.results[i][j] = es.DeriveTemperature(cfg.temperatures[i]);
             }
@@ -95,7 +121,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
         std::cout << "x";
     }
 
-    if (cfg.logging_level == LoggingLevel::Everything)
+    if (cfg.output_type != OutputType::Nothing)
         Logger::LogSampleMetrics(metrics_path, sample_metrics);
 
     return sr;
@@ -164,18 +190,3 @@ void SimulationRunner::CreateOutputDirectory() const
     std::filesystem::create_directory(cfg.output_directory);
 }
 
-void SimulationRunner::CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const
-{
-    GlobalMetrics gm;
-    gm.particles_per_row                  = cfg.particles_per_row - 1;
-    gm.phi_values                         = 4 * cfg.quadrant_integral_steps;
-    gm.cells_per_row                      = grid.GetCellsPerRow();
-    gm.unique_impurity_count              = grid.GetUniqueImpurityCount();
-    gm.additional_impurities              = grid.GetTotalImpurityCount() - gm.unique_impurity_count;
-    gm.grid_time_elapsed                  = elapsed_time; 
-    gm.avg_impurities_in_cell             = grid.GetTotalImpurityCount() / (double)(gm.cells_per_row * gm.cells_per_row);
-    gm.avg_impurities_in_cell_overlapping = gm.avg_impurities_in_cell - cfg.settings.max_expected_impurities_in_cell;
-    gm.seed                               = grid.GetSeed();
-
-    Logger::CreateSampleMetricsLog(GetMetricsPath(sample_index), gm);
-}

@@ -1,9 +1,10 @@
 ﻿
-Print alle sample results....
+Synchroniseer integraal met en zonder loggen.
+Metrics zitten soms in de weg, of moeten we altijd metrics berekenen?
+
 
 OpenCL
 	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?
-
 
 Ideeën
 	(impurity randomness model per materiaal)

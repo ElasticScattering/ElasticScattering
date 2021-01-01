@@ -10,9 +10,9 @@
 class SimulationRunner {
 	SimulationConfiguration cfg;
 
-	LARGE_INTEGER beginClock, endClock, clockFrequency;
+	LARGE_INTEGER clockFrequency;
 
-	inline double GetElapsedTime() { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
+	inline double GetElapsedTime(LARGE_INTEGER beginClock, LARGE_INTEGER endClock) const { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
 	std::string GetResultPath(int t_idx) const { return cfg.output_directory + "/T" + std::to_string(t_idx) + ".dat"; }
 	std::string GetSamplePath(int sample_idx) const { return cfg.output_directory + "/Sample " + std::to_string(sample_idx); }
@@ -24,13 +24,12 @@ class SimulationRunner {
 		return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
 	}
 
-	std::string GetMetricsPath(int sample_idx) const {
-		return GetSamplePath(sample_idx) + "/Metrics.txt";
-	}
+	//std::string GetMetricsPath(int sample_idx) const { return GetSamplePath(sample_idx) + "/Metrics.txt"; }
+
+	std::string GetMetricsPath() const { return cfg.output_directory + "/Metrics.txt"; }
 
 	void CreateOutputDirectory() const;
 	void CreateSampleOutputDirectory(const int sample_index) const;
-	void CreateMetricsLogs(const int sample_index, const double elapsed_time, const Grid& grid) const;
 
 	SampleResult RunSample(Simulation& es, const Settings& settings, const int sample_index, const bool coherent, const Grid& grid);
 	void FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc);

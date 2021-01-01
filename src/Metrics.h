@@ -22,6 +22,7 @@ struct Metrics {
 
     double avg_particle_lifetime;
 
+
     Metrics() {
         cells_passed = 0;
         impurities_tested = 0;
@@ -46,32 +47,30 @@ struct GlobalMetrics
     int particles_per_row;
     int phi_values;
     int unique_impurity_count;
-    int additional_impurities;
     int cells_per_row;
-    int seed;
-
-    double grid_time_elapsed;
-    double avg_impurities_in_cell;
-    double avg_impurities_in_cell_overlapping;
+    double grid_creation_time;
 };
 
 struct SampleMetrics
 {
+    int sample_index;
     int nlifetimes;
     int cells_per_row;
     int impurity_count;
+
+    int seed;
+    int total_indexed_impurities;
 
     bool coherent;
 
     std::vector<Metrics> iteration_metrics;
 
-    SampleMetrics(bool p_coherent, int N, int nlt, int cells, int imp_count) {
+    SampleMetrics(int p_sample_index, bool p_coherent, int N, int nlt) {
+        sample_index = p_sample_index;
         coherent = p_coherent;
         iteration_metrics.resize(N);
 
         nlifetimes = nlt;
-        cells_per_row = cells;
-        impurity_count = imp_count;
     }
 };
 #endif // !DEVICE_PROGRAM

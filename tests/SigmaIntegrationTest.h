@@ -118,7 +118,7 @@ TEST_CASE("DeriveTemperature with and without logging should return same sigma r
 {
 	auto cfg = SimulationConfiguration::ParseFromeFile("tests/data/test_impurities.config");
 
-	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_integral_steps);
+	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
 
 	auto s = cfg.settings;
 	auto grid = Grid(21314214, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.max_expected_impurities_in_cell);
