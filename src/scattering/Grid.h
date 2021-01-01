@@ -37,7 +37,7 @@ private:
 	double cell_size;
 
 	double impurity_radius;
-	int seed_used;
+	unsigned int seed_used;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
 	v2i get_cell(const double x, double y);
@@ -72,6 +72,6 @@ public:
 		return is;
 	}
 
-	Grid(int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell);
+	Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell);
 	Grid(std::vector<v2> impurities, double region_size, double region_extends, double impurity_radius, int target_impurity_count_per_cell);
 };

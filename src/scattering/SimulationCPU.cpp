@@ -75,11 +75,13 @@ IterationResult SimulationCPU::DeriveTemperatureWithImages(const double temperat
 	
 	/*
 	auto sigmas		    = ApplySigma(tau, new_lifetimes);
+
 	ir.sigmas.xx_buffer = IntegrateParticle(sigmas.xx_buffer);
 	ir.sigmas.xy_buffer = IntegrateParticle(sigmas.xy_buffer);
 	ir.result.xx        = IntegrateSigma(tau, ir.sigmas.xx_buffer);
 	ir.result.xy        = IntegrateSigma(tau, ir.sigmas.xy_buffer);
 	*/
+
 	ir.sigmas = ApplySigmaParticle(tau, new_lifetimes);
 	ir.result.xx = IntegrateSigma(tau, ir.sigmas.xx_buffer);
 	ir.result.xy = IntegrateSigma(tau, ir.sigmas.xy_buffer);
@@ -95,7 +97,7 @@ Sigma SimulationCPU::DeriveTemperature(const double temperature) const
 	std::vector<double> new_lifetimes(raw_lifetimes.size());
 
 	for (int i = 0; i < new_lifetimes.size(); i++)
-		//new_lifetimes[i] = raw_lifetimes[i]; 
+		//new_lifetimes[i] = raw_lifetimes[i];
 		new_lifetimes[i] = min(raw_lifetimes[i], default_max_lifetime);
 
 	auto sigmas = ApplySigma(tau, new_lifetimes);
@@ -147,7 +149,7 @@ double SimulationCPU::IntegrateResult(const double tau, const std::vector<double
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < ss.values_per_quadrant; p++) {
-					integral_total += sigma_lifetimes[GetIndex(i, j, q, p)] * (wp * SimpsonWeight(i, ss.particles_per_row));
+					integral_total += sigma_lifetimes[GetIndex(i, j, q, p)] * (wp * SimpsonWeight(p, ss.values_per_quadrant));
 				}
 			}
 		}
@@ -158,13 +160,10 @@ double SimulationCPU::IntegrateResult(const double tau, const std::vector<double
 		return stepsize / 3
 
 		//phirange = np.pi / 2 - 2 * alpha if iscoh else 2 * alpha
-		const = integration_const(region, dimension)**2 * integration_const(phirange, nr_phi)
-		const /= region**2
-		integralxx *= const
-		integralxy *= const
+		const = integration_const(region, dimension)**2 * integration_const(phirange, nr_phi) / region**2
 	*/
 
-	double integral_factor = pow(1.0 / (3.0 * (ss.particles_per_row - 1)), 2);// *ss.phi_integrand_factor;
+	double integral_factor = pow(1.0 / (3.0 * (ss.particles_per_row - 1)), 2) * ss.phi_integrand_factor;
 	double factor = integral_factor * SigmaFactor(tau);
 	return integral_total * factor * 1e-8;
 }

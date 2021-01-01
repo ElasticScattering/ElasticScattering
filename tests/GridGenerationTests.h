@@ -13,28 +13,53 @@ int get_cell_index(const double2 pos, const double spawn_region_start, const dou
 	return get_index(get_cell(pos, spawn_region_start, spawn_region_size, cells_per_row), cells_per_row);
 }
 
+int get_cell_index(const v2i cell, const int cells_per_row)
+{
+	return cell.y * cells_per_row + cell.x;
+}
+
 bool ImpurityOverlapsCell(int correct_cell, v2 pos, double impurity_radius, const double spawn_region_start, const double spawn_region_size, int cells_per_row)
 {
-	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
-
 	std::vector<v2> possible_overlapping_positions = {
-		v2(pos.x + impurity_radius, pos.y),
-		v2(pos.x - impurity_radius, pos.y),
-		v2(pos.x, pos.y + impurity_radius),
-		v2(pos.x, pos.y - impurity_radius),
-		v2(pos.x + offset.x, pos.y + offset.y),
-		v2(pos.x - offset.x, pos.y + offset.y),
-		v2(pos.x + offset.x, pos.y - offset.y),
-		v2(pos.x - offset.x, pos.y - offset.y)
+			v2(pos.x, pos.y),
+			v2(pos.x + impurity_radius, pos.y),
+			v2(pos.x - impurity_radius, pos.y),
+			v2(pos.x, pos.y + impurity_radius),
+			v2(pos.x, pos.y - impurity_radius),
 	};
 
 	for (int i = 0; i < possible_overlapping_positions.size(); i++) {
 		auto new_cell = get_cell_index(possible_overlapping_positions[i], spawn_region_start, spawn_region_size, cells_per_row);
 
-		if (correct_cell == new_cell) {
+		if (new_cell == correct_cell) {
 			return true;
 		}
 	}
+
+	double L = spawn_region_size / (double)cells_per_row;
+	v2 low_left = to_world(get_cell(possible_overlapping_positions[0], spawn_region_start, spawn_region_size, cells_per_row), spawn_region_start, L);
+	v2 low_right = low_left + v2(L, 0);
+	v2 top_left = low_left + v2(0, L);
+	v2 top_right = low_left + v2(L, L);
+
+	double ir2 = impurity_radius * impurity_radius;
+	auto cell = get_cell(pos.x, pos.y, spawn_region_size, cells_per_row);
+
+	double d_topleft_squared = pow(top_left.x - pos.x, 2) + pow(top_left.y - pos.y, 2);
+	if (d_topleft_squared < ir2 && correct_cell == get_cell_index(v2i(cell.x - 1, cell.y + 1), cells_per_row)) 
+		return true;
+
+	double d_topright_squared = pow(top_right.x - pos.x, 2) + pow(top_right.y - pos.y, 2);
+	if (d_topright_squared < ir2 && correct_cell == get_cell_index(v2i(cell.x + 1, cell.y + 1), cells_per_row)) 
+		return true;
+
+	double d_lowleft_squared = pow(low_left.x - pos.x, 2) + pow(low_left.y - pos.y, 2);
+	if (d_lowleft_squared < ir2 && correct_cell == get_cell_index(v2i(cell.x - 1, cell.y - 1), cells_per_row)) 
+		return true;
+
+	double d_lowright_squared = pow(low_right.x - pos.x, 2) + pow(low_right.y - pos.y, 2);
+	if (d_lowright_squared < ir2 && correct_cell == get_cell_index(v2i(cell.x + 1, cell.y - 1), cells_per_row)) 
+		return true;
 
 	return false;
 }
@@ -149,8 +174,6 @@ TEST_CASE("Impurities should be indexed correctly.")
 
 	CHECK(in_order == true);
 }
-
-
 
 TEST_CASE("Impurities should be indexed diagonally.")
 {

@@ -39,7 +39,8 @@ void SimulationRunner::Run(const InitParameters& init)
             CreateSampleOutputDirectory(i);
 
         QueryPerformanceCounter(&beginGridClock);
-        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
+        auto seed = random_device();
+        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
         QueryPerformanceCounter(&endGridClock);
         double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
 
@@ -79,9 +80,9 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     es.InitSample(grid, settings, coherent);
 
     SampleMetrics sample_metrics(sample_index, coherent, N, nlifetimes);
-    sample_metrics.cells_per_row            = grid.GetCellsPerRow();
-    sample_metrics.impurity_count           = grid.GetUniqueImpurityCount();
     sample_metrics.total_indexed_impurities = grid.GetTotalImpurityCount();
+    sample_metrics.impurity_count           = grid.GetUniqueImpurityCount();
+    sample_metrics.total_cells              = pow(grid.GetCellsPerRow(), 2);
     sample_metrics.seed                     = grid.GetSeed();
 
     auto raw_sample_string = std::to_string(sample_index + 1);
@@ -101,7 +102,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
         QueryPerformanceCounter(&endLifetimesClock);
         
         metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
-        metrics.real_lifetimes = sample_metrics.nlifetimes - metrics.particles_inside_impurity;
+        metrics.real_lifetimes = sample_metrics.total_lifetimes - metrics.particles_inside_impurity;
         sample_metrics.iteration_metrics[j] = metrics;
 
         for (int i = 0; i < T; i++) {

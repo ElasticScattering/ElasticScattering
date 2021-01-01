@@ -54,11 +54,11 @@ struct GlobalMetrics
 struct SampleMetrics
 {
     int sample_index;
-    int nlifetimes;
-    int cells_per_row;
+    int total_lifetimes;
+    int total_cells;
     int impurity_count;
 
-    int seed;
+    unsigned int seed;
     int total_indexed_impurities;
 
     bool coherent;
@@ -70,7 +70,12 @@ struct SampleMetrics
         coherent = p_coherent;
         iteration_metrics.resize(N);
 
-        nlifetimes = nlt;
+        total_cells = 0;
+        total_lifetimes = nlt;
+        total_indexed_impurities = 0;
+
+        seed = 0;
+        impurity_count = 0;
     }
 };
 #endif // !DEVICE_PROGRAM

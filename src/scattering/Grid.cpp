@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <set>
 
-Grid::Grid(int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell)
+Grid::Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell)
 {
 	seed_used = seed;
 	impurity_radius = _impurity_radius;
@@ -89,8 +89,6 @@ void Grid::ConvertToIndex()
 
 int Grid::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius)
 {
-	v2 offset = v2(cos(45.0 * PI / 180.0), sin(45.0 * PI / 180.0)) * impurity_radius;
-
 	std::vector<v2i> possible_overlapping_positions = {
 		get_cell(pos.x, pos.y),
 		get_cell(pos.x + impurity_radius, pos.y),

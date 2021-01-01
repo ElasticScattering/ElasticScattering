@@ -181,14 +181,14 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
     const auto metrics = sample_metrics.iteration_metrics;
 
     if (sample_metrics.coherent) { // Assume coherent sample is before incoherent.
-        file << std::endl << std::endl;
+        file << std::endl << std::endl << std::endl;
+        file << "---------------------------------------------------------" << std::endl;
         file << "Sample " << sample_metrics.sample_index << ((sample_metrics.coherent) ? " Coherent" : " Incoherent") << std::endl;
         file << "---------------------------------------------------------" << std::endl;
         file << "Seed                              " << sample_metrics.seed << std::endl;
         file << "Total indexed impurities          " << std::setprecision(2) << (double)sample_metrics.total_indexed_impurities / 1'000'000 << " mil (" << std::setprecision(4) << (sample_metrics.total_indexed_impurities - sample_metrics.impurity_count) << " overlapped)" << std::endl;
-        file << "Avg. impurities per cell          " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.cells_per_row * sample_metrics.cells_per_row) << std::endl;
-        file << "Particles started inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.nlifetimes)) << "%" << std::endl;
-        file << std::endl;
+        file << "Avg. impurities per cell          " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.total_cells) << std::endl;
+        file << "Particles started inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_lifetimes)) << "%" << std::endl;
     }
 
     // Header
@@ -275,7 +275,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-                << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes) / pow(sample_metrics.cells_per_row, 2)) << "%";
+                << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes) / sample_metrics.total_cells) << "%";
         }
         file << L'│' << std::endl;
 

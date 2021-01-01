@@ -63,7 +63,7 @@ public:
 		ss.small_offset               = v2(ss.distance_between_particles * 0.01, ss.distance_between_particles * 0.005);
 
 		const double base_area = s.alpha * 2.0;
-		ss.integrand_angle_area = !coherent ? base_area : (PI / 2.0 - base_area);
+		ss.integrand_angle_area = !coherent ? base_area : (HALF_PI - base_area);
 		ss.phi_integrand_factor = ss.integrand_angle_area / ((ss.values_per_quadrant - 1) * 3.0);
 		ss.coherent_tau         = s.tau;
 

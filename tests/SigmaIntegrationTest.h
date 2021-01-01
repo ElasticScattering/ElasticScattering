@@ -130,6 +130,9 @@ TEST_CASE("DeriveTemperature with and without logging should return same sigma r
 	auto result  = sim.DeriveTemperature(2);
 	auto result2 = sim.DeriveTemperatureWithImages(2);
 
+	printf("Factor diff XX %f\n", result.xx / result2.result.xx);
+	printf("Factor diff XY %f\n", result.xy / result2.result.xy);
+
 	CHECK_ALMOST(result.xx, result2.result.xx);
 	CHECK_ALMOST(result.xy, result2.result.xy);
 }
