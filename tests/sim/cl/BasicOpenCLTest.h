@@ -1,9 +1,10 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
+#include "tests/TestMacros.h"
 
 #include "src/utils/OpenCLUtils.h"
+#include "src/sim/es/v2.h"
 #include <random>
 #include <vector>
 
@@ -19,7 +20,7 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "tests/kernels/test_precision.cl", &program);
+	CompileOpenCLProgram(device, context, "tests/sim/cl/kernels/test_precision.cl", &program);
 
 	std::vector<double> A;
 	A.clear();
@@ -74,10 +75,9 @@ TEST_CASE("Generic gpu/cpu precision test by performing many operations on small
 		for (int i = 0; i < number_of_operations; i++) {
 			cpu_results[j] += A[j] * sqrt(abs(sin((double)i)));
 		}
-		CHECK_ALMOST(cpu_results[j], gpu_results[j], "");
+		CHECK_ALMOST(cpu_results[j], gpu_results[j], "Cpu and gpu results should be almost the same on this device.");
 	}
 }
-
 
 TEST_CASE("Test double2")
 {
@@ -89,7 +89,7 @@ TEST_CASE("Test double2")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "tests/kernels/test_double2.cl", &program);
+	CompileOpenCLProgram(device, context, "tests/sim/cl/kernels/test_double2.cl", &program);
 
 	size_t global_work_size = buffer_size;
 	size_t local_work_size = 128;
@@ -127,7 +127,7 @@ TEST_CASE("Test double2")
 	for (int j = 0; j < gpu_results.size(); j++) {
 		gpu_result += gpu_results[j];
 
-		double2 x = { (double)j, (double)j };
+		v2 x = v2(j, j);
 		x = x * 1.5;
 		cpu_result += x.x + x.y;
 	}
@@ -147,7 +147,7 @@ TEST_CASE("Test if cpp can be compiled and executed by opencl")
 	InitializeOpenCL(true, &device, &context, &queue);
 
 	cl_program program;
-	CompileOpenCLProgram(device, context, "tests/kernels/test_cpp.cl", &program);
+	CompileOpenCLProgram(device, context, "tests/sim/cl/kernels/test_cpp.cl", &program);
 
 	size_t global_work_size = buffer_size;
 	size_t local_work_size = 128;

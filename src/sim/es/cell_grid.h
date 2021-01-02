@@ -7,6 +7,7 @@
 
 #include "constants.h"
 #include "details.h"
+#include "settings.h"
 
 typedef struct Intersection {
 	double2 position;
@@ -112,7 +113,7 @@ UpdateFirstBoundaryIntersect(
 ESCL_INLINE bool 
 GetNextCell(const Orbit* orbit,
 	const double phi,
-	const ImpuritySettings *is,
+	IMPURITY_SETTINGS,
 	Intersection* const last_intersection,
 	Intersection* next_intersection)
 {

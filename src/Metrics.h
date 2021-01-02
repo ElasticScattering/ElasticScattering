@@ -5,7 +5,7 @@
 #include <vector>
 #endif // !DEVICE_PROGRAM
 
-struct Metrics {
+typedef struct Metrics {
     int cells_passed;
     int impurities_tested;
     int particles_inside_impurity;
@@ -39,7 +39,7 @@ struct Metrics {
         max_impurities_tested = 0;
     }
 #endif // !DEVICE_PROGRAM
-};
+} Metrics;
 
 #ifndef DEVICE_PROGRAM
 struct GlobalMetrics

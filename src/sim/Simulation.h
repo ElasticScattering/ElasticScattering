@@ -3,10 +3,10 @@
 
 #include "Grid.h"
 
-#include "es/ScatteringParameters.h"
+#include "es/settings.h"
 #include "es/constants.h"
 
-#include "src/Settings.h"
+#include "src/ConfigSettings.h"
 #include "src/SimulationResult.h"
 #include "src/Metrics.h"
 
@@ -31,6 +31,20 @@ protected:
 		outside *= tau / (1.0 + wct * wct);
 
 		return outside;
+	}
+
+	double GetTau(double temperature) const {
+		return (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
+	}
+
+	double GetDefaultMaxLifetime(double tau) const {
+		return 15.0 * tau;
+	}
+
+	double GetSigmaIntegrandFactor(double tau) const {
+		//	const double integrand_factor = sp->integrand_angle_area / ((values_per_quadrant - 1) * 3.0);
+		double integral_factor = pow(1.0 / (3.0 * (ss.particles_per_row - 1)), 2);
+		return integral_factor * SigmaFactor(tau) * 1e-8;
 	}
 
 	double AverageLifetime() const
@@ -109,7 +123,7 @@ public:
 
 
 class SimulationCL : public Simulation {
-	void PrepareKernels(const Settings& ss, const size_t items_in_workgroup);
+	void PrepareKernels(const Settings& s, const size_t items_in_workgroup);
 
 public:
 	virtual void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics) override;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScatteringParameters.h"
+#include "settings.h"
 
 #include "device_macros.h"
 #include "details.h"
@@ -55,23 +55,25 @@ cell. To prevent this, only the impurities that happen before the particle
 will leave the cell are considered.
 */
 /// </summary>
+
 ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER_ARGS)
 {
     double lifetime = INF;
 
     Intersection next_intersection;
     next_intersection.position       = p->starting_position;
-    next_intersection.entering_cell  = get_cell(p->starting_position, settings->spawn_region_start, settings->spawn_region_size, settings->cells_per_row);
+    next_intersection.entering_cell  = get_cell(p->starting_position, is->spawn_region_start, is->spawn_region_size, is->cells_per_row);
     next_intersection.dphi           = PI2;
     next_intersection.incident_angle = p->phi;
     
-    int particle_cell_index = get_index(next_intersection.entering_cell, settings->cells_per_row);
+    int particle_cell_index = get_index(next_intersection.entering_cell, is->cells_per_row);
 
     int impurity_start = (particle_cell_index == 0) ? 0 : cell_indices[particle_cell_index - 1];	
     int impurity_end = cell_indices[particle_cell_index];
+
     for (int i = impurity_start; i < impurity_end; i++)
     {
-        if (InsideImpurity(p->starting_position, impurities[i], settings->impurity_radius)) {
+        if (InsideImpurity(p->starting_position, impurities[i], is->impurity_radius)) {
             METRIC_INC(metrics->particles_inside_impurity);
             return 0;
         }
@@ -81,11 +83,11 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         // Move to the next cell.
         Intersection entry_point = next_intersection;
 
-        bool next_cell_available = GetNextCell(&p->orbit, p->phi, settings, &entry_point, &next_intersection);
+        bool next_cell_available = GetNextCell(&p->orbit, p->phi, is, &entry_point, &next_intersection);
         double2 valid_phi_range = MAKE_DOUBLE2(entry_point.incident_angle, next_cell_available ? next_intersection.incident_angle : p->phi); // move to Intersection?
 
         // Use the grid index to get the impurities in the current cell.
-        int cell_idx = get_index(entry_point.entering_cell, settings->cells_per_row);
+        int cell_idx = get_index(entry_point.entering_cell, is->cells_per_row);
         int impurity_start = (cell_idx > 0) ? cell_indices[cell_idx - 1] : 0;
         int impurity_end = cell_indices[cell_idx];
 
@@ -95,8 +97,8 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         // Test each impurity.
         for (int i = impurity_start; i < impurity_end; i++) {
             double2 impurity = impurities[i];
-            if (CirclesCross(&p->orbit, impurity, settings->impurity_radius)) {
-                double t = GetFirstCrossTime(&p->orbit, impurity, settings->impurity_radius, p->angular_speed, valid_phi_range);
+            if (CirclesCross(&p->orbit, impurity, is->impurity_radius)) {
+                double t = GetFirstCrossTime(&p->orbit, impurity, is->impurity_radius, p->angular_speed, valid_phi_range);
                 lifetime = (t < lifetime) ? t : lifetime;
             }
         }

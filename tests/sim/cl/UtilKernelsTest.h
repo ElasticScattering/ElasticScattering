@@ -1,8 +1,9 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
-#include "src/sim/Simulation.h"
+#include "tests/TestMacros.h"
+//#include "src/sim/Simulation.h"
+#include "src/sim/es/util.h"
 #include "src/utils/OpenCLUtils.h"
 #include <vector>
 

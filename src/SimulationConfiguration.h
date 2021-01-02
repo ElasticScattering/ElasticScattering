@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Settings.h"
+#include "ConfigSettings.h"
 
 #include <vector>
 #include <string>
@@ -11,7 +11,6 @@
 #include <filesystem>
 
 #include <unordered_map>
-
 
 enum class ProgramMode {
     Test,
@@ -46,6 +45,8 @@ typedef struct SimulationConfiguration
     Settings settings;
 
     OutputType output_type;
+    bool use_gpu;
+    bool force_recompile;
 
     std::string base_output_directory;
     std::string output_directory;
@@ -116,9 +117,13 @@ typedef struct SimulationConfiguration
             }
         }
 
-        cfg.num_samples             = atoi(values.at("num_samples").c_str());
+
+        cfg.use_gpu = values.at("device") == "gpu";
+        cfg.force_recompile = atoi(values.at("force_recompile").c_str()) == 1;
+
+        cfg.num_samples        = atoi(values.at("num_samples").c_str());
         cfg.quadrant_phi_steps = atoi(values.at("integrand_steps").c_str());
-        cfg.particles_per_row       = atoi(values.at("dimension").c_str());;
+        cfg.particles_per_row  = atoi(values.at("dimension").c_str());;
 
         {
             double mf_min       = atof(values.at("magnetic_field_min").c_str());

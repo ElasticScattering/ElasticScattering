@@ -3,20 +3,17 @@
 
 #include "TestMacros.h"
 
-#include "GridGenerationTests.h"
+#include "es/AngleTests.h"
+#include "es/OrbitDetailsTest.h"
+#include "es/IndexTests.h"
+#include "es/GridMovementTests.h"
+#include "es/LifetimeTests.h"
 
-#include "AngleTests.h"
-#include "OrbitDetailsTest.h"
+#include "sim/GridGenerationTests.h"
+#include "sim/SimpsonWeightsTest.h"
+#include "sim/SigmaIntegrationTest.h"
 
-#include "SimpsonWeightsTest.h"
-
-#include "IndexTests.h"
-#include "GridMovementTests.h"
-
-#include "LifetimeTests.h"
-#include "SigmaIntegrationTest.h"
-
-//#include "BasicOpenCLTest.h"
+#include "sim/cl/BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"
 
 void test_main() {

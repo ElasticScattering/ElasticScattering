@@ -1,6 +1,7 @@
 #pragma once
 
 #include <doctest.h>
+#include "tests/TestMacros.h"
 #include "src/sim/es/cell_grid.h"
 
 TEST_CASE("DifferentPoint")

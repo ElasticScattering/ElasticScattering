@@ -14,7 +14,7 @@ typedef struct
     cl_program program_lifetimes;
     cl_kernel lifetimes_kernel;
 
-    cl_mem lifetimes;
+    cl_mem raw_lifetimes;
 
     cl_mem particle_settings;
     cl_mem impurity_settings;
@@ -34,6 +34,8 @@ typedef struct
     cl_kernel apply_simpson_weights;
     cl_kernel integrate_particle_kernel;
     cl_kernel sum_kernel;
+
+    cl_mem lifetimes;
 
     cl_mem sigma_lifetimes_xx;
     cl_mem sigma_lifetimes_xy;
@@ -72,7 +74,7 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl_scatter.impurity_settings);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl_scatter.impurities);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 4, sizeof(cl_mem), (void*)&ocl_scatter.cell_indices);
-        clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 5, sizeof(cl_mem), (void*)&ocl_scatter.lifetimes);
+        clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 5, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 6, sizeof(cl_mem), (void*)&ocl_scatter.metrics);
     }
 
@@ -95,18 +97,28 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
 
 Sigma SimulationCL::DeriveTemperature(const double temperature) const
 {
+    size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
+    const size_t values_in_work_group = min(ss.values_per_particle, 256);
+    size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group };
+
     cl_int clStatus;
+    double tau = GetTau(temperature);
     
+    // Apply max lifetime.
     {
-        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_scatter.lifetimes);
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
+        
+        double default_max_lifetime = GetDefaultMaxLifetime(tau);
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(double), (void*)&default_max_lifetime);
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+
+        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_max_lifetime, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't start apply_max_lifetime execution.");
     }
 
+    // Apply sigma components.
     {
-        size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
-        const size_t values_in_work_group = min(ss.values_per_particle, 256);
-        size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group };
-
-        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 0, sizeof(cl_mem), (void*)&ocl_scatter.lifetimes);
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
         clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
         int mode = 0;
 
@@ -129,30 +141,69 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         }
     }
 
+    // Apply simpson weights.
     {
-        size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
-        const size_t values_in_work_group = min(ss.values_per_particle, 256);
-        size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group };
-
-        /*
-        double* sigma_lifetimes, 
-        double values_per_quadrant, 
-        double* B
-        */
-
-        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
         clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 1, sizeof(cl_mem), (void*)&ss.values_per_quadrant);
 
+        {
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
 
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
+        }
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
+        }
     }
 
-    //	const double integrand_factor = sp->integrand_angle_area / ((values_per_quadrant - 1) * 3.0);
+    Sigma sigma;
 
-    Sigma ir;
+    // Sum sigma xx/xy buffers.
+    {
+        // @Optimize, voer de som nog vaker uit tot een aantal elementen.
+        clStatus = clSetKernelArg(ocl_integration.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl_integration.incomplete_sum);
+        clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(double) * values_in_work_group, nullptr);
 
-    return ir;
+        const size_t half_size = ss.total_lifetimes / 2;
+        const size_t incomplete_sum_size = half_size / values_in_work_group;
+        {
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
+
+            std::vector<double> incomplete_sum(incomplete_sum_size);
+            clEnqueueReadBuffer(ocl.queue, ocl_integration.incomplete_sum, CL_TRUE, 0, sizeof(double) * incomplete_sum_size, incomplete_sum.data(), 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Failed to read back incomplete sum XX.");
+
+            for (int i = 0; i < incomplete_sum.size(); i++)
+                sigma.xx += incomplete_sum[i];
+        }
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
+
+            std::vector<double> incomplete_sum(incomplete_sum_size);
+            clEnqueueReadBuffer(ocl.queue, ocl_integration.incomplete_sum, CL_TRUE, 0, sizeof(double) * incomplete_sum_size, incomplete_sum.data(), 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Failed to read back incomplete sum XY.");
+
+            for (int i = 0; i < incomplete_sum.size(); i++)
+                sigma.xy += incomplete_sum[i];
+        }
+    }
+
+    double factor = GetSigmaIntegrandFactor(tau);
+    sigma.xx *= factor;
+    sigma.xy *= factor;
+
+    return sigma;
 }
 
 IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperature) const
@@ -166,7 +217,7 @@ IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperatu
     
     /*
     // temperature is niet genoeg, moet sp meegeven...
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(ScatteringParameters), (void*)&sp, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl.parameters, CL_TRUE, 0, sizeof(settings), (void*)&sp, 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Couldn't set argument to buffer.");
 
     // Set up kernels
@@ -290,7 +341,6 @@ IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperatu
     */
 }
 
-
 void SimulationCL::UploadImpurities(const Grid& grid)
 {
     cl_int clStatus;
@@ -320,9 +370,18 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     if (true)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
+    /*
     std::cout << "\nBuilding main program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/scatter.cl", &ocl_scatter.program_lifetimes);
     std::cout << "Compilation succeeded!" << std::endl;
+
+    size_t number_of_binaries;
+    clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &number_of_binaries, NULL);
+    size_t* binaries = new size_t[number_of_binaries];
+    
+    auto binary = new unsigned char *[number_of_binaries];
+    clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARIES, number_of_binaries, &binary, NULL);
+    */
 
     std::cout << "\nBuilding integration program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);

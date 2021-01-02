@@ -1,5 +1,8 @@
 #include "src/sim/es/util.h"
-#include "shared_macros.h"
+#include "src/sim/cl/cl_macros.h"
+#include "src/sim/es/constants.h"
+
+#include "src/sim/es/settings.h"
 
 kernel void 
 apply_max_lifetime(constant double* raw_lifetimes, double default_max_lifetime, global double* lifetimes)
@@ -8,13 +11,25 @@ apply_max_lifetime(constant double* raw_lifetimes, double default_max_lifetime, 
     int j = get_global_id(1);
 	int v = get_global_id(2);
 
-	int idx = GET_INDEX(i, j, v);
+	int values_per_particle = get_global_size(2);
+	int particles_per_row   = get_global_size(0);
+	int values_per_row      = particles_per_row * values_per_particle;
+
+	int idx = j * values_per_row + i * values_per_particle + v;
+
+	//int idx = GET_INDEX(i, j, v);
 	double lt = raw_lifetimes[idx];
 	lifetimes[idx] = min(lt , default_max_lifetime);
 }
 
+
 kernel void 
-apply_sigma_component(constant double* lifetimes, constant SimulationSettings* ss, int mode, global double* sigma_component)
+apply_sigma_component(constant double* lifetimes, 
+					  constant SimulationSettings* ss, 
+					  constant ParticleSettings* ps, 
+					  const int mode, 
+					  const double tau, 
+					  global double* sigma_component)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -23,40 +38,42 @@ apply_sigma_component(constant double* lifetimes, constant SimulationSettings* s
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
-	unsigned int idx = GET_INDEX(i, j, v);
-	const int q = (int)(v / ss->integrand_steps);
-	const int p =       v % ss->integrand_steps;
+	int idx = GET_INDEX(i, j, v);
+
+	const int q = (int)(v / ss->values_per_quadrant);
+	const int p =       v % ss->values_per_quadrant;
 
 	//double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
 
-	double f = (mode == MODE_SIGMA_XX) cos(p) : sin(p); 
-	sigma_component[idx] = GetSigma(lifetimes[idx], GET_PHI(q, p), tau, ss->signed_angular_speed);
+	double phi = GET_PHI(q, p);
+	double f = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi); 
+	sigma_component[idx] = GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed);
 }
 
+
 kernel void 
-apply_simpson_weights(global double* sigma_lifetimes, double values_per_quadrant, global double* B)
+apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSettings* ss, const int values_per_quadrant)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
 	int v = get_global_id(2);
-	int limit = get_global_size(0) - 1;
     
-	if (i >= limit || y >= limit) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 
-	unsigned int idx = GET_INDEX(i, j, v);
-	B[idx] = sigma_lifetimes[idx] * (SimpsonWeight2D(i, j, limit) * SimpsonWeight(v % values_per_quadrant, values_per_quadrant));
+	int idx = GET_INDEX(i, j, v);
+
+	sigma_lifetimes[idx] *= (SimpsonWeight2D(i, j, ss->particles_per_row) * SimpsonWeight(v % ss->values_per_quadrant, ss->values_per_quadrant));
 }
 
+
 kernel void 
-integrate_to_particle(global double* values, double values_per_quadrant, double integrand_factor, global double* particle_results)
+integrate_to_particle(global double* values, constant SimulationSettings* ss, global double* particle_results)
 {
 	int i        = get_global_id(0);
     int j        = get_global_id(1);
-	int row_size = get_global_size(0) - 1;
-	int limit    = row_size - 1;
 	
-	if (i >= limit || y >= limit) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 
 	double total = 0;
@@ -64,15 +81,17 @@ integrate_to_particle(global double* values, double values_per_quadrant, double 
 	{
 		unsigned int base_idx = GET_INDEX(i, j, q); // @Optimize
 	
-		for (int p = 0; p < values_per_quadrant; p++)
-			total += values[base_idx + p] * SimpsonWeight(p, values_per_quadrant);
+		for (int p = 0; p < ss->values_per_quadrant; p++)
+			total += values[base_idx + p] * SimpsonWeight(p, ss->values_per_quadrant);
 	}
 	
-	particle_results[j * row_size + i] = total;
+	// @Todo, integrand factor.
+	particle_results[j * (ss->particles_per_row+1) + i] = total;
 }
 
+
 kernel void 
-sum(global read_only double* A, global write_only double* B, local double* local_sums)
+sum(global double* A, global double* B, local double* local_sums)
 {
 	uint id = get_global_id(0);
 	uint local_id = get_local_id(0);

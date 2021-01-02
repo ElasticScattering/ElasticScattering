@@ -26,7 +26,10 @@ void SimulationRunner::Run(const InitParameters& init)
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+    //SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+    SimulationCL es(cfg.particles_per_row - 1, cfg.quadrant_phi_steps);
+
+    exit(0);
 
     const Settings& ss = cfg.settings;
 

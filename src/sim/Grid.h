@@ -1,7 +1,7 @@
 #pragma once
 
 #include "es/v2.h"
-#include "es/ScatteringParameters.h"
+#include "es/settings.h"
 
 #include <vector>
 struct Cell {

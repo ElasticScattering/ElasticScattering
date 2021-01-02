@@ -1,5 +1,7 @@
 #pragma once
 
+#include "src/sim/es/shared_macros.h"
+
 ESCL_INLINE double SimpsonWeight(const int i, const int dim) {
     const double main_multiplier = (i % 2 == 0) ? 2.0 : 4.0;
     const bool is_edge = (i == 0) || i == (dim - 1);

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
+#include "tests/TestMacros.h"
 #include "src/sim/es/cell_grid.h"
-
+#include "src/sim/es/settings.h"
 #include <vector>
 
 void TestGridMovement(Orbit& o, Intersection& exit, std::vector<Intersection>& expected_intersections)

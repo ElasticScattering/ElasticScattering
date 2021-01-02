@@ -1,8 +1,8 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
-#include "TestUtils.h"
+#include "tests/TestMacros.h"
+#include "tests/TestUtils.h"
 
 #include "src/SimulationConfiguration.h"
 #include "src/sim/Simulation.h"

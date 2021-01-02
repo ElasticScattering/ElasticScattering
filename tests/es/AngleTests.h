@@ -1,5 +1,5 @@
 #include <doctest.h>
-#include "TestMacros.h"
+#include "tests/TestMacros.h"
 #include "src/sim/es/details.h"
 #include <stdio.h>
 

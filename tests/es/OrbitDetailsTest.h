@@ -1,7 +1,7 @@
 #pragma once
 
 #include <doctest.h>
-#include "TestMacros.h"
+#include "tests/TestMacros.h"
 #include "src/sim/es/details.h"
 
 TEST_CASE("InsideImpurity")

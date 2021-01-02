@@ -60,8 +60,8 @@ void SimulationCPU::ComputeLifetimes(const double magnetic_field, const Grid& gr
 
 IterationResult SimulationCPU::DeriveTemperatureWithImages(const double temperature) const
 {
-	double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
-	double default_max_lifetime = 15.0 * tau;
+	double tau = GetTau(temperature);
+	double default_max_lifetime = GetDefaultMaxLifetime(tau);
 
 	IterationResult ir;
 

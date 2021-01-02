@@ -1,5 +1,8 @@
 #include "src/sim/es/lifetime.h"
-#include "shared_macros.h"
+#include "src/sim/es/settings.h"
+#include "src/Metrics.h"
+
+#include "src/sim/cl/cl_macros.h"
 
 kernel void 
 lifetime(constant SimulationSettings* ss, // Settings used for generic simulation settings, scaling etc.
@@ -7,7 +10,7 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 		 constant ImpuritySettings* is,   // Settings used for calculating intersections and grid movement.
 		 constant double2* impurities, 
 		 constant int* imp_index,
-		 global double* lifetimes
+		 global double* lifetimes,
 		 global Metrics* metrics)
 {
 	int i = get_global_id(0);
@@ -17,10 +20,10 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
-	const int q = (int)(v / ss->integrand_steps);
-	const int p =       v % ss->integrand_steps;
+	const int q = (int)(v / ss->values_per_quadrant);
+	const int p =       v % ss->values_per_quadrant;
     const double2 pos = ((double2)(i, j) * ss->distance_between_particles) + ss->small_offset;
 	
-	Particle particle = CreateParticle(q, p, pos, &ps);
-	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, &is, impurities, imp_index, metrics);
+	Particle particle = CreateParticle(q, p, pos, ps);
+	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, is, impurities, imp_index, metrics);
 }

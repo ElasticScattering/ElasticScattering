@@ -1,4 +1,4 @@
-#include "./tests/kernels/test_cpp.h"
+#include "./tests/sim/cl/kernels/test_cpp.h"
 
 __kernel void test_cpp(__global int *B) {
 	int id = get_global_id(0);
