@@ -77,8 +77,8 @@ struct SampleResult {
 
     SampleResult(int T, int N)
     {
-        results.resize(T);
-        for (int i = 0; i < T; i++)
-            results[i].resize(N);
+        results.resize(N);
+        for (int i = 0; i < N; i++)
+            results[i].resize(T);
     }
 };

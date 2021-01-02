@@ -369,16 +369,18 @@
     <ClCompile Include="src\sim\Grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\SimulationRunner.cpp" />
-    <ClCompile Include="tests\AngleTests.h" />
-    <ClCompile Include="tests\data\kernels\test_cpp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ConfigSettings.h" />
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\Metrics.h" />
+    <ClInclude Include="src\sim\cl\cl_macros.h" />
     <ClInclude Include="src\sim\cl\shared_macros.h" />
     <ClInclude Include="src\sim\es\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
+    <ClInclude Include="src\sim\es\settings.h" />
+    <ClInclude Include="src\sim\es\shared_macros.h" />
     <ClInclude Include="src\sim\es\v2.h" />
     <ClInclude Include="src\sim\Simulation.h" />
     <ClInclude Include="src\sim\es\constants.h" />
@@ -394,20 +396,20 @@
     <ClInclude Include="src\utils\OpenCLUtils.h" />
     <ClInclude Include="tests\BasicOpenCLTest.h" />
     <ClInclude Include="tests\ElasticScatteringTests.h" />
-    <ClInclude Include="tests\GridGenerationTests.h" />
-    <ClInclude Include="tests\GridMovementTests.h" />
-    <ClInclude Include="tests\IndexTests.h" />
-    <ClInclude Include="tests\SigmaIntegrationTest.h" />
-    <ClInclude Include="tests\LifetimeTests.h" />
-    <ClInclude Include="tests\SimpsonWeightsTest.h" />
-    <ClInclude Include="tests\data\kernels\test_cpp.h" />
-    <ClInclude Include="tests\SigmaTest.h" />
-    <ClInclude Include="tests\Test.h" />
-    <ClInclude Include="tests\OrbitDetailsTest.h" />
+    <ClInclude Include="tests\es\AngleTests.h" />
+    <ClInclude Include="tests\es\GridMovementTests.h" />
+    <ClInclude Include="tests\es\IndexTests.h" />
+    <ClInclude Include="tests\es\LifetimeTests.h" />
+    <ClInclude Include="tests\es\OrbitDetailsTest.h" />
+    <ClInclude Include="tests\sim\cl\BasicOpenCLTest.h" />
+    <ClInclude Include="tests\sim\cl\CLSigmaIntegrationTest.h" />
+    <ClInclude Include="tests\sim\cl\UtilKernelsTest.h" />
+    <ClInclude Include="tests\sim\GridGenerationTests.h" />
+    <ClInclude Include="tests\sim\SigmaIntegrationTest.h" />
+    <ClInclude Include="tests\sim\SimpsonWeightsTest.h" />
     <ClInclude Include="tests\TestMacros.h" />
     <ClInclude Include="tests\TestUtils.h" />
     <ClInclude Include="tests\test_main.h" />
-    <ClInclude Include="tests\UtilKernelsTest.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

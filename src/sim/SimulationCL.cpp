@@ -54,6 +54,30 @@ OCLResources ocl;
 OCLSimResources ocl_scatter;
 OCLIntegrationResources ocl_integration;
 
+std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+{
+    Metrics metrics;
+    ComputeLifetimes(magnetic_field, grid, metrics);
+
+    std::vector<Sigma> results(temperatures.size());
+    for (int i = 0; i < temperatures.size(); i++)
+        results[i] = DeriveTemperature(temperatures[i]);
+
+    return results;
+}
+
+std::vector<IterationResult> SimulationCL::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+{
+    Metrics metrics;
+    ComputeLifetimes(magnetic_field, grid, metrics);
+
+    std::vector<IterationResult> results(temperatures.size());
+    for (int i = 0; i < temperatures.size(); i++)
+        results[i] = DeriveTemperatureWithImages(temperatures[i]);
+
+    return results;
+}
+
 void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics)
 {
     cl_int clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.particle_settings, CL_TRUE, 0, sizeof(ParticleSettings), (void*)&ps, 0, nullptr, nullptr);
@@ -92,6 +116,11 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
     clEnqueueReadBuffer(ocl.queue, ocl_scatter.metrics, CL_TRUE, 0, sizeof(Metrics), metrics_holder.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
     metrics = metrics_holder[0];
+
+    std::vector<double> lifetimes(ss.total_lifetimes);
+
+    clEnqueueReadBuffer(ocl.queue, ocl_scatter.raw_lifetimes, CL_TRUE, 0, sizeof(Metrics), lifetimes.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
 }
 
 
@@ -120,12 +149,15 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
     {
         clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
         clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 2, sizeof(cl_mem), (void*)&ocl_scatter.particle_settings);
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 3, sizeof(double), (void*)&tau);
+
         int mode = 0;
 
         {
             mode = MODE_SIGMA_XX;
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 2, sizeof(int), (void*)&mode);
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 3, sizeof(int), (void*)&ocl_integration.sigma_lifetimes_xx);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
 
             clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xx execution.");
@@ -133,8 +165,8 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
 
         {
             mode = MODE_SIGMA_XY;
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 2, sizeof(int), (void*)&mode);
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 3, sizeof(int), (void*)&ocl_integration.sigma_lifetimes_xy);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
 
             clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xy execution.");
@@ -143,7 +175,8 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
 
     // Apply simpson weights.
     {
-        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 1, sizeof(cl_mem), (void*)&ss.values_per_quadrant);
+        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
+        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 2, sizeof(int), (void*)&ss.values_per_quadrant);
 
         {
             clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
@@ -362,19 +395,39 @@ void SimulationCL::PrepareKernels(const Settings& ss, const size_t items_in_work
 {
 }
 
-SimulationCL::SimulationCL() : SimulationCL(true, true) {};
-
 SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant)
 {
     InitializeOpenCL(true, &ocl.deviceID, &ocl.context, &ocl.queue);
-    if (true)
+    if (false)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
-    /*
     std::cout << "\nBuilding main program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/scatter.cl", &ocl_scatter.program_lifetimes);
     std::cout << "Compilation succeeded!" << std::endl;
 
+    //auto clStatus = clBuildProgram(program, 1, &devices[0], "-cl-mad-enable", NULL, NULL); //build the program
+
+    //auto clStatus = clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_NUM_DEVICES, sizeof(size_t), &nb_devices, &nbread);// Return 1 devices
+
+    size_t* np = new size_t[1]; //Create size array
+
+    auto clStatus = clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), np, NULL);//Load in np the size of my binary
+
+    char** bn = new char* [1]; //Create the binary array
+
+    for (int i = 0; i < 1; i++)  bn[i] = new char[np[i]]; // I know... it's bad... but if i use new char[np], i have a segfault... :/
+
+    clStatus = clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARIES, sizeof(unsigned char*), bn, NULL); //Load the binary itself
+
+    printf("%s\n", bn[0]); //Print the first binary. But here, I have some curious characters
+
+    FILE* fp;
+    fopen_s(&fp, "binar.bin", "wb");
+
+    fwrite(bn[0], sizeof(char), np[0], fp); // Save the binary, but my file stay empty
+
+
+    /*
     size_t number_of_binaries;
     clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &number_of_binaries, NULL);
     size_t* binaries = new size_t[number_of_binaries];
@@ -382,12 +435,9 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     auto binary = new unsigned char *[number_of_binaries];
     clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARIES, number_of_binaries, &binary, NULL);
     */
-
     std::cout << "\nBuilding integration program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);
     std::cout << "Compilation succeeded!" << std::endl;
-
-    cl_int clStatus;
 
     ocl_scatter.lifetimes_kernel      = clCreateKernel(ocl_scatter.program_lifetimes, "lifetime", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetime kernel.");

@@ -109,11 +109,20 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         // ended.
         
         //bool bound_reached = !ps->is_coherent && orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise);
-        if (lifetime < INF || !next_cell_available)
+        //if (lifetime < INF || !next_cell_available)
+        if (lifetime < INF)
             break;
-    }
 
-    METRIC_INC_COND(lifetime > 1, metrics->particles_escaped);
+        if (!next_cell_available)
+        {
+            //printf("Particle escaped! (%e, %e, %f)\n", p->starting_position.x, p->starting_position.y, p->phi);
+            //printf("Cells passed: %i\n", metrics->cells_passed);
+            //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
+
+            METRIC_INC(metrics->particles_escaped);
+            break;
+        }
+    }
 
     return min(lifetime, p->orbit.bound_time);
 }

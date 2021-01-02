@@ -118,8 +118,8 @@ typedef struct SimulationConfiguration
         }
 
 
-        cfg.use_gpu = values.at("device") == "gpu";
-        cfg.force_recompile = atoi(values.at("force_recompile").c_str()) == 1;
+        cfg.use_gpu         = values.find("device") == values.end() || values.at("device") == "gpu";
+        cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
 
         cfg.num_samples        = atoi(values.at("num_samples").c_str());
         cfg.quadrant_phi_steps = atoi(values.at("integrand_steps").c_str());
@@ -140,13 +140,13 @@ typedef struct SimulationConfiguration
         {
             std::stringstream string_stream(values.at("temperatures"));
 
-            int i = 0;
             while (string_stream.good())
             {
                 std::string a;
                 std::getline(string_stream, a, ' ');
-                cfg.temperatures.push_back(atof(a.c_str()));
-                i++;
+                double temp = atof(a.c_str());
+                if (temp > 0)
+                    cfg.temperatures.push_back(temp);
             }
         }
 

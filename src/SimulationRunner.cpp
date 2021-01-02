@@ -26,10 +26,8 @@ void SimulationRunner::Run(const InitParameters& init)
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    //SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
-    SimulationCL es(cfg.particles_per_row - 1, cfg.quadrant_phi_steps);
-
-    exit(0);
+    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+    //SimulationCL es(cfg.particles_per_row - 1, cfg.quadrant_phi_steps);
 
     const Settings& ss = cfg.settings;
 
@@ -82,7 +80,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
 
     es.InitSample(grid, settings, coherent);
 
-    SampleMetrics sample_metrics(sample_index, coherent, N, nlifetimes);
+    SampleMetrics sample_metrics(sample_index, coherent, nlifetimes);
     sample_metrics.total_indexed_impurities = grid.GetTotalImpurityCount();
     sample_metrics.impurity_count           = grid.GetUniqueImpurityCount();
     sample_metrics.total_cells              = pow(grid.GetCellsPerRow(), 2);
@@ -94,34 +92,21 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     std::cout << '\r' << sample_string << std::string(cfg.magnetic_fields.size(), '.') << "]";
     std::cout << '\r' << sample_string;
 
-    LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
+    for (int i = 0; i < N; i++) {
+        if (cfg.output_type != OutputType::All)
+        {
+            sr.results[i] = es.ComputeSigmas(cfg.magnetic_fields[i], cfg.temperatures, grid, sample_metrics);
+        }
+        else
+        {
+            auto iteration = es.ComputeSigmasWithImages(cfg.magnetic_fields[i], cfg.temperatures, grid, sample_metrics);
 
-    for (int j = 0; j < N; j++) {
-        Metrics metrics;
-    
-        // Main compute method.
-        QueryPerformanceCounter(&beginLifetimesClock);
-        es.ComputeLifetimes(cfg.magnetic_fields[j], grid, metrics);
-        QueryPerformanceCounter(&endLifetimesClock);
-        
-        metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
-        metrics.real_lifetimes = sample_metrics.total_lifetimes - metrics.particles_inside_impurity;
-        sample_metrics.iteration_metrics[j] = metrics;
-
-        for (int i = 0; i < T; i++) {
-            if (cfg.output_type == OutputType::Nothing) 
-            {
-                sr.results[i][j] = es.DeriveTemperature(cfg.temperatures[i]);
-            }
-            else 
-            {
-                auto iteration = es.DeriveTemperatureWithImages(cfg.temperatures[i]);
-                sr.results[i][j] = iteration.result;
-
-                Logger::LogImages(GetImagePath(i, j, sample_index, coherent), cfg.particles_per_row - 1, iteration);
+            for (int j = 0; j < cfg.temperatures.size(); j++) {
+                sr.results[i][j] = iteration[j].result;
+                Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.particles_per_row - 1, iteration[j]);
             }
         }
-
+            
         std::cout << "x";
     }
 
@@ -135,22 +120,22 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
 {
     const double S = (double)cfg.num_samples;
 
-    for (int i = 0; i < cfg.temperatures.size(); i++) {
-        double temperature = cfg.temperatures[i];
-        Logger::CreateResultLog(GetResultPath(i), cfg, temperature);
+    for (int j = 0; j < cfg.temperatures.size(); j++) {
+        double temperature = cfg.temperatures[j];
 
-        for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
+        auto current_file = GetResultPath(j);
+        Logger::CreateResultLog(current_file, cfg, temperature);
+
+        for (int i = 0; i < cfg.magnetic_fields.size(); i++) {
             Sigma coherent, incoherent;
             double dxx_squared = 0;
 
             for (int s = 0; s < cfg.num_samples; s++) {
-                // Sommeer <MF,T> voor alle samples.
                 auto coh = sample_results_coh[s].results[i][j];
                 auto inc = sample_results_inc[s].results[i][j];
 
-                coherent += coh;
-                incoherent += inc;
-
+                coherent    += coh;
+                incoherent  += inc;
                 dxx_squared += pow(coh.xx + inc.xx, 2);
             }
 
@@ -159,7 +144,7 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
             incoherent.xx /= S;
             incoherent.xy /= S;
 
-            DataRow row(temperature, cfg.magnetic_fields[j], coherent, incoherent);
+            DataRow row(temperature, cfg.magnetic_fields[i], coherent, incoherent);
 
             if (cfg.num_samples == 1) {
                 row.xxd = 0;
@@ -167,11 +152,11 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
             else {
                 double sxx_sq_exp = dxx_squared / S + 1e-15;
                 double sxx_exp = (coherent.xx + incoherent.xx) / S;
-                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (double)(S - 1));
+                double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (S - 1.0));
                 row.xxd = sxx_std / sxx_exp;
             }
 
-            Logger::LogResult(GetResultPath(i), row);
+            Logger::LogResult(current_file, row);
         }
     }
 }

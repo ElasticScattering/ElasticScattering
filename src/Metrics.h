@@ -65,10 +65,9 @@ struct SampleMetrics
 
     std::vector<Metrics> iteration_metrics;
 
-    SampleMetrics(int p_sample_index, bool p_coherent, int N, int nlt) {
+    SampleMetrics(int p_sample_index, bool p_coherent, int nlt) {
         sample_index = p_sample_index;
         coherent = p_coherent;
-        iteration_metrics.resize(N);
 
         total_cells = 0;
         total_lifetimes = nlt;

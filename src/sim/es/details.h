@@ -105,9 +105,9 @@ AngleInRange(const double phi, const double2 phi_range, const bool clockwise)
     double low  = (clockwise) ? phi_range.y : phi_range.x;
     double high = (clockwise) ? phi_range.x : phi_range.y;
     
-    //const double D = 1e-10;
-    //low  += D;
-    //high -= D;
+    const double D = 1e-10;
+    low  += D;
+    high -= D;
 
     high = (high < low) ? (high + PI2) : high;
     

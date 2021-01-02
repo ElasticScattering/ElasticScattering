@@ -28,37 +28,39 @@ void Logger::CreateResultLog(const std::string file_path, const SimulationConfig
 
     const auto ss = cfg.settings;
     
-    file << "# Elastic Scattering simulation results summary." << std::endl;
-    file << "# Simulations " << cfg.magnetic_fields.size() << std::endl;
+    file << "# Elastic Scattering results summary." << std::endl;
+    file << std::endl; 
+    file << "# Temperature           " << temperature << std::endl;
+    file << "# Magnetic field values " << cfg.magnetic_fields.size() << std::endl;
+    file << std::endl;
     file << "# Samples     " << cfg.num_samples << std::endl;
     file << "# Particles   " << cfg.particles_per_row-1 << "x" << cfg.particles_per_row-1 << std::endl;
     file << "# Phi steps   " << cfg.quadrant_phi_steps << std::endl;
+    file << std::endl;
 
     file << std::scientific << std::setprecision(3);
-    file << std::endl;
-    file << "###########################" << std::endl;
-    file << "# Scattering parameters   #" << std::endl;
+    file << "############" << std::endl;
+    file << "# Settings #" << std::endl;
+    file << "#\t" << "tau              " << ss.tau << std::endl;
+    file << "#\t" << "alpha            " << ss.alpha << std::endl;
+    file << "#\t" << "particle_speed   " << ss.particle_speed << std::endl;
+    file << "#\t" << "clockwise        " << (ss.is_clockwise ? "True" : "False") << std::endl;
     file << "#" << std::endl;
-    file << "#\t" << "Temperature    " << temperature << std::endl;
-    file << "#\t" << "Tau            " << ss.tau << std::endl;
-    file << "#\t" << "Alpha          " << ss.alpha << std::endl;
-    file << "#\t" << "Particle speed " << ss.particle_speed << std::endl;
-    file << "#\t" << "Clockwise      " << (ss.is_clockwise ? "True" : "False") << std::endl;
-    file << "#\n# Impurities:" << std::endl;
-    file << "#\t" << "Region size    " << ss.region_size << std::endl;
-    file << "#\t" << "Region extends " << ss.region_extends << std::endl;
-    file << "#\t" << "Density        " << ss.impurity_density << std::endl;
-    file << "#\t" << "Radius         " << ss.impurity_radius << std::endl;
-
-    file << "#\n# Constants:" << std::endl;
-    file << "#\t" << "Particle mass  " << M << std::endl;
-    file << "#\t" << "E              " << E << std::endl;
-    file << "#\t" << "HBAR           " << HBAR << std::endl;
-    file << "#\t" << "C              " << C1 << std::endl;
-    file << "#\t" << "KB             " << KB << std::endl;
+    file << "#\t" << "region_size      " << ss.region_size << std::endl;
+    file << "#\t" << "region_extends   " << ss.region_extends << std::endl;
+    file << "#\t" << "impurity_denisty " << ss.impurity_density << std::endl;
+    file << "#\t" << "impurity_radius  " << ss.impurity_radius << std::endl;
     file << std::endl;
-    file << "###########################" << std::endl;
-    file << "# Results                 #" << std::endl;
+    file << "#############" << std::endl;
+    file << "# Constants #" << std::endl << std::setprecision(6);
+    file << "#\t" << "Particle mass " << M << std::endl;
+    file << "#\t" << "E             " << E << std::endl;
+    file << "#\t" << "HBAR          " << HBAR << std::endl;
+    file << "#\t" << "C             " << C1 << std::endl;
+    file << "#\t" << "KB            " << KB << std::endl;
+    file << std::endl;
+    file << "###########" << std::endl;
+    file << "# Results #" << std::endl;
     file << "#" << std::endl << std::endl;
     file << "magnetic_field  sigma_xx_inc    sigma_xx_coh    sigma_xy_inc    sigma_xy_coh    delta_xx" << std::endl;
 }
@@ -79,13 +81,7 @@ void Logger::LogResult(const std::string file_path, const DataRow& row)
          << std::setw(w) << std::left << row.incoherent.xy
          << std::setw(w) << std::left << row.coherent.xy 
          << std::setw(w) << std::left << row.xxd << std::endl;
-    
-    //std::string s = "   ";
-    //file << row.magnetic_field << s << row.incoherent.xx << s << row.coherent.xx << s << row.incoherent.xy << s << row.coherent.xy << s << row.xxd << std::endl;
 }
-
-
-
 
 void Logger::CreateSampleResultLog(const std::string file_path, const SimulationConfiguration& cfg)
 {
@@ -136,22 +132,24 @@ void Logger::LogSampleResults(const std::string file_path, const SampleResult co
     int w = p + 8;
     file << std::scientific << std::setprecision(p);
 
-    for (int j = 0; j < coherent.results.size(); j++) {
-        auto coh = coherent.results[j];
-        auto inc = incoherent.results[j];
+    const int T = coherent.results[0].size();
+    const int B = coherent.results.size();
 
-        for (int i = 0; i < coherent.results.size(); i++) {
+    for (int j = 0; j < T; j++) {
+        for (int i = 0; i < B; i++) {
+            auto coh = coherent.results[i];
+            auto inc = incoherent.results[i];
+
             file << std::setw(4) << std::left << j
                  << std::setw(4) << std::left << i
-                 << std::setw(w) << std::left << inc[i].xx
-                 << std::setw(w) << std::left << coh[i].xx
-                 << std::setw(w) << std::left << inc[i].xy
-                 << std::setw(w) << std::left << coh[i].xy << std::endl;
+                 << std::setw(w) << std::left << inc[j].xx
+                 << std::setw(w) << std::left << coh[j].xx
+                 << std::setw(w) << std::left << inc[j].xy
+                 << std::setw(w) << std::left << coh[j].xy << std::endl;
         }
         file << std::endl;
     }
 }
-
 
 
 

@@ -24,8 +24,6 @@ class SimulationRunner {
 		return GetSamplePath(sample_idx) + type + "T" + std::to_string(t_idx) + " MF" + std::to_string(m_idx) + ".png";
 	}
 
-	//std::string GetMetricsPath(int sample_idx) const { return GetSamplePath(sample_idx) + "/Metrics.txt"; }
-
 	std::string GetMetricsPath() const { return cfg.output_directory + "/Metrics.txt"; }
 
 	void CreateOutputDirectory() const;

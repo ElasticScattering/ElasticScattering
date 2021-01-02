@@ -1,7 +1,6 @@
 #include "src/sim/es/util.h"
 #include "src/sim/cl/cl_macros.h"
 #include "src/sim/es/constants.h"
-
 #include "src/sim/es/settings.h"
 
 kernel void 
@@ -27,9 +26,9 @@ kernel void
 apply_sigma_component(constant double* lifetimes, 
 					  constant SimulationSettings* ss, 
 					  constant ParticleSettings* ps, 
-					  const int mode, 
 					  const double tau, 
-					  global double* sigma_component)
+					  const int mode, 
+					  global double* sigma_lifetimes)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -38,16 +37,10 @@ apply_sigma_component(constant double* lifetimes,
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
-	int idx = GET_INDEX(i, j, v);
-
-	const int q = (int)(v / ss->values_per_quadrant);
-	const int p =       v % ss->values_per_quadrant;
-
-	//double tau = (ps.is_coherent) ? ss.coherent_tau : HBAR / (KB * temperature);
-
-	double phi = GET_PHI(q, p);
-	double f = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi); 
-	sigma_component[idx] = GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed);
+	int idx    = GET_INDEX(i, j, v);
+	double phi = GET_PHI(v);
+	double f   = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi); 
+	sigma_lifetimes[idx] = GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed) * f;
 }
 
 
@@ -75,7 +68,8 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
-
+	
+	int prt_idx = GET_PARTICLE_INDEX(i, j);
 	double total = 0;
 	for (int q = 0; q < 4; q++)
 	{
@@ -86,7 +80,7 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	}
 	
 	// @Todo, integrand factor.
-	particle_results[j * (ss->particles_per_row+1) + i] = total;
+	particle_results[prt_idx] = total * ss->phi_integrand_factor;
 }
 
 
