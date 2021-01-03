@@ -13,7 +13,7 @@
 #include "sim/SimpsonWeightsTest.h"
 #include "sim/SigmaIntegrationTest.h"
 
-#include "sim/cl/BasicOpenCLTest.h"
+//#include "sim/cl/BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"
 
 void test_main() {

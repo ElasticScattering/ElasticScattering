@@ -64,7 +64,6 @@ public:
 		ss.region_size                = s.region_size;
 		ss.region_extended_area       = s.region_extends;
 		ss.distance_between_particles = ss.region_size / (double)(ss.particles_per_row - 1);
-		//ss.small_offset               = v2(ss.distance_between_particles * 0.01, ss.distance_between_particles * 0.005);
 		ss.small_offset = v2(is.cell_size * 0.01, is.cell_size * 0.005);
 
 		const double base_area = s.alpha * 2.0;

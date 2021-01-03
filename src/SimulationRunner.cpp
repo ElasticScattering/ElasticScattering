@@ -150,7 +150,7 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_resu
                 row.xxd = 0;
             }
             else {
-                double sxx_sq_exp = dxx_squared / S + 1e-15;
+                double sxx_sq_exp = dxx_squared / S;
                 double sxx_exp = (coherent.xx + incoherent.xx) / S;
                 double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (S - 1.0));
                 row.xxd = sxx_std / sxx_exp;

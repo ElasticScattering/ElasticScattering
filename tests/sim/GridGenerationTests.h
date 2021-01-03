@@ -143,6 +143,19 @@ TEST_CASE("Index should contain all cells.")
 	}
 }
 
+/*
+TEST_CASE("")
+{
+	auto s = SimulationConfiguration::ParseFromeFile("tests/data/real_case.config").settings;
+	auto impurities = GetTestImpurities("tests/data/real_case_impurities.dat");
+	auto grid = Grid(impurities, s.region_size, s.region_extends, s.impurity_radius, s.max_expected_impurities_in_cell);
+
+	CHECK(grid.GetUniqueImpurityCount() == 19000);
+	CHECK(grid.GetCellsPerRow() == 44);
+	CHECK(grid.GetTotalImpurityCount() == 19000);
+}
+*/
+
 TEST_CASE("Impurities should be indexed correctly.")
 {
 	double impurity_radius = 1e-3;
@@ -184,14 +197,6 @@ TEST_CASE("Impurities should be indexed diagonally.")
 		REQUIRE_MESSAGE(grid.GetCellsPerRow() == 2, "Niet genoeg cellen om te testen");
 
 		CHECK(grid.GetTotalImpurityCount() == 7);
-
-		/*
-		for (int i = 0; i < grid.GetImpurities().size(); i++)
-		{
-			auto imp = grid.GetImpurities()[i];
-			printf("Impurity: %f, %f\n", imp.x, imp.y);
-		}
-		*/
 	}
 	
 	SUBCASE("Impurity off centered.")

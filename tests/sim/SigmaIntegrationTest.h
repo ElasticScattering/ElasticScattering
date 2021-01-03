@@ -23,9 +23,8 @@ SampleResult GetSample(Simulation& sim, const Grid& grid, const SimulationConfig
 
 void RunTestSample(const std::string file_path, const std::string imp_path, const std::vector<DataRow>& expected_results)
 {
-	SimulationCPU sim(31, 7);
-
 	auto cfg = SimulationConfiguration::ParseFromeFile(file_path);
+	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
 
 	auto impurities = GetTestImpurities(imp_path);
 	REQUIRE(impurities.size() > 0);
@@ -39,8 +38,13 @@ void RunTestSample(const std::string file_path, const std::string imp_path, cons
 	SampleMetrics metrics_inc(0, 0, 0);
 	auto results_inc = GetSample(sim, grid, cfg, false, metrics_inc);
 
+	for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
+		REQUIRE(metrics_inc.iteration_metrics[j].particles_escaped == 0);
+		REQUIRE(metrics_coh.iteration_metrics[j].particles_escaped == 0);
+	}
+
 	for (int i = 0; i < cfg.temperatures.size(); i++) {
-		for (int j = 1; j < cfg.magnetic_fields.size(); j++) {
+		for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
 			DataRow row(cfg.temperatures[i], cfg.magnetic_fields[j], results_coh.results[j][i], results_inc.results[j][i]);
 
 			auto expected_row = expected_results[j * cfg.temperatures.size() + i];
@@ -55,17 +59,12 @@ void RunTestSample(const std::string file_path, const std::string imp_path, cons
 			printf("inc xy: %.8f <> %.8f, r/e : %.5f\n", row.incoherent.xy, expected_row.incoherent.xy, row.incoherent.xy / expected_row.incoherent.xy);
 			*/
 
-			CHECK_RELATIVE(row.coherent.xx, expected_row.coherent.xx);
-			CHECK_RELATIVE(row.coherent.xy, expected_row.coherent.xy);
-			CHECK_RELATIVE(row.incoherent.xx, expected_row.incoherent.xx);
-			CHECK_RELATIVE(row.incoherent.xy, expected_row.incoherent.xy);
+			CHECK_RELATIVE_MF(row.coherent.xx, expected_row.coherent.xx, row.magnetic_field);
+			CHECK_RELATIVE_MF(row.coherent.xy, expected_row.coherent.xy, row.magnetic_field);
+			CHECK_RELATIVE_MF(row.incoherent.xx, expected_row.incoherent.xx, row.magnetic_field);
+			CHECK_RELATIVE_MF(row.incoherent.xy, expected_row.incoherent.xy, row.magnetic_field);
 
 		}
-	}
-
-	for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
-		CHECK(metrics_inc.iteration_metrics[j].particles_escaped == 0);
-		CHECK(metrics_coh.iteration_metrics[j].particles_escaped == 0);
 	}
 }
 
@@ -108,8 +107,30 @@ TEST_CASE("Integration Test")
 
 		RunTestSample("tests/data/test_smaller_case.config", "tests/data/test_impurities.dat", expected_results);
 	}
-}
 
+	SUBCASE("File 2")
+	{
+		auto expected_results = std::vector<DataRow>{
+			DataRow(  0.01,  0.01000, Sigma(1.386002087578524e-03, -1.537199128580249e-05), Sigma(8.368570176961005e-04, -1.316584974074347e-06)),
+			DataRow(  0.10,  0.01000, Sigma(1.386002087578524e-03, -1.537199128580249e-05), Sigma(8.367279670060126e-04, -1.315795417499154e-06)),
+			DataRow(  1.00,  0.01000, Sigma(1.386002087578524e-03, -1.537199128580249e-05), Sigma(8.354396218919578e-04, -1.307930948448158e-06)),
+			DataRow( 10.00,  0.01000, Sigma(1.386002087578524e-03, -1.537199128580249e-05), Sigma(8.227688608287362e-04, -1.232309223977877e-06)),
+			DataRow(100.00,  0.01000, Sigma(1.386002087578524e-03, -1.537199128580249e-05), Sigma(7.143179157335149e-04, -7.083291397089291e-07)),
+			DataRow(  0.01,  2.50500, Sigma(1.385845272478199e-03, -1.396557740299649e-05), Sigma(8.365443650852093e-04, -5.424390123263805e-07)),
+			DataRow(  0.10,  2.50500, Sigma(1.385845272478199e-03, -1.396557740299649e-05), Sigma(8.364153792827681e-04, -5.418553946037812e-07)),
+			DataRow(  1.00,  2.50500, Sigma(1.385845272478199e-03, -1.396557740299649e-05), Sigma(8.351276812030610e-04, -5.360457097528681e-07)),
+			DataRow( 10.00,  2.50500, Sigma(1.385845272478199e-03, -1.396557740299649e-05), Sigma(8.224632093090551e-04, -4.805209555980756e-07)),
+			DataRow(100.00,  2.50500, Sigma(1.385845272478199e-03, -1.396557740299649e-05), Sigma(7.140600114090230e-04, -1.202642641281398e-07)),
+			DataRow(  0.01,  5.00000, Sigma(1.386064235093636e-03, -1.245047286027403e-05), Sigma(8.365863725002720e-04,  3.451963420552745e-07)),
+			DataRow(  0.10,  5.00000, Sigma(1.386064235093636e-03, -1.245047286027403e-05), Sigma(8.364573312744872e-04,  3.455147926025721e-07)),
+			DataRow(  1.00,  5.00000, Sigma(1.386064235093636e-03, -1.245047286027403e-05), Sigma(8.351690812934688e-04,  3.486790549469624e-07)),
+			DataRow( 10.00,  5.00000, Sigma(1.386064235093636e-03, -1.245047286027403e-05), Sigma(8.224993208570038e-04,  3.783627484758533e-07)),
+			DataRow(100.00,  5.00000, Sigma(1.386064235093636e-03, -1.245047286027403e-05), Sigma(7.140624595128576e-04,  5.313575786105296e-07))
+		};
+
+		RunTestSample("tests/data/real_case.config", "tests/data/real_case_impurities.dat", expected_results);
+	}
+}
 
 TEST_CASE("DeriveTemperature with and without logging should return same sigma result")
 {

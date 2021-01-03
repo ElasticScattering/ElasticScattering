@@ -8,7 +8,6 @@
 #include "constants.h"
 #include "details.h"
 #include "settings.h"
-#include <assert.h>
 
 typedef struct Intersection {
 	double2 position;
@@ -28,11 +27,6 @@ typedef struct Intersection {
 } Intersection;
 
 ESCL_INLINE int get_index(const int2 p, const int cells_per_row) {
-	assert(p.x >= 0);
-	assert(p.x < cells_per_row);
-	assert(p.y >= 0);
-	assert(p.y < cells_per_row);
-
 	return p.y * cells_per_row + p.x;
 }
 
