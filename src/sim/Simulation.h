@@ -54,8 +54,8 @@ protected:
 	inline double GetElapsedTime(LARGE_INTEGER beginClock, LARGE_INTEGER endClock) const { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }
 
 public:
-	virtual std::vector<Sigma> ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
-	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
+	virtual std::vector<Sigma> ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
+	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
 
 	void InitSample(const Grid& grid, const Settings& s, const bool coherent)
 	{
@@ -105,8 +105,8 @@ class SimulationCPU : public Simulation {
 	std::vector<double> IntegrateParticle(const std::vector<double>& current_lifetimes) const;
 
 public:
-	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
-	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
+	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
+	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 
 	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
 };
@@ -119,8 +119,8 @@ class SimulationCL : public Simulation {
 
 	void PrepareKernels(const Settings& s, const size_t items_in_workgroup);
 public:
-	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
-	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
+	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
+	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 
 	void UploadImpurities(const Grid& grid);
 

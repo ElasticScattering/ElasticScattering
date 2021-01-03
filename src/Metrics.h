@@ -24,7 +24,6 @@ typedef struct Metrics {
 
     double avg_particle_lifetime;
 
-
     Metrics() {
         cells_passed = 0;
         impurities_tested = 0;

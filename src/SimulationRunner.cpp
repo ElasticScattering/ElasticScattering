@@ -116,7 +116,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     return sr;
 }
 
-void SimulationRunner::FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc)
+void SimulationRunner::FinishResults(const std::vector<SampleResult>& sample_results_coh, const std::vector<SampleResult>& sample_results_inc)
 {
     const double S = (double)cfg.num_samples;
 
@@ -168,7 +168,7 @@ void SimulationRunner::CreateSampleOutputDirectory(const int sample_index) const
     std::filesystem::create_directory(sample_path + "/Incoherent/");
     std::filesystem::create_directory(sample_path + "/Coherent/");
 
-    Logger::CreateSampleResultLog(GetSampleResultsPath(sample_index), cfg);
+    Logger::CreateSampleResultLog(GetSampleResultsPath(sample_index));
 }
 
 void SimulationRunner::CreateOutputDirectory() const
@@ -177,5 +177,10 @@ void SimulationRunner::CreateOutputDirectory() const
         std::filesystem::create_directory(cfg.base_output_directory);
 
     std::filesystem::create_directory(cfg.output_directory);
+
+    auto slash_pos = cfg.config_path.rfind('/');
+    auto config_name = slash_pos != std::string::npos ? cfg.config_path.substr(slash_pos, cfg.config_path.size() - slash_pos) : cfg.config_path;
+
+    std::filesystem::copy_file(cfg.config_path, cfg.output_directory + "/" + config_name);
 }
 

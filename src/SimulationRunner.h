@@ -30,7 +30,7 @@ class SimulationRunner {
 	void CreateSampleOutputDirectory(const int sample_index) const;
 
 	SampleResult RunSample(Simulation& es, const Settings& settings, const int sample_index, const bool coherent, const Grid& grid);
-	void FinishResults(const std::vector<SampleResult> sample_results_coh, const std::vector<SampleResult> sample_results_inc);
+	void FinishResults(const std::vector<SampleResult> &sample_results_coh, const std::vector<SampleResult> &sample_results_inc);
 
 public:
 	void Run(const InitParameters& init);

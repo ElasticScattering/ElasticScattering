@@ -36,18 +36,19 @@ enum class OutputType
 typedef struct SimulationConfiguration
 {
     int num_samples;
-    std::vector<double> magnetic_fields;
-    std::vector<double> temperatures;
-
     int particles_per_row;
     int quadrant_phi_steps;
-
-    Settings settings;
 
     OutputType output_type;
     bool use_gpu;
     bool force_recompile;
 
+    Settings settings;
+
+    std::vector<double> magnetic_fields;
+    std::vector<double> temperatures;
+    
+    std::string config_path;
     std::string base_output_directory;
     std::string output_directory;
     int digits_in_sample_num;
@@ -84,6 +85,7 @@ typedef struct SimulationConfiguration
         fb.close();
 
         SimulationConfiguration cfg;
+        cfg.config_path = file_path;
 
         cfg.output_type = OutputType::All;
         if (values.find("output_type") != values.end()) {

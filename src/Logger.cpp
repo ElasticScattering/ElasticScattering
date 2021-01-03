@@ -26,111 +26,62 @@ void Logger::CreateResultLog(const std::string file_path, const SimulationConfig
     std::ofstream file;
     file.open(file_path);
 
-    const auto ss = cfg.settings;
-    
     file << "# Elastic Scattering results summary." << std::endl;
     file << std::endl; 
-    file << "# Temperature           " << temperature << std::endl;
-    file << "# Magnetic field values " << cfg.magnetic_fields.size() << std::endl;
+    file << "Temperature " << std::fixed << std::setprecision(4) << temperature << std::endl;
     file << std::endl;
-    file << "# Samples     " << cfg.num_samples << std::endl;
-    file << "# Particles   " << cfg.particles_per_row-1 << "x" << cfg.particles_per_row-1 << std::endl;
-    file << "# Phi steps   " << cfg.quadrant_phi_steps << std::endl;
+    file << "MF values   " << cfg.magnetic_fields.size() << std::endl;
+    file << "Samples     " << cfg.num_samples << std::endl;
+    file << "Positions   " << cfg.particles_per_row-1 << " x " << cfg.particles_per_row-1 << std::endl;
+    file << "Phi steps   " << cfg.quadrant_phi_steps << std::endl;
     file << std::endl;
 
-    file << std::scientific << std::setprecision(3);
-    file << "############" << std::endl;
-    file << "# Settings #" << std::endl;
-    file << "#\t" << "tau              " << ss.tau << std::endl;
-    file << "#\t" << "alpha            " << ss.alpha << std::endl;
-    file << "#\t" << "particle_speed   " << ss.particle_speed << std::endl;
-    file << "#\t" << "clockwise        " << (ss.is_clockwise ? "True" : "False") << std::endl;
-    file << "#" << std::endl;
-    file << "#\t" << "region_size      " << ss.region_size << std::endl;
-    file << "#\t" << "region_extends   " << ss.region_extends << std::endl;
-    file << "#\t" << "impurity_denisty " << ss.impurity_density << std::endl;
-    file << "#\t" << "impurity_radius  " << ss.impurity_radius << std::endl;
-    file << std::endl;
-    file << "#############" << std::endl;
-    file << "# Constants #" << std::endl << std::setprecision(6);
-    file << "#\t" << "Particle mass " << M << std::endl;
-    file << "#\t" << "E             " << E << std::endl;
-    file << "#\t" << "HBAR          " << HBAR << std::endl;
-    file << "#\t" << "C             " << C1 << std::endl;
-    file << "#\t" << "KB            " << KB << std::endl;
-    file << std::endl;
-    file << "###########" << std::endl;
-    file << "# Results #" << std::endl;
-    file << "#" << std::endl << std::endl;
-    file << "magnetic_field  sigma_xx_inc    sigma_xx_coh    sigma_xy_inc    sigma_xy_coh    delta_xx" << std::endl;
+    file << "# Results #" << std::endl << std::endl;
+
+    file << std::left 
+        << std::setw(8) << "B"
+        << std::setw(rw) << "sigma_xx_inc" 
+        << std::setw(rw) << "sigma_xx_coh" 
+        << std::setw(rw) << "sigma_xy_inc" 
+        << std::setw(rw) << "sigma_xy_coh" 
+        << std::setw(rw) << "delta_xx" << std::endl;
 }
-
 
 void Logger::LogResult(const std::string file_path, const DataRow& row)
 {
     std::ofstream file;
     file.open(file_path, std::ios_base::app);
 
-    int p = 8;
-    int w = p + 8;
-    file << std::scientific << std::setprecision(p);
-
-    file << std::setw(w) << std::left << row.magnetic_field 
-         << std::setw(w) << std::left << row.incoherent.xx 
-         << std::setw(w) << std::left << row.coherent.xx 
-         << std::setw(w) << std::left << row.incoherent.xy
-         << std::setw(w) << std::left << row.coherent.xy 
-         << std::setw(w) << std::left << std::fixed << row.xxd << std::endl;
+    file << std::left << std::setw(8) << std::setprecision(2) << std::fixed << row.magnetic_field
+         << std::scientific << std::setprecision(result_precision) 
+         << std::setw(rw) << row.incoherent.xx
+         << std::setw(rw) << row.coherent.xx
+         << std::setw(rw) << row.incoherent.xy
+         << std::setw(rw) << row.coherent.xy
+         << std::setw(rw) << std::setprecision(4) << std::defaultfloat << row.xxd << std::endl;
 }
 
-void Logger::CreateSampleResultLog(const std::string file_path, const SimulationConfiguration& cfg)
+void Logger::CreateSampleResultLog(const std::string file_path)
 {
     std::ofstream file;
     file.open(file_path);
 
-    const auto ss = cfg.settings;
-
     file << "# Elastic Scattering sample results summary." << std::endl;
-    file << "# Simulations " << cfg.magnetic_fields.size() << std::endl;
-    file << "# Particles   " << cfg.particles_per_row - 1 << "x" << cfg.particles_per_row - 1 << std::endl;
-    file << "# Phi steps   " << cfg.quadrant_phi_steps << std::endl;
 
-    file << std::scientific << std::setprecision(3);
-    file << std::endl;
-    file << "###########################" << std::endl;
-    file << "# Scattering parameters   #" << std::endl;
-    file << "#" << std::endl;
-    file << "#\t" << "Tau            " << ss.tau << std::endl;
-    file << "#\t" << "Alpha          " << ss.alpha << std::endl;
-    file << "#\t" << "Particle speed " << ss.particle_speed << std::endl;
-    file << "#\t" << "Clockwise      " << (ss.is_clockwise ? "True" : "False") << std::endl;
-    file << "#\n# Impurities:" << std::endl;
-    file << "#\t" << "Region size    " << ss.region_size << std::endl;
-    file << "#\t" << "Region extends " << ss.region_extends << std::endl;
-    file << "#\t" << "Density        " << ss.impurity_density << std::endl;
-    file << "#\t" << "Radius         " << ss.impurity_radius << std::endl;
-
-    file << "###########################" << std::endl;
-    file << "# Sample Results          #" << std::endl;
-    file << "#" << std::endl << std::endl;
-
-    int w = 16;
-    file << std::setw(4) << std::left << "T"
-         << std::setw(4) << std::left << "B"
-         << std::setw(w) << std::left << "sigma_xx_inc"
-         << std::setw(w) << std::left << "sigma_xx_coh"
-         << std::setw(w) << std::left << "sigma_xy_inc" 
-         << std::setw(w) << std::left << "sigma_xy_coh" << std::endl;
+    file << std::left << std::setw(4) << "T"
+         << std::setw(4) << "B"
+         << std::setw(rw) << "sigma_xx_inc"
+         << std::setw(rw) << "sigma_xx_coh"
+         << std::setw(rw) << "sigma_xy_inc" 
+         << std::setw(rw) << "sigma_xy_coh" << std::endl;
 }
 
-void Logger::LogSampleResults(const std::string file_path, const SampleResult coherent, const SampleResult incoherent)
+void Logger::LogSampleResults(const std::string file_path, const SampleResult& coherent, const SampleResult& incoherent)
 {
     std::ofstream file;
     file.open(file_path, std::ios_base::app);
 
-    int p = 8;
-    int w = p + 8;
-    file << std::scientific << std::setprecision(p);
+    file << std::setprecision(result_precision);
 
     const int T = coherent.results[0].size();
     const int B = coherent.results.size();
@@ -140,12 +91,12 @@ void Logger::LogSampleResults(const std::string file_path, const SampleResult co
             auto coh = coherent.results[i];
             auto inc = incoherent.results[i];
 
-            file << std::setw(4) << std::left << j
-                 << std::setw(4) << std::left << i
-                 << std::setw(w) << std::left << inc[j].xx
-                 << std::setw(w) << std::left << coh[j].xx
-                 << std::setw(w) << std::left << inc[j].xy
-                 << std::setw(w) << std::left << coh[j].xy << std::endl;
+            file << std::left << std::setw(4) << j
+                              << std::setw(4) << i
+                              << std::setw(rw) << std::scientific << inc[j].xx
+                              << std::setw(rw) << std::scientific << coh[j].xx
+                              << std::setw(rw) << std::scientific << inc[j].xy
+                              << std::setw(rw) << std::scientific << coh[j].xy << std::endl;
         }
         file << std::endl;
     }
@@ -159,7 +110,7 @@ void Logger::CreateSampleMetricsLog(const std::string file_path, const GlobalMet
     file.open(file_path);
 
     file << "# Metrics collected during particle lifetime computation." << std::endl << std::endl;
-    file << "Particles  " << gm.particles_per_row << " x " << gm.particles_per_row << std::endl;
+    file << "Positions  " << gm.particles_per_row << " x " << gm.particles_per_row << std::endl;
     file << "Phi values " << gm.phi_values << std::endl;
     file << "Lifetimes  " << ((int)pow(gm.particles_per_row, 2) * gm.phi_values) << std::endl;
     file << "Impurities " << gm.unique_impurity_count << std::endl;
@@ -183,10 +134,10 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         file << "---------------------------------------------------------" << std::endl;
         file << "Sample " << sample_metrics.sample_index << ((sample_metrics.coherent) ? " Coherent" : " Incoherent") << std::endl;
         file << "---------------------------------------------------------" << std::endl;
-        file << "Seed                              " << sample_metrics.seed << std::endl;
-        file << "Total indexed impurities          " << std::setprecision(2) << (double)sample_metrics.total_indexed_impurities / 1'000'000 << " mil (" << std::setprecision(4) << (sample_metrics.total_indexed_impurities - sample_metrics.impurity_count) << " overlapped)" << std::endl;
-        file << "Avg. impurities per cell          " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.total_cells) << std::endl;
-        file << "Particles started inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_lifetimes)) << "%" << std::endl;
+        file << "Seed                      " << sample_metrics.seed << std::endl;
+        file << "Total indexed impurities  " << std::setprecision(2) << (double)sample_metrics.total_indexed_impurities / 1'000'000 << " mil (" << std::setprecision(4) << (sample_metrics.total_indexed_impurities - sample_metrics.impurity_count) << " overlapped)" << std::endl;
+        file << "Avg. impurities per cell  " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.total_cells) << std::endl;
+        file << "Positions inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_lifetimes)) << "%" << std::endl;
     }
 
     // Header

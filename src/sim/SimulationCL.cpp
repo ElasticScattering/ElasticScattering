@@ -54,7 +54,7 @@ OCLResources ocl;
 OCLSimResources ocl_scatter;
 OCLIntegrationResources ocl_integration;
 
-std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
     Metrics metrics;
     ComputeLifetimes(magnetic_field, grid, metrics);
@@ -66,7 +66,7 @@ std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, cons
     return results;
 }
 
-std::vector<IterationResult> SimulationCL::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+std::vector<IterationResult> SimulationCL::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
     Metrics metrics;
     ComputeLifetimes(magnetic_field, grid, metrics);

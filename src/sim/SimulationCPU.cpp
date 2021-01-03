@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <Windows.h>
 
-std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
 	LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
 
@@ -32,7 +32,7 @@ std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, con
 	return results;
 }
 
-std::vector<IterationResult> SimulationCPU::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double> temperatures, const Grid& grid, SampleMetrics& sample_metrics)
+std::vector<IterationResult> SimulationCPU::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
 	LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
 	Metrics metrics;
