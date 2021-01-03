@@ -22,53 +22,96 @@ void SimulationRunner::Run(const InitParameters& init)
     }
     std::cout << std::endl;
 
-    std::vector<SampleResult> sample_results_coh(cfg.num_samples);
-    std::vector<SampleResult> sample_results_inc(cfg.num_samples);
-
-    std::random_device random_device;
-    //SimulationCPU es(cfg.positions_per_row-1, cfg.particles_per_quadrant);
-    SimulationCL es(cfg.positions_per_row - 1, cfg.particles_per_quadrant);
-
-    const Settings& ss = cfg.settings;
-
     LARGE_INTEGER beginTotalClock, endTotalClock;
     QueryPerformanceCounter(&beginTotalClock);
-    for (int i = 0; i < cfg.num_samples; i++) {
-        if (cfg.output_type == OutputType::All)
-            CreateSampleOutputDirectory(i);
+    auto sr = cfg.use_gpu ? RunSimulationCL() : RunSimulationCPU();
+    QueryPerformanceCounter(&endTotalClock);
+    std::cout << std::endl << "Finished! (" << GetElapsedTime(beginTotalClock, endTotalClock) << "s)" << std::endl;
 
+    FinishResults(sr);
+}
+
+SimulationResult SimulationRunner::RunSimulationCPU() const
+{
+    std::random_device random_device;
+    const Settings& ss = cfg.settings;
+    
+    auto es = SimulationCPU(cfg.positions_per_row - 1, cfg.particles_per_quadrant);
+    SimulationResult sr(cfg.num_samples);
+
+    for (int i = 0; i < cfg.num_samples; i++) {
         LARGE_INTEGER beginGridClock, endGridClock;
         QueryPerformanceCounter(&beginGridClock);
-        auto seed = random_device();
-        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
+        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
         QueryPerformanceCounter(&endGridClock);
         double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
 
+        if (cfg.output_type == OutputType::All)
+            CreateSampleOutputDirectory(i);
+
         if (i == 0 && cfg.output_type != OutputType::Nothing) {
             GlobalMetrics gm;
-            gm.particles_per_row     = cfg.positions_per_row - 1;
-            gm.phi_steps             = 4 * cfg.particles_per_quadrant;
-            gm.cells_per_row         = grid.GetCellsPerRow();
+            gm.particles_per_row = cfg.positions_per_row - 1;
+            gm.phi_steps = 4 * cfg.particles_per_quadrant;
+            gm.cells_per_row = grid.GetCellsPerRow();
             gm.unique_impurity_count = grid.GetUniqueImpurityCount();
-            gm.grid_creation_time    = grid_creation_time;
+            gm.grid_creation_time = grid_creation_time;
 
             Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
         }
 
-        sample_results_coh[i] = RunSample(es, ss, i, true,  grid);
-        sample_results_inc[i] = RunSample(es, ss, i, false, grid);
+        sr.coherent.push_back(RunSample(es, ss, i, true, grid));
+        sr.incoherent.push_back(RunSample(es, ss, i, false, grid));
 
         if (cfg.output_type == OutputType::All)
-            Logger::LogSampleResults(GetSampleResultsPath(i), sample_results_coh[i], sample_results_inc[i]);
+            Logger::LogSampleResults(GetSampleResultsPath(i), sr.coherent[i], sr.incoherent[i]);
     }
 
-    FinishResults(sample_results_coh, sample_results_inc);
-
-    QueryPerformanceCounter(&endTotalClock);
-    std::cout << std::endl << "Finished! (" << GetElapsedTime(beginTotalClock, endTotalClock) << "s)" << std::endl;
+    return sr;
 }
 
-SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &settings, const int sample_index, const bool coherent, const Grid& grid)
+SimulationResult SimulationRunner::RunSimulationCL() const
+{
+    std::random_device random_device;
+    const Settings& ss = cfg.settings;
+
+    auto es = SimulationCL(cfg.positions_per_row - 1, cfg.particles_per_quadrant);
+    SimulationResult sr(cfg.num_samples);
+
+    for (int i = 0; i < cfg.num_samples; i++) {
+        LARGE_INTEGER beginGridClock, endGridClock;
+        QueryPerformanceCounter(&beginGridClock);
+        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
+        QueryPerformanceCounter(&endGridClock);
+        double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
+
+        es.UploadImpurities(grid);
+
+        if (cfg.output_type == OutputType::All)
+            CreateSampleOutputDirectory(i);
+
+        if (i == 0 && cfg.output_type != OutputType::Nothing) {
+            GlobalMetrics gm;
+            gm.particles_per_row = cfg.positions_per_row - 1;
+            gm.phi_steps = 4 * cfg.particles_per_quadrant;
+            gm.cells_per_row = grid.GetCellsPerRow();
+            gm.unique_impurity_count = grid.GetUniqueImpurityCount();
+            gm.grid_creation_time = grid_creation_time;
+
+            Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
+        }
+
+        sr.coherent.push_back(RunSample(es, ss, i, true, grid));
+        sr.incoherent.push_back(RunSample(es, ss, i, false, grid));
+
+        if (cfg.output_type == OutputType::All)
+            Logger::LogSampleResults(GetSampleResultsPath(i), sr.coherent[i], sr.incoherent[i]);
+    }
+
+    return sr;
+}
+
+SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &settings, const int sample_index, const bool coherent, const Grid& grid) const
 {
     const int T = cfg.temperatures.size();
     const int N = cfg.magnetic_fields.size();
@@ -117,7 +160,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     return sr;
 }
 
-void SimulationRunner::FinishResults(const std::vector<SampleResult>& sample_results_coh, const std::vector<SampleResult>& sample_results_inc)
+void SimulationRunner::FinishResults(const SimulationResult& sr) const
 {
     const double S = (double)cfg.num_samples;
 
@@ -132,8 +175,8 @@ void SimulationRunner::FinishResults(const std::vector<SampleResult>& sample_res
             double dxx_squared = 0;
 
             for (int s = 0; s < cfg.num_samples; s++) {
-                auto coh = sample_results_coh[s].results[i][j];
-                auto inc = sample_results_inc[s].results[i][j];
+                auto coh = sr.coherent[s].results[i][j];
+                auto inc = sr.incoherent[s].results[i][j];
 
                 coherent    += coh;
                 incoherent  += inc;

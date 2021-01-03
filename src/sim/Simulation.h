@@ -128,7 +128,6 @@ class SimulationCL : public Simulation {
 	Sigma			DeriveTemperature(const double temperature) const;
 	IterationResult DeriveTemperatureWithImages(const double temperature) const;
 
-	void PrepareKernels(const Settings& s, const size_t items_in_workgroup);
 public:
 	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;

@@ -2,10 +2,6 @@
 
 #include <vector>
 
-struct SigmaResult {
-    std::vector<double> xx_buffer, xy_buffer;
-};
-
 struct Sigma {
     double xx, xy;
 
@@ -33,10 +29,47 @@ struct Sigma {
     }
 };
 
+struct SampleResult {
+    std::vector<std::vector<Sigma>> results;
+
+    SampleResult() {}
+
+    SampleResult(int T, int N)
+    {
+        results.resize(N);
+        for (int i = 0; i < N; i++)
+            results[i].resize(T);
+    }
+};
+
+struct SimulationResult {
+    std::vector<SampleResult> coherent;
+    std::vector<SampleResult> incoherent;
+
+    SimulationResult(const int S)
+    {
+        coherent.reserve(S);
+        incoherent.reserve(S);
+    }
+};
+
+struct SigmaResult {
+    std::vector<double> xx_buffer, xy_buffer;
+};
+
+typedef struct IterationResult {
+    std::vector<double> particle_lifetimes;
+    SigmaResult sigmas;
+    Sigma result;
+
+    IterationResult() {}
+} IterationResult;
+
+
 struct DataRow {
     double temperature;
     double magnetic_field;
-    
+
     Sigma incoherent;
     Sigma coherent;
     double xxd;
@@ -59,26 +92,5 @@ struct DataRow {
         magnetic_field = mf;
         coherent = _coherent;
         incoherent = _incoherent;
-    }
-};
-
-typedef struct IterationResult {
-    std::vector<double> particle_lifetimes;
-    SigmaResult sigmas;
-    Sigma result;
-
-    IterationResult() {}
-} IterationResult;
-
-struct SampleResult {
-    std::vector<std::vector<Sigma>> results;
-
-    SampleResult() {}
-
-    SampleResult(int T, int N)
-    {
-        results.resize(N);
-        for (int i = 0; i < N; i++)
-            results[i].resize(T);
     }
 };

@@ -119,8 +119,9 @@ typedef struct SimulationConfiguration
             }
         }
 
+        bool device_selected = values.find("device") != values.end();
+        cfg.use_gpu = device_selected ? values.at("device") == "gpu" : false;
 
-        cfg.use_gpu         = values.find("device") == values.end() || values.at("device") == "gpu";
         cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
 
         cfg.num_samples            = atoi(values.at("num_samples").c_str());
