@@ -80,7 +80,7 @@ void Logger::LogResult(const std::string file_path, const DataRow& row)
          << std::setw(w) << std::left << row.coherent.xx 
          << std::setw(w) << std::left << row.incoherent.xy
          << std::setw(w) << std::left << row.coherent.xy 
-         << std::setw(w) << std::left << row.xxd << std::endl;
+         << std::setw(w) << std::left << std::fixed << row.xxd << std::endl;
 }
 
 void Logger::CreateSampleResultLog(const std::string file_path, const SimulationConfiguration& cfg)
@@ -217,6 +217,10 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
 
         file << L'│' << std::setw(metric_width) << std::left << " Particles escaped";
         for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particles_escaped;
+        file << L'│' << std::endl;
+
+        file << L'│' << std::setw(metric_width) << std::left << " Particles at bound";
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particles_at_bound;
         file << L'│' << std::endl;
     }
 

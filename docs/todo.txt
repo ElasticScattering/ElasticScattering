@@ -1,16 +1,16 @@
 ﻿
-Synchroniseer integraal met en zonder loggen.
-Metrics zitten soms in de weg, of moeten we altijd metrics berekenen?
-
+Naam bij config / resultaat
+config bestand kopieeren in resultaat.
 
 OpenCL
 	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?
 
 Ideeën
 	(impurity randomness model per materiaal)
-	- Particle waardes die niet botsen. (karakteristieken...)
 
 Optimalisaties
+	valid_phi_range wordt steeds getest op omdraaien vanwege clockwise, dit kan ook minder vaak gedaan worden.g
+
 	Bereken phi, BoundTime waardes vooraf?
 	clockwise vooraf bepalen?.
 

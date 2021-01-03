@@ -8,8 +8,10 @@
 typedef struct Metrics {
     int cells_passed;
     int impurities_tested;
+    
     int particles_inside_impurity;
     int particles_escaped;
+    int particles_at_bound;
 
     int max_impurities_tested;
     int max_cells_passed;
@@ -26,9 +28,12 @@ typedef struct Metrics {
     Metrics() {
         cells_passed = 0;
         impurities_tested = 0;
+        
         particles_inside_impurity = 0;
-        real_lifetimes = 0;
         particles_escaped = 0;
+        particles_at_bound = 0;
+        
+        real_lifetimes = 0;
 
         avg_particle_lifetime = 0;
 

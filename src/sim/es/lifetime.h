@@ -120,9 +120,17 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
             //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
 
             METRIC_INC(metrics->particles_escaped);
+            lifetime = 0;
             break;
         }
     }
 
-    return min(lifetime, p->orbit.bound_time);
+    // @Refactor
+    if (lifetime > p->orbit.bound_time)
+    {
+        METRIC_INC(metrics->particles_at_bound);
+        return p->orbit.bound_time;
+    }
+
+    return lifetime;
 }
