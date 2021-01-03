@@ -10,11 +10,11 @@ apply_max_lifetime(constant double* raw_lifetimes, double default_max_lifetime, 
     int j = get_global_id(1);
 	int v = get_global_id(2);
 
-	int values_per_position = get_global_size(2);
+	int particles_per_position = get_global_size(2);
 	int positions_per_row   = get_global_size(0);
-	int values_per_row      = positions_per_row * values_per_position;
+	int values_per_row      = positions_per_row * particles_per_position;
 
-	int idx = j * values_per_row + i * values_per_position + v;
+	int idx = j * values_per_row + i * particles_per_position + v;
 
 	//int idx = GET_INDEX(i, j, v);
 	double lt = raw_lifetimes[idx];
@@ -34,7 +34,7 @@ apply_sigma_component(constant double* lifetimes,
     int j = get_global_id(1);
 	int v = get_global_id(2);
 	
-	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
+	if (i >= ss->positions_per_row || j >= ss->positions_per_row)
 		return;
 
 	int idx    = GET_INDEX(i, j, v);
@@ -51,12 +51,12 @@ apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSetting
     int j = get_global_id(1);
 	int v = get_global_id(2);
     
-	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 
 	int idx = GET_INDEX(i, j, v);
 
-	sigma_lifetimes[idx] *= (SimpsonWeight2D(i, j, ss->particles_per_row) * SimpsonWeight(v % ss->values_per_quadrant, ss->values_per_quadrant));
+	sigma_lifetimes[idx] *= (SimpsonWeight2D(i, j, ss->positions_per_row) * SimpsonWeight(v % ss->particles_per_quadrant, ss->particles_per_quadrant));
 }
 
 
@@ -66,7 +66,7 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	int i        = get_global_id(0);
     int j        = get_global_id(1);
 	
-	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 	
 	int pos_idx = GET_POSITION_INDEX(i, j);
@@ -75,8 +75,8 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	{
 		unsigned int base_idx = GET_INDEX(i, j, q); // @Optimize
 	
-		for (int p = 0; p < ss->values_per_quadrant; p++)
-			total += values[base_idx + p] * SimpsonWeight(p, ss->values_per_quadrant);
+		for (int p = 0; p < ss->particles_per_quadrant; p++)
+			total += values[base_idx + p] * SimpsonWeight(p, ss->particles_per_quadrant);
 	}
 	
 	// @Todo, integrand factor.

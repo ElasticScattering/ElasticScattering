@@ -22,8 +22,10 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 
 	const int q = (int)(v / ss->particles_per_quadrant);
 	const int p =       v % ss->particles_per_quadrant;
-    const double2 pos = ((double2)(i, j) * ss->distance_between_positions) + ss->small_offset;
+    const double2 pos = ((double2)(i, j) * ss->distance_between_positions) 
+							+ ss->small_offset;
 	
 	Particle particle = CreateParticle(q, p, pos, ps);
-	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, is, impurities, imp_index, metrics);
+	lifetimes[GET_INDEX(i, j, v)] = 
+		TraceOrbit(&particle, is, impurities, imp_index, metrics);
 }

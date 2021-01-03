@@ -405,8 +405,13 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/scatter.cl", &ocl_scatter.program_lifetimes);
     std::cout << "Compilation succeeded!" << std::endl;
 
-    //auto clStatus = clBuildProgram(program, 1, &devices[0], "-cl-mad-enable", NULL, NULL); //build the program
+    std::cout << "\nBuilding integration program..." << std::endl;
+    CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);
+    std::cout << "Compilation succeeded!" << std::endl;
 
+    exit(0);
+
+    //auto clStatus = clBuildProgram(program, 1, &devices[0], "-cl-mad-enable", NULL, NULL); //build the program
     //auto clStatus = clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_NUM_DEVICES, sizeof(size_t), &nb_devices, &nbread);// Return 1 devices
 
     size_t* np = new size_t[1]; //Create size array
@@ -419,13 +424,14 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
 
     clStatus = clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARIES, sizeof(unsigned char*), bn, NULL); //Load the binary itself
 
+    /*
     printf("%s\n", bn[0]); //Print the first binary. But here, I have some curious characters
 
     FILE* fp;
     fopen_s(&fp, "binar.bin", "wb");
 
     fwrite(bn[0], sizeof(char), np[0], fp); // Save the binary, but my file stay empty
-
+    */
 
     /*
     size_t number_of_binaries;
@@ -435,9 +441,7 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     auto binary = new unsigned char *[number_of_binaries];
     clGetProgramInfo(ocl_scatter.program_lifetimes, CL_PROGRAM_BINARIES, number_of_binaries, &binary, NULL);
     */
-    std::cout << "\nBuilding integration program..." << std::endl;
-    CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);
-    std::cout << "Compilation succeeded!" << std::endl;
+
 
     ocl_scatter.lifetimes_kernel      = clCreateKernel(ocl_scatter.program_lifetimes, "lifetime", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create lifetime kernel.");
