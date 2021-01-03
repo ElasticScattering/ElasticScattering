@@ -11,5 +11,5 @@ typedef struct Settings
     double region_extends;
     double impurity_density;
     double impurity_radius;
-    int max_expected_impurities_in_cell;
+    int target_cell_population;
 } Settings;

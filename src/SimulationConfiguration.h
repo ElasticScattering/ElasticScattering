@@ -36,8 +36,8 @@ enum class OutputType
 typedef struct SimulationConfiguration
 {
     int num_samples;
-    int particles_per_row;
-    int quadrant_phi_steps;
+    int positions_per_row;
+    int particles_per_quadrant;
 
     OutputType output_type;
     bool use_gpu;
@@ -123,9 +123,9 @@ typedef struct SimulationConfiguration
         cfg.use_gpu         = values.find("device") == values.end() || values.at("device") == "gpu";
         cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
 
-        cfg.num_samples        = atoi(values.at("num_samples").c_str());
-        cfg.quadrant_phi_steps = atoi(values.at("integrand_steps").c_str());
-        cfg.particles_per_row  = atoi(values.at("dimension").c_str());;
+        cfg.num_samples            = atoi(values.at("num_samples").c_str());
+        cfg.particles_per_quadrant = atoi(values.at("phi_steps").c_str());
+        cfg.positions_per_row      = atoi(values.at("dimension").c_str());;
 
         {
             double mf_min       = atof(values.at("magnetic_field_min").c_str());
@@ -152,16 +152,16 @@ typedef struct SimulationConfiguration
             }
         }
 
-        cfg.settings.particle_speed                  = atof(values.at("particle_speed").c_str());
-        cfg.settings.tau                             = atof(values.at("tau").c_str());
-        cfg.settings.alpha                           = atof(values.at("alpha").c_str());
-        cfg.settings.is_clockwise                    = atoi(values.at("clockwise").c_str()) > 0;
+        cfg.settings.particle_speed         = atof(values.at("particle_speed").c_str());
+        cfg.settings.tau                    = atof(values.at("tau").c_str());
+        cfg.settings.alpha                  = atof(values.at("alpha").c_str());
+        cfg.settings.is_clockwise           = atoi(values.at("clockwise").c_str()) > 0;
 
-        cfg.settings.region_size                     = atof(values.at("region_size").c_str());
-        cfg.settings.region_extends                  = atof(values.at("region_extends").c_str());
-        cfg.settings.impurity_density                = atof(values.at("impurity_density").c_str());
-        cfg.settings.impurity_radius                 = atof(values.at("impurity_radius").c_str());
-        cfg.settings.max_expected_impurities_in_cell = atoi(values.at("max_expected_impurities_in_cell").c_str());
+        cfg.settings.region_size            = atof(values.at("region_size").c_str());
+        cfg.settings.region_extends         = atof(values.at("region_extends").c_str());
+        cfg.settings.impurity_density       = atof(values.at("impurity_density").c_str());
+        cfg.settings.impurity_radius        = atof(values.at("impurity_radius").c_str());
+        cfg.settings.target_cell_population = atoi(values.at("target_cell_population").c_str());
 
         int x = cfg.num_samples;
         cfg.digits_in_sample_num = 0;

@@ -32,8 +32,8 @@ void Logger::CreateResultLog(const std::string file_path, const SimulationConfig
     file << std::endl;
     file << "MF values   " << cfg.magnetic_fields.size() << std::endl;
     file << "Samples     " << cfg.num_samples << std::endl;
-    file << "Positions   " << cfg.particles_per_row-1 << " x " << cfg.particles_per_row-1 << std::endl;
-    file << "Phi steps   " << cfg.quadrant_phi_steps << std::endl;
+    file << "Positions   " << cfg.positions_per_row-1 << " x " << cfg.positions_per_row-1 << std::endl;
+    file << "Phi steps   " << cfg.particles_per_quadrant << std::endl;
     file << std::endl;
 
     file << "# Results #" << std::endl << std::endl;
@@ -66,7 +66,7 @@ void Logger::CreateSampleResultLog(const std::string file_path)
     std::ofstream file;
     file.open(file_path);
 
-    file << "# Elastic Scattering sample results summary." << std::endl;
+    file << "# Elastic Scattering sample results summary." << std::endl << std::endl;
 
     file << std::left << std::setw(4) << "T"
          << std::setw(4) << "B"
@@ -111,8 +111,8 @@ void Logger::CreateSampleMetricsLog(const std::string file_path, const GlobalMet
 
     file << "# Metrics collected during particle lifetime computation." << std::endl << std::endl;
     file << "Positions  " << gm.particles_per_row << " x " << gm.particles_per_row << std::endl;
-    file << "Phi values " << gm.phi_values << std::endl;
-    file << "Lifetimes  " << ((int)pow(gm.particles_per_row, 2) * gm.phi_values) << std::endl;
+    file << "Phi values " << gm.phi_steps << std::endl;
+    file << "Lifetimes  " << ((int)pow(gm.particles_per_row, 2) * gm.phi_steps) << std::endl;
     file << "Impurities " << gm.unique_impurity_count << std::endl;
     file << "Cells      " << gm.cells_per_row << " x " << gm.cells_per_row << std::endl;
     file << "Index time " << std::fixed << std::setprecision(1) << gm.grid_creation_time * 1000.0 << "ms" << std::endl;
@@ -137,7 +137,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         file << "Seed                      " << sample_metrics.seed << std::endl;
         file << "Total indexed impurities  " << std::setprecision(2) << (double)sample_metrics.total_indexed_impurities / 1'000'000 << " mil (" << std::setprecision(4) << (sample_metrics.total_indexed_impurities - sample_metrics.impurity_count) << " overlapped)" << std::endl;
         file << "Avg. impurities per cell  " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.total_cells) << std::endl;
-        file << "Positions inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_lifetimes)) << "%" << std::endl;
+        file << "Positions inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_particles)) << "%" << std::endl;
     }
 
     // Header
@@ -189,7 +189,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
-                << ((double)metrics[i].impurities_tested / (double)metrics[i].real_lifetimes);
+                << ((double)metrics[i].impurities_tested / (double)metrics[i].real_particles);
         }
         file << L'│' << std::endl;
 
@@ -197,7 +197,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-                << (100 * ((double)metrics[i].impurities_tested / (double)metrics[i].real_lifetimes) / (double)sample_metrics.impurity_count) << "%";
+                << (100 * ((double)metrics[i].impurities_tested / (double)metrics[i].real_particles) / (double)sample_metrics.impurity_count) << "%";
         }
         file << L'│' << std::endl;
 
@@ -220,7 +220,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
-                << ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes);
+                << ((double)metrics[i].cells_passed / (double)metrics[i].real_particles);
         }
         file << L'│' << std::endl;
 
@@ -228,7 +228,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-                << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_lifetimes) / sample_metrics.total_cells) << "%";
+                << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_particles) / sample_metrics.total_cells) << "%";
         }
         file << L'│' << std::endl;
 

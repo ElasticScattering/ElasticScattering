@@ -14,12 +14,12 @@
     #include "windows.h"
 #endif
 
-ESCL_INLINE Particle CreateParticle(const int quadrant, const int step, const double2 pos, PARTICLE_SETTINGS)
+ESCL_INLINE Particle CreateParticle(const int quadrant, const int phi_step_index, const double2 position, PARTICLE_SETTINGS)
 {
     Particle p;
-    p.starting_position = pos;
-    p.phi               = ps->phi_start + quadrant * HALF_PI + step * ps->phi_step_size;
-    p.angular_speed     = ps->angular_speed;
+    p.position      = position;
+    p.phi           = ps->phi_start + quadrant * HALF_PI + phi_step_index * ps->phi_step_size;
+    p.angular_speed = ps->angular_speed;
 
     const double2 vel        = MAKE_DOUBLE2(cos(p.phi), sin(p.phi)) * ps->particle_speed;
     const double bound_angle = GetBoundAngle(p.phi, ps->alpha, ps->is_clockwise);
@@ -28,10 +28,10 @@ ESCL_INLINE Particle CreateParticle(const int quadrant, const int step, const do
     orbit.clockwise      = ps->is_clockwise;
     orbit.radius         = ps->particle_speed / ps->angular_speed;
     orbit.radius_squared = orbit.radius * orbit.radius;
-    orbit.center         = GetCyclotronOrbitCenter(p.starting_position, vel, orbit.radius, ps->particle_speed, ps->is_clockwise);
+    orbit.center         = GetCyclotronOrbitCenter(p.position, vel, orbit.radius, ps->particle_speed, ps->is_clockwise);
     orbit.bound_time     = GetBoundTime(p.phi, ps->alpha, ps->angular_speed, ps->is_coherent, ps->is_clockwise, false);
     orbit.bound_phi      = ps->is_coherent ? INF : GetCrossAngle(p.phi, bound_angle, ps->is_clockwise);
-    orbit.particle_angle = p.phi; //GetAngle(p.starting_position, &orbit); //@Refactor: name?
+    orbit.particle_angle = p.phi; //GetAngle(p.position, &orbit); //@Refactor: name?
 
     p.orbit = orbit;
 
@@ -61,8 +61,8 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
     double lifetime = INF;
 
     Intersection next_intersection;
-    next_intersection.position       = p->starting_position;
-    next_intersection.entering_cell  = get_cell(p->starting_position, is->spawn_region_start, is->spawn_region_size, is->cells_per_row);
+    next_intersection.position       = p->position;
+    next_intersection.entering_cell  = get_cell(p->position, is->spawn_region_start, is->spawn_region_size, is->cells_per_row);
     next_intersection.dphi           = PI2;
     next_intersection.incident_angle = p->phi;
     
@@ -73,7 +73,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
 
     for (int i = impurity_start; i < impurity_end; i++)
     {
-        if (InsideImpurity(p->starting_position, impurities[i], is->impurity_radius)) {
+        if (InsideImpurity(p->position, impurities[i], is->impurity_radius)) {
             METRIC_INC(metrics->particles_inside_impurity);
             return 0;
         }
@@ -115,7 +115,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
 
         if (!next_cell_available)
         {
-            //printf("Particle escaped! (%e, %e, %f)\n", p->starting_position.x, p->starting_position.y, p->phi);
+            //printf("Particle escaped! (%e, %e, %f)\n", p->position.x, p->position.y, p->phi);
             //printf("Cells passed: %i\n", metrics->cells_passed);
             //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
 

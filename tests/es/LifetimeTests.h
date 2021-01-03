@@ -86,7 +86,7 @@ TEST_CASE("Lifetime tests")
 		auto particle = CreateParticle(0, 0, v2(6.5e-7, 1.35e-6), &ps50);
 		double lt = ps50.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &m);
 
-		CHECK(lt > 100);
+		CHECK(lt == 0); // Op dit moment betekend 0 dat een particle nergens op is gebotst.
 	}
 
 	SUBCASE("Repositioned.")
@@ -109,7 +109,7 @@ TEST_CASE("Lifetime tests")
 		auto particle = CreateParticle(0, 1, v2(1.00000000e-06, 5.0000000e-07), &ps8);
 		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &m);
 
-		CHECK(lt > 1);
+		CHECK(lt == 0); // Op dit moment betekend 0 dat een particle nergens op is gebotst.
 	}
 
 	SUBCASE("Edge case 2.")

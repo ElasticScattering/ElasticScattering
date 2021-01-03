@@ -1,6 +1,5 @@
 ﻿
-Naam bij config / resultaat
-config bestand kopieeren in resultaat.
+ - Naam bij config / resultaat
 
 OpenCL
 	clCreateProgramWithBinary() -- misschien voor alle kernels behalve Lifetime?

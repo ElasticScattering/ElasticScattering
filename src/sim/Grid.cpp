@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <set>
 
-Grid::Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell)
+Grid::Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_cell_population)
 {
 	seed_used = seed;
 	impurity_radius = _impurity_radius;
@@ -14,21 +14,21 @@ Grid::Grid(unsigned int seed, double region_size, double region_extends, double 
 	spawn_range = v2(-region_extends, region_size + region_extends);
 	double area_length = spawn_range.y - spawn_range.x;
 	unique_impurity_count = max(1, (int)ceil(area_length * area_length * density));
-	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_impurity_count_per_cell)), 1);
+	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_cell_population)), 1);
 	cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
-
 	auto impurities = GenerateImpurities(unique_impurity_count, seed);
+
 	GenerateImpurityCells(impurities, impurity_radius);
 	ConvertToIndex();
 }
 
-Grid::Grid(std::vector<v2> impurities, double region_size, double region_extends, double _impurity_radius, int target_impurity_count_per_cell)
+Grid::Grid(std::vector<v2> impurities, double region_size, double region_extends, double _impurity_radius, int target_cell_population)
 {
 	impurity_radius = _impurity_radius;
 	
 	spawn_range = v2(-region_extends, region_size + region_extends);
 	unique_impurity_count = impurities.size();
-	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_impurity_count_per_cell)), 1);
+	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_cell_population)), 1);
 	cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
 
 	GenerateImpurityCells(impurities, impurity_radius);

@@ -104,8 +104,8 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
 
     // Ipv WI te maken die elk een particle behandelen, laten we elk WI één phi waarde/lifetime doen.
     // @Optimize Verifiëer dat dit ook daadwerkelijk achtereenvolgende phi's berekend in één WG.
-    size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
-    const size_t values_in_work_group = min(ss.values_per_particle, 256);
+    size_t global_work_size[3] = { (size_t)ss.positions_per_row, (size_t)ss.positions_per_row, ss.particles_per_position };
+    const size_t values_in_work_group = min(ss.particles_per_position, 256);
     size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group }; 
 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_scatter.lifetimes_kernel, 3, nullptr, global_work_size, local_work_size, 0, nullptr, nullptr);
@@ -117,7 +117,7 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
     CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
     metrics = metrics_holder[0];
 
-    std::vector<double> lifetimes(ss.total_lifetimes);
+    std::vector<double> lifetimes(ss.total_particles);
 
     clEnqueueReadBuffer(ocl.queue, ocl_scatter.raw_lifetimes, CL_TRUE, 0, sizeof(Metrics), lifetimes.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
@@ -126,8 +126,8 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
 
 Sigma SimulationCL::DeriveTemperature(const double temperature) const
 {
-    size_t global_work_size[3] = { (size_t)ss.particles_per_row, (size_t)ss.particles_per_row, ss.values_per_particle };
-    const size_t values_in_work_group = min(ss.values_per_particle, 256);
+    size_t global_work_size[3] = { (size_t)ss.positions_per_row, (size_t)ss.positions_per_row, ss.particles_per_position };
+    const size_t values_in_work_group = min(ss.particles_per_position, 256);
     size_t local_work_size[3] = { 256 / values_in_work_group, 1, values_in_work_group };
 
     cl_int clStatus;
@@ -176,7 +176,7 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
     // Apply simpson weights.
     {
         clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
-        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 2, sizeof(int), (void*)&ss.values_per_quadrant);
+        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 2, sizeof(int), (void*)&ss.particles_per_quadrant);
 
         {
             clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
@@ -201,7 +201,7 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         clStatus = clSetKernelArg(ocl_integration.sum_kernel, 1, sizeof(cl_mem), (void*)&ocl_integration.incomplete_sum);
         clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(double) * values_in_work_group, nullptr);
 
-        const size_t half_size = ss.total_lifetimes / 2;
+        const size_t half_size = ss.total_particles / 2;
         const size_t incomplete_sum_size = half_size / values_in_work_group;
         {
             clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);

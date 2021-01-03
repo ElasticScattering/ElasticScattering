@@ -421,7 +421,6 @@
     <None Include="tests\data\kernels\test_precision.cl" />
     <None Include="tests\data\kernels\test_double2.cl" />
     <None Include="tests\data\kernels\test_printf.cl" />
-    <None Include="tests\data\test_impurities.dat" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="docs\todo.txt" />

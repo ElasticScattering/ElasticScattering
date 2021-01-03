@@ -17,7 +17,7 @@ typedef struct Metrics {
     int max_cells_passed;
 
 #ifndef DEVICE_PROGRAM
-    int real_lifetimes;
+    int real_particles;
 
     double time_elapsed_lifetimes;
     double time_elapsed_temperatures;
@@ -32,7 +32,7 @@ typedef struct Metrics {
         particles_escaped = 0;
         particles_at_bound = 0;
         
-        real_lifetimes = 0;
+        real_particles = 0;
 
         avg_particle_lifetime = 0;
 
@@ -49,7 +49,7 @@ typedef struct Metrics {
 struct GlobalMetrics
 {
     int particles_per_row;
-    int phi_values;
+    int phi_steps;
     int unique_impurity_count;
     int cells_per_row;
     double grid_creation_time;
@@ -58,7 +58,7 @@ struct GlobalMetrics
 struct SampleMetrics
 {
     int sample_index;
-    int total_lifetimes;
+    int total_particles;
     int total_cells;
     int impurity_count;
 
@@ -74,7 +74,7 @@ struct SampleMetrics
         coherent = p_coherent;
 
         total_cells = 0;
-        total_lifetimes = nlt;
+        total_particles = nlt;
         total_indexed_impurities = 0;
 
         seed = 0;

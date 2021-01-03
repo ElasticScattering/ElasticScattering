@@ -26,32 +26,31 @@ void SimulationRunner::Run(const InitParameters& init)
     std::vector<SampleResult> sample_results_inc(cfg.num_samples);
 
     std::random_device random_device;
-    SimulationCPU es(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+    SimulationCPU es(cfg.positions_per_row-1, cfg.particles_per_quadrant);
     //SimulationCL es(cfg.particles_per_row - 1, cfg.quadrant_phi_steps);
 
     const Settings& ss = cfg.settings;
 
-    LARGE_INTEGER beginGridClock, endGridClock;
     LARGE_INTEGER beginTotalClock, endTotalClock;
     QueryPerformanceCounter(&beginTotalClock);
-
     for (int i = 0; i < cfg.num_samples; i++) {
         if (cfg.output_type == OutputType::All)
             CreateSampleOutputDirectory(i);
 
+        LARGE_INTEGER beginGridClock, endGridClock;
         QueryPerformanceCounter(&beginGridClock);
         auto seed = random_device();
-        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.max_expected_impurities_in_cell);
+        auto grid = Grid(seed, ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
         QueryPerformanceCounter(&endGridClock);
         double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
 
         if (i == 0 && cfg.output_type != OutputType::Nothing) {
             GlobalMetrics gm;
-            gm.particles_per_row = cfg.particles_per_row - 1;
-            gm.phi_values = 4 * cfg.quadrant_phi_steps;
-            gm.cells_per_row = grid.GetCellsPerRow();
+            gm.particles_per_row     = cfg.positions_per_row - 1;
+            gm.phi_steps             = 4 * cfg.particles_per_quadrant;
+            gm.cells_per_row         = grid.GetCellsPerRow();
             gm.unique_impurity_count = grid.GetUniqueImpurityCount();
-            gm.grid_creation_time = grid_creation_time;
+            gm.grid_creation_time    = grid_creation_time;
 
             Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
         }
@@ -76,7 +75,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     SampleResult sr(T, N);
 
     auto metrics_path = GetMetricsPath();
-    double nlifetimes = pow(cfg.particles_per_row - 1, 2) * 4.0 * cfg.quadrant_phi_steps;
+    double nlifetimes = pow(cfg.positions_per_row - 1, 2) * 4.0 * cfg.particles_per_quadrant;
 
     es.InitSample(grid, settings, coherent);
 
@@ -86,11 +85,13 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     sample_metrics.total_cells              = pow(grid.GetCellsPerRow(), 2);
     sample_metrics.seed                     = grid.GetSeed();
 
-    auto raw_sample_string = std::to_string(sample_index + 1);
-    auto sample_string = std::string(cfg.digits_in_sample_num - raw_sample_string.length(), '0') + raw_sample_string + (coherent ? " C" : " I") + " [";
+    {
+        auto raw_sample_string = std::to_string(sample_index + 1);
+        auto sample_string = std::string(cfg.digits_in_sample_num - raw_sample_string.length(), '0') + raw_sample_string + (coherent ? " C" : " I") + " [";
 
-    std::cout << '\r' << sample_string << std::string(cfg.magnetic_fields.size(), '.') << "]";
-    std::cout << '\r' << sample_string;
+        std::cout << '\r' << sample_string << std::string(cfg.magnetic_fields.size(), '.') << "]";
+        std::cout << '\r' << sample_string;
+    }
 
     for (int i = 0; i < N; i++) {
         if (cfg.output_type != OutputType::All)
@@ -103,7 +104,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
 
             for (int j = 0; j < cfg.temperatures.size(); j++) {
                 sr.results[i][j] = iteration[j].result;
-                Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.particles_per_row - 1, iteration[j]);
+                Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.positions_per_row - 1, iteration[j]);
             }
         }
             

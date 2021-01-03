@@ -47,7 +47,7 @@ typedef struct Orbit {
 
 typedef struct Particle {
 	double phi;
-	double2 starting_position;
+	double2 position;
     double angular_speed;
 
     Orbit orbit;

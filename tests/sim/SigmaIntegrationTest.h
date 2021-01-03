@@ -24,13 +24,13 @@ SampleResult GetSample(Simulation& sim, const Grid& grid, const SimulationConfig
 void RunTestSample(const std::string file_path, const std::string imp_path, const std::vector<DataRow>& expected_results)
 {
 	auto cfg = SimulationConfiguration::ParseFromeFile(file_path);
-	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+	SimulationCPU sim(cfg.positions_per_row-1, cfg.particles_per_quadrant);
 
 	auto impurities = GetTestImpurities(imp_path);
 	REQUIRE(impurities.size() > 0);
 
 	auto s = cfg.settings;
-	auto grid = Grid(impurities, s.region_size, s.region_extends, s.impurity_radius, s.max_expected_impurities_in_cell);
+	auto grid = Grid(impurities, s.region_size, s.region_extends, s.impurity_radius, s.target_cell_population);
 
 	SampleMetrics metrics_coh(0, 0, 0);
 	auto results_coh = GetSample(sim, grid, cfg, true, metrics_coh);
@@ -134,13 +134,13 @@ TEST_CASE("Integration Test")
 
 TEST_CASE("DeriveTemperature with and without logging should return same sigma result")
 {
-	auto cfg = SimulationConfiguration::ParseFromeFile("tests/data/test_images.config");
+	auto cfg = SimulationConfiguration::ParseFromeFile("tests/data/log_with_images.config");
 	REQUIRE(cfg.temperatures.size() == 1);
 
-	SimulationCPU sim(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+	SimulationCPU sim(cfg.positions_per_row-1, cfg.particles_per_quadrant);
 
 	auto s = cfg.settings;
-	auto grid = Grid(21314214, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.max_expected_impurities_in_cell);
+	auto grid = Grid(21314214, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.target_cell_population);
 
 	SampleMetrics metrics(0, 0, 0);
 

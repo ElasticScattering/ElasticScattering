@@ -148,7 +148,7 @@ TEST_CASE("")
 {
 	auto s = SimulationConfiguration::ParseFromeFile("tests/data/real_case.config").settings;
 	auto impurities = GetTestImpurities("tests/data/real_case_impurities.dat");
-	auto grid = Grid(impurities, s.region_size, s.region_extends, s.impurity_radius, s.max_expected_impurities_in_cell);
+	auto grid = Grid(impurities, s.region_size, s.region_extends, s.impurity_radius, s.target_cell_population);
 
 	CHECK(grid.GetUniqueImpurityCount() == 19000);
 	CHECK(grid.GetCellsPerRow() == 44);

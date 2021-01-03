@@ -9,10 +9,17 @@ typedef struct ImpuritySettings
     double spawn_region_size;
 
     double cell_size;
-    int cells_per_row;
+    int    cells_per_row;
 
     double impurity_radius;
 } ImpuritySettings;
+
+typedef struct Range
+{
+    double start;
+    double step_size;
+    double count;
+} Range;
 
 typedef struct ParticleSettings
 {
@@ -29,12 +36,15 @@ typedef struct ParticleSettings
 
 typedef struct SimulationSettings
 {
-    int values_per_quadrant;
-    int values_per_particle;
-    int values_per_row;
-    int total_lifetimes;
+    int particles_per_quadrant;
+    int particles_per_position;
     int particles_per_row;
     int total_particles;
+
+    int positions_per_row;
+    int total_positions;
+
+    double signed_angular_speed; //?
 
     double integrand_angle_area;
     double phi_integrand_factor;
@@ -42,10 +52,8 @@ typedef struct SimulationSettings
     double region_size;
     double region_extended_area;
     
-    double distance_between_particles;
+    double distance_between_positions;
     double2 small_offset;
 
-    double signed_angular_speed; //?
     double coherent_tau;
 } SimulationSettings;
-

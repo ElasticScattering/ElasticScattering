@@ -10,11 +10,11 @@ apply_max_lifetime(constant double* raw_lifetimes, double default_max_lifetime, 
     int j = get_global_id(1);
 	int v = get_global_id(2);
 
-	int values_per_particle = get_global_size(2);
-	int particles_per_row   = get_global_size(0);
-	int values_per_row      = particles_per_row * values_per_particle;
+	int values_per_position = get_global_size(2);
+	int positions_per_row   = get_global_size(0);
+	int values_per_row      = positions_per_row * values_per_position;
 
-	int idx = j * values_per_row + i * values_per_particle + v;
+	int idx = j * values_per_row + i * values_per_position + v;
 
 	//int idx = GET_INDEX(i, j, v);
 	double lt = raw_lifetimes[idx];
@@ -45,7 +45,7 @@ apply_sigma_component(constant double* lifetimes,
 
 
 kernel void 
-apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSettings* ss, const int values_per_quadrant)
+apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSettings* ss)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
@@ -61,7 +61,7 @@ apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSetting
 
 
 kernel void 
-integrate_to_particle(global double* values, constant SimulationSettings* ss, global double* particle_results)
+integrate_to_particle(global double* values, constant SimulationSettings* ss, global double* position_lifetimes)
 {
 	int i        = get_global_id(0);
     int j        = get_global_id(1);
@@ -69,7 +69,7 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 	
-	int prt_idx = GET_PARTICLE_INDEX(i, j);
+	int pos_idx = GET_POSITION_INDEX(i, j);
 	double total = 0;
 	for (int q = 0; q < 4; q++)
 	{
@@ -80,7 +80,7 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 	}
 	
 	// @Todo, integrand factor.
-	particle_results[prt_idx] = total * ss->phi_integrand_factor;
+	position_lifetimes[pos_idx] = total * ss->phi_integrand_factor;
 }
 
 

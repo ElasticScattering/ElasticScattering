@@ -10,11 +10,11 @@
 TEST_CASE("CL Sigma integration should be identical to CPU sigma integration.")
 {
 	auto cfg = SimulationConfiguration::ParseFromeFile("tests/data/test_images.config");
-	SimulationCPU sim_cpu(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
-	SimulationCL  sim_cl(cfg.particles_per_row-1, cfg.quadrant_phi_steps);
+	SimulationCPU sim_cpu(cfg.positions_per_row-1, cfg.particles_per_quadrant);
+	SimulationCL  sim_cl(cfg.positions_per_row-1, cfg.particles_per_quadrant);
 
 	auto s = cfg.settings;
-	auto grid = Grid(1245124151, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.max_expected_impurities_in_cell);
+	auto grid = Grid(1245124151, s.region_size, s.region_extends, s.impurity_density, s.impurity_radius, s.target_cell_population);
 
 	sim_cpu.InitSample(grid, s, false);
 	sim_cl.InitSample (grid, s, false);
