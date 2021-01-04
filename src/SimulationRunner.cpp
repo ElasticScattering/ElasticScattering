@@ -36,7 +36,7 @@ SimulationResult SimulationRunner::RunSimulationCPU() const
     std::random_device random_device;
     const Settings& ss = cfg.settings;
     
-    auto es = SimulationCPU(cfg.positions_per_row - 1, cfg.particles_per_quadrant);
+    auto es = SimulationCPU(cfg.positions_per_row, cfg.particles_per_quadrant);
     SimulationResult sr(cfg.num_samples);
 
     for (int i = 0; i < cfg.num_samples; i++) {
@@ -75,7 +75,7 @@ SimulationResult SimulationRunner::RunSimulationCL() const
     std::random_device random_device;
     const Settings& ss = cfg.settings;
 
-    auto es = SimulationCL(cfg.positions_per_row - 1, cfg.particles_per_quadrant);
+    auto es = SimulationCL(cfg.positions_per_row, cfg.particles_per_quadrant);
     SimulationResult sr(cfg.num_samples);
 
     for (int i = 0; i < cfg.num_samples; i++) {

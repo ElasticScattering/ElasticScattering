@@ -5,10 +5,10 @@
 #include <vector>
 #endif // !DEVICE_PROGRAM
 
-typedef struct Metrics {
+typedef struct ParticleMetrics {
     int cells_passed;
     int impurities_tested;
-    
+
     int particles_inside_impurity;
     int particles_escaped;
     int particles_at_bound;
@@ -17,6 +17,21 @@ typedef struct Metrics {
     int max_cells_passed;
 
 #ifndef DEVICE_PROGRAM
+    ParticleMetrics() {
+        cells_passed = 0;
+        impurities_tested = 0;
+        particles_inside_impurity = 0;
+        particles_escaped = 0;
+        particles_at_bound = 0;
+        max_impurities_tested = 0;
+        max_cells_passed = 0;
+    }
+#endif
+} ParticleMetrics;
+
+#ifndef DEVICE_PROGRAM
+typedef struct Metrics {
+    ParticleMetrics particle_metrics;
     int real_particles;
 
     double time_elapsed_lifetimes;
@@ -25,25 +40,15 @@ typedef struct Metrics {
     double avg_particle_lifetime;
 
     Metrics() {
-        cells_passed = 0;
-        impurities_tested = 0;
-        
-        particles_inside_impurity = 0;
-        particles_escaped = 0;
-        particles_at_bound = 0;
-        
         real_particles = 0;
 
         avg_particle_lifetime = 0;
 
         time_elapsed_lifetimes = 0;
         time_elapsed_temperatures = 0;
-
-        max_cells_passed = 0;
-        max_impurities_tested = 0;
     }
-#endif // !DEVICE_PROGRAM
 } Metrics;
+#endif // !DEVICE_PROGRAM
 
 #ifndef DEVICE_PROGRAM
 struct GlobalMetrics

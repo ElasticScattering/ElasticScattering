@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ConfigSettings.h"
+#include "utils/ErrorMacros.h"
 
 #include <vector>
 #include <string>
@@ -124,9 +125,14 @@ typedef struct SimulationConfiguration
 
         cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
 
-        cfg.num_samples            = atoi(values.at("num_samples").c_str());
+        cfg.num_samples = atoi(values.at("num_samples").c_str());
+        CFG_EXIT_CONDITION(cfg.num_samples <= 0, "Samples must be greater than 0.");
+
         cfg.particles_per_quadrant = atoi(values.at("phi_steps").c_str());
-        cfg.positions_per_row      = atoi(values.at("dimension").c_str());;
+        CFG_EXIT_CONDITION(cfg.particles_per_quadrant % 2 != 0, "Phi steps must be even.");
+
+        cfg.positions_per_row = atoi(values.at("dimension").c_str());;
+        CFG_EXIT_CONDITION(cfg.positions_per_row % 2 != 0, "Dimension must be even.");
 
         {
             double mf_min       = atof(values.at("magnetic_field_min").c_str());

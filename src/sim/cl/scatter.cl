@@ -11,7 +11,7 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 		 constant double2* impurities, 
 		 constant int* imp_index,
 		 global double* lifetimes,
-		 global Metrics* metrics)
+		 global ParticleMetrics* metrics)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);

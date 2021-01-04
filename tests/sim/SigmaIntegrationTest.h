@@ -39,8 +39,8 @@ void RunTestSample(const std::string file_path, const std::string imp_path, cons
 	auto results_inc = GetSample(sim, grid, cfg, false, metrics_inc);
 
 	for (int j = 0; j < cfg.magnetic_fields.size(); j++) {
-		REQUIRE(metrics_inc.iteration_metrics[j].particles_escaped == 0);
-		REQUIRE(metrics_coh.iteration_metrics[j].particles_escaped == 0);
+		REQUIRE(metrics_inc.iteration_metrics[j].particle_metrics.particles_escaped == 0);
+		REQUIRE(metrics_coh.iteration_metrics[j].particle_metrics.particles_escaped == 0);
 	}
 
 	for (int i = 0; i < cfg.temperatures.size(); i++) {

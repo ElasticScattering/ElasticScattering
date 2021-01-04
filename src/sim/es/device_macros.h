@@ -7,7 +7,7 @@
 	#define IMPURITY_SETTINGS __constant ImpuritySettings *is
 	#define PARTICLE_SETTINGS __constant ParticleSettings* ps
 
-	#define BUFFER_ARGS __constant double2 *impurities, __constant int *cell_indices, __global Metrics *metrics
+	#define BUFFER_ARGS __constant double2 *impurities, __constant int *cell_indices, __global ParticleMetrics *metrics
 	
 	#define MAKE_POS(i, j) MAKE_DOUBLE(i, j) * (sp.region_size / (double)(sp.dim - 2))	
 
@@ -23,7 +23,7 @@
 
 	#define IMPURITY_SETTINGS const ImpuritySettings * const is
 	#define PARTICLE_SETTINGS const ParticleSettings* const ps
-	#define BUFFER_ARGS const std::vector<v2> &impurities, const std::vector<int> &cell_indices, Metrics *metrics
+	#define BUFFER_ARGS const std::vector<v2> &impurities, const std::vector<int> &cell_indices, ParticleMetrics *metrics
 
 	#define MAKE_DOUBLE2(px, py) v2(px, py)
 	#define MAKE_INT2(px, py) v2i(px, py)

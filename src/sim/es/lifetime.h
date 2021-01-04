@@ -116,7 +116,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         if (!next_cell_available)
         {
             //printf("Particle escaped! (%e, %e, %f)\n", p->position.x, p->position.y, p->phi);
-            //printf("Cells passed: %i\n", metrics->cells_passed);
+            //printf("Cells passed: %i\n", particle_metrics->cells_passed);
             //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
 
             METRIC_INC(metrics->particles_escaped);

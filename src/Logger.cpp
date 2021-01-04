@@ -137,7 +137,7 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         file << "Seed                      " << sample_metrics.seed << std::endl;
         file << "Total indexed impurities  " << std::setprecision(2) << (double)sample_metrics.total_indexed_impurities / 1'000'000 << " mil (" << std::setprecision(4) << (sample_metrics.total_indexed_impurities - sample_metrics.impurity_count) << " overlapped)" << std::endl;
         file << "Avg. impurities per cell  " << std::setprecision(2) << (double)(sample_metrics.total_indexed_impurities) / (double)(sample_metrics.total_cells) << std::endl;
-        file << "Positions inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particles_inside_impurity / sample_metrics.total_particles)) << "%" << std::endl;
+        file << "Positions inside impurity " << std::setprecision(2) << (100 * ((double)metrics[0].particle_metrics.particles_inside_impurity / sample_metrics.total_particles)) << "%" << std::endl;
     }
 
     // Header
@@ -167,11 +167,11 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width) << std::left << " Particles escaped";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particles_escaped;
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particle_metrics.particles_escaped;
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width) << std::left << " Particles at bound";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particles_at_bound;
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particle_metrics.particles_at_bound;
         file << L'│' << std::endl;
     }
 
@@ -182,14 +182,14 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
     // Impurities statistics tree
     {
         file << L'│' << std::setw(metric_width) << std::left << " Total impurities tested";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].impurities_tested / 1'000'000.0) << " mil";
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].particle_metrics.impurities_tested / 1'000'000.0) << " mil";
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average";
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
-                << ((double)metrics[i].impurities_tested / (double)metrics[i].real_particles);
+                << ((double)metrics[i].particle_metrics.impurities_tested / (double)metrics[i].real_particles);
         }
         file << L'│' << std::endl;
 
@@ -197,12 +197,12 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-                << (100 * ((double)metrics[i].impurities_tested / (double)metrics[i].real_particles) / (double)sample_metrics.impurity_count) << "%";
+                << (100 * ((double)metrics[i].particle_metrics.impurities_tested / (double)metrics[i].real_particles) / (double)sample_metrics.impurity_count) << "%";
         }
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << std::setprecision(4) << (double)metrics[i].max_impurities_tested;
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << std::setprecision(4) << (double)metrics[i].particle_metrics.max_impurities_tested;
         file << L'│' << std::endl;
     }
 
@@ -213,14 +213,14 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
     // Cell grid statistics.
     {
         file << L'│' << std::setw(metric_width) << std::left << " Grid cells passed";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].cells_passed / 1'000'000.0) << " mil";
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 4) << std::right << std::setprecision(3) << ((double)metrics[i].particle_metrics.cells_passed / 1'000'000.0) << " mil";
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Average";
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width) << std::right << std::setprecision(2)
-                << ((double)metrics[i].cells_passed / (double)metrics[i].real_particles);
+                << ((double)metrics[i].particle_metrics.cells_passed / (double)metrics[i].real_particles);
         }
         file << L'│' << std::endl;
 
@@ -228,12 +228,12 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++)
         {
             file << L'│' << std::setw(value_width - 1) << std::right << std::setprecision(2)
-                << (100 * ((double)metrics[i].cells_passed / (double)metrics[i].real_particles) / sample_metrics.total_cells) << "%";
+                << (100 * ((double)metrics[i].particle_metrics.cells_passed / (double)metrics[i].real_particles) / sample_metrics.total_cells) << "%";
         }
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
-        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].max_cells_passed;
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particle_metrics.max_cells_passed;
         file << L'│' << std::endl;
 
     }

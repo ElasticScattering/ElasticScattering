@@ -22,7 +22,7 @@ std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, con
 	QueryPerformanceCounter(&endLifetimesClock);
 	metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
 	
-	metrics.real_particles = ss.total_particles - metrics.particles_inside_impurity;
+	metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
 	sample_metrics.iteration_metrics.push_back(metrics);
 
 	std::vector<Sigma> results(temperatures.size());
@@ -43,7 +43,7 @@ std::vector<IterationResult> SimulationCPU::ComputeSigmasWithImages(const double
 	QueryPerformanceCounter(&endLifetimesClock);
 	metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
 
-	metrics.real_particles = ss.total_particles - metrics.particles_inside_impurity;
+	metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
 	sample_metrics.iteration_metrics.push_back(metrics);
 
 	std::vector<IterationResult> results(temperatures.size());
@@ -64,6 +64,8 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 	ps.angular_speed = E * magnetic_field / M;
 	ss.signed_angular_speed = ps.is_clockwise ? -ps.angular_speed : ps.angular_speed;
 
+	ParticleMetrics pm;
+
 	for (int j = 0; j < ss.positions_per_row; j++) {
 		for (int i = 0; i < ss.positions_per_row; i++) {
 			const v2 position = v2(i, j) * ss.distance_between_positions + ss.small_offset;
@@ -72,23 +74,24 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 				for (int p = 0; p < ss.particles_per_quadrant; p++) {
 					auto particle = CreateParticle(q, p, position, &ps);
 
-					int last_cells_passed = metrics.cells_passed;
-					int last_intersections_tested = metrics.impurities_tested;
+					int last_cells_passed = pm.cells_passed;
+					int last_intersections_tested = pm.impurities_tested;
 
-					lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), &metrics);
+					lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), &pm);
 
-					int new_cells_passed = metrics.cells_passed - last_cells_passed;
-					if (metrics.max_cells_passed < new_cells_passed)
-						metrics.max_cells_passed = new_cells_passed;
+					int new_cells_passed = pm.cells_passed - last_cells_passed;
+					if (pm.max_cells_passed < new_cells_passed)
+						pm.max_cells_passed = new_cells_passed;
 
-					int new_intersections_tested = metrics.impurities_tested - last_intersections_tested;
-					if (metrics.max_impurities_tested < new_intersections_tested)
-						metrics.max_impurities_tested = new_intersections_tested;
+					int new_intersections_tested = pm.impurities_tested - last_intersections_tested;
+					if (pm.max_impurities_tested < new_intersections_tested)
+						pm.max_impurities_tested = new_intersections_tested;
 				}
 			}
 		}
 	}
 
+	metrics.particle_metrics = pm;
 	metrics.avg_particle_lifetime = AverageLifetime(lifetimes);
 
 	return lifetimes;
