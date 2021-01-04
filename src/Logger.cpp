@@ -32,7 +32,7 @@ void Logger::CreateResultLog(const std::string file_path, const SimulationConfig
     file << std::endl;
     file << "MF values   " << cfg.magnetic_fields.size() << std::endl;
     file << "Samples     " << cfg.num_samples << std::endl;
-    file << "Positions   " << cfg.positions_per_row-1 << " x " << cfg.positions_per_row-1 << std::endl;
+    file << "Positions   " << cfg.positions_per_row << " x " << cfg.positions_per_row << std::endl;
     file << "Phi steps   " << cfg.particles_per_quadrant << std::endl;
     file << std::endl;
 

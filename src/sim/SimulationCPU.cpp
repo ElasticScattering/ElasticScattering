@@ -66,9 +66,15 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 
 	ParticleMetrics pm;
 
+
 	for (int j = 0; j < ss.positions_per_row; j++) {
 		for (int i = 0; i < ss.positions_per_row; i++) {
 			const v2 position = v2(i, j) * ss.distance_between_positions + ss.small_offset;
+
+			/*
+			if (i < 5)
+				printf("x: %e y: %e\n", position.x, position.y);
+			*/
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < ss.particles_per_quadrant; p++) {
@@ -77,7 +83,7 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 					int last_cells_passed = pm.cells_passed;
 					int last_intersections_tested = pm.impurities_tested;
 
-					lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), &pm);
+					lifetimes[GetIndex(i, j, q, p)] = TraceOrbit(&particle, &is, grid.GetImpurities(), grid.GetIndex(), pm);
 
 					int new_cells_passed = pm.cells_passed - last_cells_passed;
 					if (pm.max_cells_passed < new_cells_passed)
@@ -90,6 +96,8 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 			}
 		}
 	}
+
+	//printf("<<<CPU DONE>>>\n");
 
 	metrics.particle_metrics = pm;
 	metrics.avg_particle_lifetime = AverageLifetime(lifetimes);

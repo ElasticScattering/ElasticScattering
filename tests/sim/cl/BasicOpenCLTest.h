@@ -190,15 +190,15 @@ TEST_CASE("Test if opencl can printf without fail")
 	cl_program program;
 	CompileOpenCLProgram(device, context, "tests/kernels/test_printf.cl", &program);
 
-	size_t global_work_size = 32;
-	size_t local_work_size = 32;
+	size_t global = 32;
+	size_t local = 32;
 
 	cl_int clStatus;
 
 	cl_kernel main_kernel = clCreateKernel(program, "test_printf", &clStatus);
 	CL_FAIL_CONDITION(clStatus, "Couldn't create kernel.");
 
-	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 1, nullptr, &global_work_size, &local_work_size, 0, nullptr, nullptr);
+	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 1, nullptr, &global, &local, 0, nullptr, nullptr);
 	CL_FAIL_CONDITION(clStatus, "Couldn't start test kernel execution.");
 
 	clStatus = clFinish(queue);

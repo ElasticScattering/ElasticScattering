@@ -74,7 +74,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
     for (int i = impurity_start; i < impurity_end; i++)
     {
         if (InsideImpurity(p->position, impurities[i], is->impurity_radius)) {
-            METRIC_INC(metrics->particles_inside_impurity);
+            METRIC_INC(particles_inside_impurity);
             return 0;
         }
     }
@@ -91,8 +91,8 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         int impurity_start = (cell_idx > 0) ? cell_indices[cell_idx - 1] : 0;
         int impurity_end = cell_indices[cell_idx];
 
-        METRIC_INC(metrics->cells_passed);
-        METRIC_ADD(metrics->impurities_tested, (impurity_end - impurity_start));
+        METRIC_INC(cells_passed);
+        METRIC_ADD(impurities_tested, (impurity_end - impurity_start));
 
         // Test each impurity.
         for (int i = impurity_start; i < impurity_end; i++) {
@@ -119,7 +119,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
             //printf("Cells passed: %i\n", particle_metrics->cells_passed);
             //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
 
-            METRIC_INC(metrics->particles_escaped);
+            METRIC_INC(particles_escaped);
             lifetime = 0;
             break;
         }
@@ -128,7 +128,7 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
     // @Refactor
     if (lifetime > p->orbit.bound_time)
     {
-        METRIC_INC(metrics->particles_at_bound);
+        METRIC_INC(particles_at_bound);
         return p->orbit.bound_time;
     }
 

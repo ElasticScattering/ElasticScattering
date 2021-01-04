@@ -129,15 +129,22 @@ typedef struct SimulationConfiguration
         CFG_EXIT_CONDITION(cfg.num_samples <= 0, "Samples must be greater than 0.");
 
         cfg.particles_per_quadrant = atoi(values.at("phi_steps").c_str());
-        CFG_EXIT_CONDITION(cfg.particles_per_quadrant % 2 != 0, "Phi steps must be even.");
+        CFG_EXIT_CONDITION(cfg.particles_per_quadrant % 2 == 0, "Phi steps must be odd.");
 
         cfg.positions_per_row = atoi(values.at("dimension").c_str());;
-        CFG_EXIT_CONDITION(cfg.positions_per_row % 2 != 0, "Dimension must be even.");
+        CFG_EXIT_CONDITION(cfg.positions_per_row % 2 == 0, "Dimension must be odd.");
 
+        if (values.find("magnetic_field") != values.end()) {
+            cfg.magnetic_fields.push_back(atof(values.at("magnetic_field").c_str()));
+        }
+        else
         {
             double mf_min       = atof(values.at("magnetic_field_min").c_str());
             double mf_max       = atof(values.at("magnetic_field_max").c_str());
             double mf_n         = atoi(values.at("magnetic_field_n").c_str());
+
+            CFG_EXIT_CONDITION(mf_n < 2, "Tried to declare magnetic field range with n<2. Use 'magnetic_field x' when using only one value.");
+
             double mf_step_size = (mf_max - mf_min) / (double)(mf_n - 1);
 
             cfg.magnetic_fields.resize(mf_n);

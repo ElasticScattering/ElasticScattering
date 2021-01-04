@@ -4,21 +4,15 @@
 #include "src/sim/es/settings.h"
 
 kernel void 
-apply_max_lifetime(constant double* raw_lifetimes, double default_max_lifetime, global double* lifetimes)
+apply_max_lifetime(constant double* raw_lifetimes, constant SimulationSettings *ss, double default_max_lifetime, global double* lifetimes)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
 	int v = get_global_id(2);
 
-	int particles_per_position = get_global_size(2);
-	int positions_per_row   = get_global_size(0);
-	int values_per_row      = positions_per_row * particles_per_position;
-
-	int idx = j * values_per_row + i * particles_per_position + v;
-
-	//int idx = GET_INDEX(i, j, v);
+	int idx = GET_INDEX(i, j, v);
 	double lt = raw_lifetimes[idx];
-	lifetimes[idx] = min(lt , default_max_lifetime);
+	lifetimes[idx] = min(lt, default_max_lifetime);
 }
 
 
@@ -37,8 +31,11 @@ apply_sigma_component(constant double* lifetimes,
 	if (i >= ss->positions_per_row || j >= ss->positions_per_row)
 		return;
 
+	double quadrant = floor(v / (double)ss->particles_per_quadrant);
+	double phi_index = (double)(v % ss->particles_per_quadrant); 
+	double phi = ps->phi_start + quadrant * HALF_PI + phi_index * ps->phi_step_size;
+
 	int idx    = GET_INDEX(i, j, v);
-	double phi = GET_PHI(v);
 	double f   = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi); 
 	sigma_lifetimes[idx] = GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed) * f;
 }
@@ -85,7 +82,7 @@ integrate_to_particle(global double* values, constant SimulationSettings* ss, gl
 
 
 kernel void 
-sum(global double* A, global double* B, local double* local_sums)
+sum(global double* A, local double* local_sums, global double* B)
 {
 	uint id = get_global_id(0);
 	uint local_id = get_local_id(0);

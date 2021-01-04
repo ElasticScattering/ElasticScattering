@@ -14,13 +14,6 @@ typedef struct ImpuritySettings
     double impurity_radius;
 } ImpuritySettings;
 
-typedef struct Range
-{
-    double start;
-    double step_size;
-    double count;
-} Range;
-
 typedef struct ParticleSettings
 {
     double particle_speed;
@@ -53,7 +46,7 @@ typedef struct SimulationSettings
     double region_extended_area;
     
     double distance_between_positions;
-    double2 small_offset;
 
     double coherent_tau;
+    double2 small_offset;
 } SimulationSettings;

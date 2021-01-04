@@ -12,12 +12,31 @@
 
 #include <vector>
 
+typedef struct PerformanceCounters
+{
+	LARGE_INTEGER lifetimeBegin, lifetimeEnd;
+	LARGE_INTEGER temperaturesBegin, temperaturesEnd;
+
+} PerformanceCounters;
+
+typedef struct WorkSize
+{
+	size_t positions_per_row;
+	size_t particles_per_position;
+	int    total_particles;
+
+	size_t global[3];
+	size_t local [3];
+};
+
 class Simulation {
 
 protected:
 	SimulationSettings ss;
 	ImpuritySettings is;
 	ParticleSettings ps;
+
+	PerformanceCounters pc;
 
 	LARGE_INTEGER clockFrequency;
 
@@ -122,17 +141,18 @@ public:
 	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
 };
 
-
 class SimulationCL : public Simulation {
+	WorkSize work_size;
+	unsigned int last_grid_seed = 0;
+
 	void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics);
 	Sigma			DeriveTemperature(const double temperature) const;
 	IterationResult DeriveTemperatureWithImages(const double temperature) const;
 
+	void UploadImpurities(const Grid& grid);
 public:
 	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
-
-	void UploadImpurities(const Grid& grid);
 
 	SimulationCL(int p_particles_per_row, int p_values_per_quadrant);
 	~SimulationCL();

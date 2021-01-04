@@ -37,7 +37,7 @@ TEST_CASE("Lifetime tests")
 		ps.is_coherent  = 1;
 
 		auto particle = CreateParticle(0, 0, v2(7e-7, 2.99e-7), &ps);
-		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 		
 		CHECK(lt > 0.88);
 		CHECK(lt < 0.89);
@@ -49,7 +49,7 @@ TEST_CASE("Lifetime tests")
 		ps.is_coherent  = 0;
 
 		auto particle = CreateParticle(0, 0, v2(7e-7, 2.99e-7), &ps);
-		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK_ALMOST(lt, (PI / 4));
 	}
@@ -60,7 +60,7 @@ TEST_CASE("Lifetime tests")
 		ps.is_coherent  = 1;
 
 		auto particle = CreateParticle(0, 0, v2(7e-7, 2.99e-7), &ps);
-		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt > 0.078);
 		CHECK(lt < 0.079);
@@ -72,7 +72,7 @@ TEST_CASE("Lifetime tests")
 		ps.is_coherent = 1;
 
 		auto particle = CreateParticle(0, 0, v2(7e-7, 4.3e-7), &ps);
-		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt > 3.82); 
 		CHECK(lt < 3.83);
@@ -84,7 +84,7 @@ TEST_CASE("Lifetime tests")
 		ps50.is_coherent = 1;
 
 		auto particle = CreateParticle(0, 0, v2(6.5e-7, 1.35e-6), &ps50);
-		double lt = ps50.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps50.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt == 0); // Op dit moment betekend 0 dat een particle nergens op is gebotst.
 	}
@@ -95,7 +95,7 @@ TEST_CASE("Lifetime tests")
 		ps50.is_coherent = 1;
 
 		auto particle = CreateParticle(0, 0, v2(6.15e-7, 1.35e-6), &ps50);
-		double lt = ps50.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps50.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 		
 		CHECK(lt > 2.21);
 		CHECK(lt < 2.215);
@@ -107,7 +107,7 @@ TEST_CASE("Lifetime tests")
 		ps.is_coherent  = 1;
 
 		auto particle = CreateParticle(0, 1, v2(1.00000000e-06, 5.0000000e-07), &ps8);
-		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt == 0); // Op dit moment betekend 0 dat een particle nergens op is gebotst.
 	}
@@ -118,7 +118,7 @@ TEST_CASE("Lifetime tests")
 		ps8.is_coherent  = 1;
 
 		auto particle = CreateParticle(0, 1, v2(1.00000000e-06, 5.0000100e-07), &ps8);
-		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt < 1);
 	}
@@ -129,7 +129,7 @@ TEST_CASE("Lifetime tests")
 		ps8.is_coherent  = 1;
 
 		auto particle = CreateParticle(0, 1, v2(1.00000000e-06, 4.9999900e-07), &ps8);
-		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), &pm);
+		double lt = ps8.angular_speed * TraceOrbit(&particle, &impurity_settings, grid.GetImpurities(), grid.GetIndex(), pm);
 
 		CHECK(lt < 1);
 	}

@@ -11,7 +11,9 @@
 
 #include "sim/GridGenerationTests.h"
 #include "sim/SimpsonWeightsTest.h"
-#include "sim/SigmaIntegrationTest.h"
+
+//#include "sim/SigmaIntegrationTest.h"
+#include "sim/cl/CLSigmaIntegrationTest.h"
 
 //#include "sim/cl/BasicOpenCLTest.h"
 //#include "UtilKernelsTest.h"
