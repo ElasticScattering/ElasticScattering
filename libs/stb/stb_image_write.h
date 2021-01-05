@@ -64,7 +64,7 @@ USAGE:
    where the callback is:
       void stbi_write_func(void *context, void *data, int size);
 
-   You can configure it with these global variables:
+   You can configure it with these particles_global variables:
       int stbi_write_tga_with_rle;             // defaults to true; set to 0 to disable RLE
       int stbi_write_png_compression_level;    // defaults to 8; set to higher for more compression
       int stbi_write_force_png_filter;         // defaults to -1; set to 0..5 to force a filter mode
@@ -96,7 +96,7 @@ USAGE:
    writer, both because it is in BGR order and because it may have padding
    at the end of the line.)
 
-   PNG allows you to set the deflate compression level by setting the global
+   PNG allows you to set the deflate compression level by setting the particles_global
    variable 'stbi_write_png_compression_level' (it defaults to 8).
 
    HDR expects linear float data. Since the format is always 32-bit rgb(e)
@@ -104,7 +104,7 @@ USAGE:
    replicated across all three channels.
 
    TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
-   data, set the global variable 'stbi_write_tga_with_rle' to 0.
+   data, set the particles_global variable 'stbi_write_tga_with_rle' to 0.
 
    JPEG does ignore alpha channels in input data; quality is between 1 and 100.
    Higher quality looks better but results in a bigger image.
@@ -1366,7 +1366,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
 }
 
 static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality) {
-   // Constants that don't pollute global namespace
+   // Constants that don't pollute particles_global namespace
    static const unsigned char std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
    static const unsigned char std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
    static const unsigned char std_ac_luminance_nrcodes[] = {0,0,2,1,3,3,2,4,3,5,5,4,4,0,0,1,0x7d};

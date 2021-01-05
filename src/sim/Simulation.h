@@ -25,8 +25,11 @@ typedef struct WorkSize
 	size_t particles_per_position;
 	int    total_particles;
 
-	size_t global[3];
-	size_t local [3];
+	size_t particles_global[3];
+	size_t particles_local [3];
+
+	size_t sum_global;
+	size_t sum_local;
 };
 
 class Simulation {
@@ -77,7 +80,8 @@ protected:
 			if (lifetimes[i] > 0) total_valid++;
 		}
 		
-		return total / (double)total_valid;
+		//@Todo, kan ook total_valid gebruiken.
+		return total / (double)ss.total_particles;
 	}
 
 	inline double GetElapsedTime(LARGE_INTEGER beginClock, LARGE_INTEGER endClock) const { return ((double)(endClock.QuadPart - beginClock.QuadPart) / clockFrequency.QuadPart); }

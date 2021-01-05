@@ -402,8 +402,9 @@
     <ClInclude Include="tests\es\LifetimeTests.h" />
     <ClInclude Include="tests\es\OrbitDetailsTest.h" />
     <ClInclude Include="tests\sim\cl\BasicOpenCLTest.h" />
+    <ClInclude Include="tests\sim\cl\CLGridMovementTests.h" />
     <ClInclude Include="tests\sim\cl\CLSigmaIntegrationTest.h" />
-    <ClInclude Include="tests\sim\cl\UtilKernelsTest.h" />
+    <ClInclude Include="tests\sim\cl\IntegrationKernelsTest.h" />
     <ClInclude Include="tests\sim\GridGenerationTests.h" />
     <ClInclude Include="tests\sim\SigmaIntegrationTest.h" />
     <ClInclude Include="tests\sim\SimpsonWeightsTest.h" />
@@ -421,6 +422,7 @@
     <None Include="tests\data\kernels\test_precision.cl" />
     <None Include="tests\data\kernels\test_double2.cl" />
     <None Include="tests\data\kernels\test_printf.cl" />
+    <None Include="tests\sim\cl\kernels\cell_grid_test.cl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="docs\todo.txt" />

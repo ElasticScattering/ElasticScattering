@@ -3,13 +3,10 @@
 #include "src/sim/es/shared_macros.h"
 
 #ifdef DEVICE_PROGRAM
-
 	#define IMPURITY_SETTINGS __constant ImpuritySettings *is
 	#define PARTICLE_SETTINGS __constant ParticleSettings* ps
 
 	#define BUFFER_ARGS __constant double2 *impurities, __constant int *cell_indices, __global ParticleMetrics *metrics
-	
-	#define MAKE_POS(i, j) MAKE_DOUBLE(i, j) * (sp.region_size / (double)(sp.dim - 2))	
 
 	#define MAKE_DOUBLE2(px, py) (double2)(px, py)
 	#define MAKE_INT2(px, py) (int2)(px, py)

@@ -22,12 +22,19 @@ TEST_CASE("CL Sigma integration should be identical to CPU sigma integration.")
 	SampleMetrics sm_cpu(0, 0, 0);
 	SampleMetrics sm_cl (0, 0, 0);
 
-	auto results_cpu = sim_cpu.ComputeSigmas(12, cfg.temperatures, grid, sm_cpu);
 	auto results_cl  = sim_cl .ComputeSigmas(12, cfg.temperatures, grid, sm_cl);
+	auto results_cpu = sim_cpu.ComputeSigmas(12, cfg.temperatures, grid, sm_cpu);
 	REQUIRE(results_cpu.size() == results_cl.size());
 
 	for (int i = 0; i < cfg.temperatures.size(); i++)
 	{
+		CHECK_RELATIVE(results_cpu[i].xx, results_cl[i].xx);
+		CHECK_RELATIVE(results_cpu[i].xy, results_cl[i].xy);
+
+		printf("Relative difference\n");
+		printf("xx: %e\n", abs((results_cpu[i].xx) - (results_cl[i].xx)) / (results_cl[i].xx));
+		printf("xx: %e\n", abs((results_cpu[i].xy) - (results_cl[i].xy)) / (results_cl[i].xy));
+
 		CHECK_ALMOST(results_cpu[i].xx, results_cl[i].xx);
 		CHECK_ALMOST(results_cpu[i].xy, results_cl[i].xy)
 	}

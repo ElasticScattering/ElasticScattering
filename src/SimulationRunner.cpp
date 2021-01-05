@@ -54,7 +54,7 @@ SimulationResult SimulationRunner::RunSimulation() const
 
         if (i == 0 && cfg.output_type != OutputType::Nothing) {
             GlobalMetrics gm;
-            gm.particles_per_row = cfg.positions_per_row - 1;
+            gm.particles_per_row = cfg.positions_per_row;
             gm.phi_steps = 4 * cfg.particles_per_quadrant;
             gm.cells_per_row = grid.GetCellsPerRow();
             gm.unique_impurity_count = grid.GetUniqueImpurityCount();
@@ -80,7 +80,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     SampleResult sr(T, N);
 
     auto metrics_path = GetMetricsPath();
-    double nlifetimes = pow(cfg.positions_per_row - 1, 2) * 4.0 * cfg.particles_per_quadrant;
+    double nlifetimes = pow(cfg.positions_per_row, 2) * 4.0 * cfg.particles_per_quadrant;
 
     es.InitSample(grid, settings, coherent);
 
@@ -109,7 +109,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
 
             for (int j = 0; j < cfg.temperatures.size(); j++) {
                 sr.results[i][j] = iteration[j].result;
-                Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.positions_per_row - 1, iteration[j]);
+                Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.positions_per_row, iteration[j]);
             }
         }
             

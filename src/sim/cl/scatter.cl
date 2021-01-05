@@ -1,5 +1,4 @@
-//#include "src/sim/es/lifetime.h"
-#include "src/sim/es/constants.h" // kan normaal weg.
+#include "src/sim/es/lifetime.h"
 #include "src/sim/es/settings.h"
 #include "src/Metrics.h"
 
@@ -24,11 +23,13 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 	const int q = (int)(v / ss->particles_per_quadrant);
 	const int p =       v % ss->particles_per_quadrant;
 
-    double2 pos = (double2)(i, j) * ss->distance_between_positions + ss->small_offset; // ;
+    double2 pos = (double2)(i, j) * ss->distance_between_positions + ss->small_offset;
 	int idx = GET_INDEX(i, j, v);
-	
-	if (idx == 0) {
-		printf("First particle:\n");
+
+	/*
+	if (idx == 54) {
+		printf("Particle:\n");
+		printf("i: %i j: %i v: %i\n", i, j, v);
 		printf("x: %.8e y: %.8e phi: %.4e\n", pos.x, pos.y, GET_PHI(v));
 
 		printf("\nParticle settings:\n");
@@ -66,9 +67,8 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 		for (int imp_idx = 0; imp_idx < 20; imp_idx++)
 			printf("x: %.8e y: %.8e\n", impurities[imp_idx].x, impurities[imp_idx].y);
 	}
+	*/
 
-	//lifetimes[GET_INDEX(i, j, v)] = (i % 2 == 0) ? small_offset.x : small_offset.y; //(i % 2 == 0) ? impurities[1].y : impurities[1].x;
-	
-	//Particle particle = CreateParticle(q, p, pos, ps);
-	//lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, is, impurities, imp_index, metrics);
+	Particle particle = CreateParticle(q, p, pos, ps);
+	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, is, impurities, imp_index, metrics);
 }

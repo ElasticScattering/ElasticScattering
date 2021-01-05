@@ -14,9 +14,9 @@
 
 //#include "sim/SigmaIntegrationTest.h"
 #include "sim/cl/CLSigmaIntegrationTest.h"
+//#include "sim/cl/IntegrationKernelsTest.h"
 
 //#include "sim/cl/BasicOpenCLTest.h"
-//#include "UtilKernelsTest.h"
 
 void test_main() {
     doctest::Context context;

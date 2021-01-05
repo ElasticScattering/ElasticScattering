@@ -11,6 +11,7 @@ void TestGridMovement(Orbit& o, Intersection& exit, std::vector<Intersection>& e
 	Intersection entry;
 
 	v2 spawn_range = { -1e-6, 2e-6 };
+	
 	ImpuritySettings settings;
 	settings.cells_per_row      = 10;
 	settings.spawn_region_start = spawn_range.x;

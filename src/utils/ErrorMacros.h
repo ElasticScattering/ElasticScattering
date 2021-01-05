@@ -1,3 +1,4 @@
+#include <iostream>
 
 #define CL_FAIL_CONDITION(err, msg)                                                                                                                                                          \
     if (err != CL_SUCCESS) {                                                                                                                                                                    \

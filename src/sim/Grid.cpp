@@ -1,7 +1,7 @@
 #include "Grid.h"
 
 #include "es/constants.h"
-
+#include "src/utils/ErrorMacros.h"
 #include <random>
 #include <windows.h>
 #include <set>
@@ -13,7 +13,11 @@ Grid::Grid(unsigned int seed, double region_size, double region_extends, double 
 	
 	spawn_range = v2(-region_extends, region_size + region_extends);
 	double area_length = spawn_range.y - spawn_range.x;
-	unique_impurity_count = max(1, (int)ceil(area_length * area_length * density));
+	double imp_count_proposal = area_length * area_length * density;
+	CFG_EXIT_CONDITION(imp_count_proposal > 1e7, "Woah!");
+	CFG_EXIT_CONDITION(imp_count_proposal < 1, "No impurities");
+
+	unique_impurity_count = max(1, (long)ceil(imp_count_proposal));
 	cells_per_row = max((int)round(sqrt(unique_impurity_count / (double)target_cell_population)), 1);
 	cell_size = (spawn_range.y - spawn_range.x) / (double)cells_per_row;
 	auto impurities = GenerateImpurities(unique_impurity_count, seed);

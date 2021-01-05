@@ -15,7 +15,6 @@ apply_max_lifetime(constant double* raw_lifetimes, constant SimulationSettings *
 	lifetimes[idx] = min(lt, default_max_lifetime);
 }
 
-
 kernel void 
 apply_sigma_component(constant double* lifetimes, 
 					  constant SimulationSettings* ss, 
@@ -31,13 +30,26 @@ apply_sigma_component(constant double* lifetimes,
 	if (i >= ss->positions_per_row || j >= ss->positions_per_row)
 		return;
 
-	double quadrant = floor(v / (double)ss->particles_per_quadrant);
+	double quadrant  = floor(v / (double)ss->particles_per_quadrant);
 	double phi_index = (double)(v % ss->particles_per_quadrant); 
-	double phi = ps->phi_start + quadrant * HALF_PI + phi_index * ps->phi_step_size;
+	double phi       = ps->phi_start + quadrant * HALF_PI + phi_index * ps->phi_step_size;
 
-	int idx    = GET_INDEX(i, j, v);
-	double f   = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi); 
-	sigma_lifetimes[idx] = GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed) * f;
+	int idx  = GET_INDEX(i, j, v);
+	double f = (mode == MODE_SIGMA_XX) ? cos(phi) : sin(phi);
+	
+	if (idx == 0) {
+		printf("Apply Sigma\n");
+		printf("q: %.1f\n", quadrant);
+		printf("p: %.1f\n", phi_index);
+		printf("ps: %.1f\n", ps->phi_start);
+		printf("pss: %.1f\n", ps->phi_step_size);
+		printf("phi: %.1f\n", phi);
+		printf("tau: %.1f\n", tau);
+		printf("mode: %i\n", mode);
+		printf("as: %.1f\n", ss->signed_angular_speed);
+	}
+	
+	sigma_lifetimes[idx] = f * GetSigma(lifetimes[idx], phi, tau, ss->signed_angular_speed);
 }
 
 
@@ -51,33 +63,33 @@ apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSetting
 	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 
-	int idx = GET_INDEX(i, j, v);
-
-	sigma_lifetimes[idx] *= (SimpsonWeight2D(i, j, ss->positions_per_row) * SimpsonWeight(v % ss->particles_per_quadrant, ss->particles_per_quadrant));
+	sigma_lifetimes[GET_INDEX(i, j, v)] = (SimpsonWeight2D(i, j, ss->positions_per_row) * SimpsonWeight(v % ss->particles_per_quadrant, ss->particles_per_quadrant));
 }
 
 
 kernel void 
-integrate_to_particle(global double* values, constant SimulationSettings* ss, global double* position_lifetimes)
+integrate_to_position(global double* values, constant SimulationSettings* ss, global double* position_values)
 {
-	int i        = get_global_id(0);
-    int j        = get_global_id(1);
+	int i = get_global_id(0);
+    int j = get_global_id(1);
 	
 	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
 		return;
 	
-	int pos_idx = GET_POSITION_INDEX(i, j);
+	int pos_idx = j * get_global_size(0) + i; //GET_POSITION_INDEX(i, j);
+	
 	double total = 0;
+	int base_idx = GET_BASE_INDEX(i, j);
 	for (int q = 0; q < 4; q++)
 	{
-		unsigned int base_idx = GET_INDEX(i, j, q); // @Optimize
-	
 		for (int p = 0; p < ss->particles_per_quadrant; p++)
 			total += values[base_idx + p] * SimpsonWeight(p, ss->particles_per_quadrant);
+		
+		base_idx += ss->particles_per_quadrant; // @Optimize?
 	}
 	
 	// @Todo, integrand factor.
-	position_lifetimes[pos_idx] = total * ss->phi_integrand_factor;
+	position_values[pos_idx] = total * ss->phi_integrand_factor;
 }
 
 

@@ -29,7 +29,7 @@ private:
 	std::vector<v2> ordered_impurities;
 	std::vector<int> imp_index;
 
-	int unique_impurity_count;
+	long unique_impurity_count;
 	int total_indexed_impurities;
 	
 	v2 spawn_range;

@@ -162,8 +162,16 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << std::setprecision(3) << metrics[i].avg_particle_lifetime;
         file << L'│' << std::endl;
 
-        file << L'│' << std::setw(metric_width) << std::left << " Time spent on lifetimes";
+        file << L'│' << std::setw(metric_width) << std::left << "Time spent on";
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::wstring(value_width, ' ');
+        file << L'│' << std::endl;
+
+        file << L'│' << std::setw(metric_width - 2) << std::left << "\t Lifetimes";
         for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 2) << std::right << std::setprecision(3) << (metrics[i].time_elapsed_lifetimes * 1000.0) << "ms";
+        file << L'│' << std::endl;
+
+        file << L'│' << std::setw(metric_width - 2) << std::left << "\t Temperatures";
+        for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width - 2) << std::right << std::setprecision(3) << (metrics[i].time_elapsed_temperatures * 1000.0) << "ms";
         file << L'│' << std::endl;
 
         file << L'│' << std::setw(metric_width) << std::left << " Particles escaped";

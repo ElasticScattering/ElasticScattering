@@ -2,6 +2,9 @@
 #include "Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 
+#include <iostream> // @Todo, remove.
+#include <iomanip>
+
 typedef struct
 {
     cl_device_id deviceID;
@@ -32,20 +35,20 @@ typedef struct
     cl_kernel apply_max_lifetime;
     cl_kernel apply_sigma_comp_kernel;
     cl_kernel apply_simpson_weights;
-    cl_kernel integrate_particle_kernel;
+    cl_kernel integrate_position_kernel;
     cl_kernel sum_kernel;
 
     cl_mem lifetimes;
 
-    cl_mem sigma_lifetimes_xx;
-    cl_mem sigma_lifetimes_xy;
+    cl_mem lifetimes_sigma_xx;
+    cl_mem lifetimes_sigma_xy;
 
-    cl_mem lifetimes_particle;
+    cl_mem lifetimes_positions;
+    cl_mem sigma_xx_positions;
+    cl_mem sigma_xy_positions;
 
     cl_mem sigma_xx;
-    cl_mem sigma_xx_particle;
     cl_mem sigma_xy;
-    cl_mem sigma_xy_particle;
 
     cl_mem incomplete_sum; // Nog steeds nodig?
 } OCLIntegrationResources;
@@ -58,8 +61,12 @@ OCLIntegrationResources ocl_integration;
 std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
     Metrics metrics;
+    QueryPerformanceCounter(&pc.lifetimeBegin);
     ComputeLifetimes(magnetic_field, grid, metrics);
-    sample_metrics.iteration_metrics.push_back(metrics);
+    QueryPerformanceCounter(&pc.lifetimeEnd);
+    metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
+
+    metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
 
     QueryPerformanceCounter(&pc.temperaturesBegin);
     std::vector<Sigma> results(temperatures.size());
@@ -68,14 +75,20 @@ std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, cons
     QueryPerformanceCounter(&pc.temperaturesEnd);
     metrics.time_elapsed_temperatures = GetElapsedTime(pc.temperaturesBegin, pc.temperaturesEnd);
 
+    sample_metrics.iteration_metrics.push_back(metrics);
+
     return results;
 }
 
 std::vector<IterationResult> SimulationCL::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
     Metrics metrics;
+    QueryPerformanceCounter(&pc.lifetimeBegin);
     ComputeLifetimes(magnetic_field, grid, metrics);
-    sample_metrics.iteration_metrics.push_back(metrics);
+    QueryPerformanceCounter(&pc.lifetimeEnd);
+    metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
+
+    metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
 
     QueryPerformanceCounter(&pc.temperaturesBegin);
     std::vector<IterationResult> results(temperatures.size());
@@ -84,6 +97,8 @@ std::vector<IterationResult> SimulationCL::ComputeSigmasWithImages(const double 
     QueryPerformanceCounter(&pc.temperaturesEnd);
     metrics.time_elapsed_temperatures = GetElapsedTime(pc.temperaturesBegin, pc.temperaturesEnd);
 
+    sample_metrics.iteration_metrics.push_back(metrics);
+
     return results;
 }
 
@@ -91,8 +106,6 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
 {
     ps.angular_speed = E * magnetic_field / M;
     ss.signed_angular_speed = ps.is_clockwise ? -ps.angular_speed : ps.angular_speed;
-    //ss.small_offset.x = 0.04;
-    //ss.small_offset.y = 0.076;
 
     if (grid.GetSeed() != last_grid_seed) {
         UploadImpurities(grid);
@@ -100,80 +113,83 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
     }
 
     cl_int clStatus;
-
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.particle_settings, CL_TRUE, 0, sizeof(ParticleSettings), (void*)&ps, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to buffer.");
-
-    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.impurity_settings, CL_TRUE, 0, sizeof(ImpuritySettings), (void*)&is, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to buffer.");
-
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.particle_settings,   CL_TRUE, 0, sizeof(ParticleSettings),   (void*)&ps, 0, nullptr, nullptr);
+    clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.impurity_settings,   CL_TRUE, 0, sizeof(ImpuritySettings),   (void*)&is, 0, nullptr, nullptr);
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.simulation_settings, CL_TRUE, 0, sizeof(SimulationSettings), (void*)&ss, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to buffer.");
 
     ParticleMetrics pm;
     ocl_scatter.metrics = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(SimulationSettings), nullptr, &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create metrics buffer.");
-
     clStatus = clEnqueueWriteBuffer(ocl.queue, ocl_scatter.metrics, CL_TRUE, 0, sizeof(ParticleMetrics), (void*)&pm, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't write to buffer.");
 
     // Ipv WI te maken die elk een positie behandelt, laten we elk WI één particle doen.
     // @Optimize Verifiëer dat dit ook daadwerkelijk achtereenvolgende phi's berekend in één WG.
-    work_size.positions_per_row = (size_t)ss.positions_per_row + 1;
-    work_size.particles_per_position = (size_t)ss.particles_per_position;
-    work_size.total_particles = work_size.positions_per_row * work_size.positions_per_row * work_size.particles_per_position;
+    {
+        work_size.positions_per_row      = (size_t)ss.positions_per_row + 1;
+        work_size.particles_per_position = (size_t)ss.particles_per_position;
+        work_size.total_particles        = work_size.positions_per_row * work_size.positions_per_row * work_size.particles_per_position;
 
-    work_size.global[0] = work_size.positions_per_row;
-    work_size.global[1] = work_size.positions_per_row;
-    work_size.global[2] = work_size.particles_per_position;
+        work_size.particles_global[0] = work_size.positions_per_row;
+        work_size.particles_global[1] = work_size.positions_per_row;
+        work_size.particles_global[2] = work_size.particles_per_position;
 
-    const size_t values_in_work_group = min(work_size.particles_per_position, 256); // @Todo, dit kan anders zijn voor andere devices.
+        const size_t values_in_work_group = min(work_size.particles_per_position, 256); // @Todo, dit kan anders zijn voor andere devices.
 
-    size_t other = 256 / values_in_work_group;
-    work_size.local[0] = (other % 2 == 0) ? other : other - 1;
-    work_size.local[1] = 1;
-    work_size.local[2] = values_in_work_group;
+        size_t other = 256 / values_in_work_group;
+        work_size.particles_local[0] = max(1, (other % 2 == 0) ? other : other - 1);
+        work_size.particles_local[1] = 1;
+        work_size.particles_local[2] = values_in_work_group;
+
+        std::cout << "Self determined work size:" << std::endl;
+        std::cout << "Global: " << work_size.particles_global[0] << " " << work_size.particles_global[1] << " " << work_size.particles_global[2] << std::endl;
+        std::cout << "Local:  " << work_size.particles_local[0]  << " " << work_size.particles_local[1]  << " " << work_size.particles_local[2]  << std::endl;
+    }
 
     ocl_scatter.raw_lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create metrics buffer.");
 
     {
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.particle_settings);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl_scatter.impurity_settings);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl_scatter.impurities);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 4, sizeof(cl_mem), (void*)&ocl_scatter.cell_indices);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 5, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 6, sizeof(cl_mem), (void*)&ocl_scatter.metrics);
-        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
     }
 
-    QueryPerformanceCounter(&pc.lifetimeBegin);
-    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_scatter.lifetimes_kernel, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Couldn't start main kernel.");
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_scatter.lifetimes_kernel, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Couldn't start lifetimes kernel.");
     clFinish(ocl.queue);
-    QueryPerformanceCounter(&pc.lifetimeEnd);
-    metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
 
-    std::vector<ParticleMetrics> metrics_holder(1);
-    clEnqueueReadBuffer(ocl.queue, ocl_scatter.metrics, CL_TRUE, 0, sizeof(ParticleMetrics), metrics_holder.data(), 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
-    metrics.particle_metrics = metrics_holder[0];
+    //std::vector<ParticleMetrics> metrics_holder(1);
+    clEnqueueReadBuffer(ocl.queue, ocl_scatter.metrics, CL_TRUE, 0, sizeof(ParticleMetrics), &metrics.particle_metrics, 0, nullptr, nullptr);
+    //metrics.particle_metrics = metrics_holder[0];
 
-#ifdef _DEBUG
+    //@Todo: remove?
     std::vector<double> lifetimes(work_size.total_particles);
     clStatus = clEnqueueReadBuffer(ocl.queue, ocl_scatter.raw_lifetimes, CL_TRUE, 0, sizeof(double) * work_size.total_particles, lifetimes.data(), 0, nullptr, nullptr);
     CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
-#endif
-}
 
+    std::ofstream file;
+    file.open("verification/gpu_lt.txt");
+    file << std::setprecision(12);
+    for (int j = 0; j < ss.positions_per_row; j++) {
+        file << std::endl << "R" << j << std::endl;
+        for (int i = 0; i < ss.positions_per_row; i++) {
+            file << std::endl;
+            for (int q = 0; q < 4; q++) {
+                for (int p = 0; p < ss.particles_per_quadrant; p++) {
+                    int idx = j * work_size.positions_per_row * ss.particles_per_position + i * ss.particles_per_position + q * ss.particles_per_quadrant + p;
+                    
+                    file << lifetimes[idx] << std::endl;
+                }
+            }
+        }
+    }
+
+    metrics.avg_particle_lifetime = AverageLifetime(lifetimes);
+}
 
 Sigma SimulationCL::DeriveTemperature(const double temperature) const
 {
@@ -183,10 +199,10 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
     ocl_integration.lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create integration lifetimes buffer.");
 
-    ocl_integration.sigma_lifetimes_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
+    ocl_integration.lifetimes_sigma_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xx buffer.");
 
-    ocl_integration.sigma_lifetimes_xy = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
+    ocl_integration.lifetimes_sigma_xy = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xy buffer.");
 
     // Apply max lifetime.
@@ -197,14 +213,14 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 1, sizeof(double), (void*)&ocl_scatter.simulation_settings);
         CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
-        double default_max_lifetime = 2.3; // GetDefaultMaxLifetime(tau);
+        double default_max_lifetime = GetDefaultMaxLifetime(tau);
         clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 2, sizeof(double), (void*)&default_max_lifetime);
         CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
         clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 3, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
         CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
-        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_max_lifetime, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
+        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_max_lifetime, 3, nullptr, work_size.particles_global, work_size.particles_local, 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Couldn't start apply_max_lifetime execution.");
 
 #ifdef _DEBUG
@@ -232,10 +248,10 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
             mode = MODE_SIGMA_XX;
             clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
             CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
             CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
-            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xx execution.");
         }
 
@@ -243,21 +259,21 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
             mode = MODE_SIGMA_XY;
             clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
             CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
-            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
             CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
 
-            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xy execution.");
         }
 
 #ifdef _DEBUG
         clFinish(ocl.queue);
         std::vector<double> sigma_xx_lifetimes(work_size.total_particles);
-        clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_lifetimes_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes.data(), 0, nullptr, nullptr);
+        clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes.data(), 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
 
         std::vector<double> sigma_xy_lifetimes(work_size.total_particles);
-        clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_lifetimes_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes.data(), 0, nullptr, nullptr);
+        clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes.data(), 0, nullptr, nullptr);
         CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
 #endif
     }
@@ -268,36 +284,47 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 2, sizeof(int), (void*)&ss.particles_per_quadrant);
 
         {
-            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
 
-            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
         }
 
         {
-            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
 
-            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.global, work_size.local, 0, nullptr, nullptr);
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
         }
-
-#ifdef _DEBUG
-        clFinish(ocl.queue);
-        std::vector<double> sigma_xx_lifetimes_weighted(work_size.total_particles);
-        clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_lifetimes_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes_weighted.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
-
-        std::vector<double> sigma_xy_lifetimes_weighted(work_size.total_particles);
-        clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_lifetimes_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes_weighted.data(), 0, nullptr, nullptr);
-        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
-#endif
     }
 
+    // @Temporary, gebruik sum kernel.
+    clFinish(ocl.queue);
+    std::vector<double> sigma_xx_lifetimes_weighted(work_size.total_particles);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, CL_TRUE, 0, sizeof(double)* work_size.total_particles, sigma_xx_lifetimes_weighted.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+
+    std::vector<double> sigma_xy_lifetimes_weighted(work_size.total_particles);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, CL_TRUE, 0, sizeof(double)* work_size.total_particles, sigma_xy_lifetimes_weighted.data(), 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+
     Sigma sigma;
+    for (int i = 0; i < sigma_xx_lifetimes_weighted.size(); i++)
+        sigma.xx += sigma_xx_lifetimes_weighted[i];
 
+    for (int i = 0; i < sigma_xy_lifetimes_weighted.size(); i++)
+        sigma.xy += sigma_xy_lifetimes_weighted[i];
 
+    double factor = GetSigmaIntegrandFactor(tau);
+    sigma.xx *= factor;
+    sigma.xy *= factor;
+
+    return sigma;
+
+    //Sigma sigma;
     // Sum sigma xx/xy buffers.
     // @Optimize, voer de som nog vaker uit tot een aantal elementen.
+    /*
     {
         const size_t half_size = work_size.total_particles / 2;
         const size_t incomplete_sum_size = half_size / work_size.particles_per_position; //Items in een WI....
@@ -308,7 +335,7 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.incomplete_sum);
         
         {
-            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xx);
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
 
             clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &half_size, &work_size.particles_per_position, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
@@ -324,7 +351,7 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
         //clEnqueueFillBuffer(ocl.queue, ocl_scatter.incomplete_sum, 0, 0, 0, sizeof(double) * work_size.total_particles, 0, 0, 0);
 
         {
-            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.sigma_lifetimes_xy);
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
 
             clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &half_size, &work_size.particles_per_position, 0, nullptr, nullptr);
             CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
@@ -343,11 +370,212 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
     sigma.xy *= factor;
 
     return sigma;
+    */
+
 }
 
 IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperature) const
 {
+    cl_int clStatus;
+    double tau = GetTau(temperature);
+
+    ocl_integration.lifetimes = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create integration lifetimes buffer.");
+
+    ocl_integration.lifetimes_sigma_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xx buffer.");
+
+    ocl_integration.lifetimes_sigma_xy = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xy buffer.");
+
+    int total_positions = work_size.positions_per_row * work_size.positions_per_row;
+
+    ocl_integration.lifetimes_positions = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * total_positions, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create lifetimes_particle buffer.");
+
+    ocl_integration.sigma_xx_positions = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * total_positions, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xy buffer.");
+
+    ocl_integration.sigma_xy_positions = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * total_positions, nullptr, &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create sigma_lifetimes_xy buffer.");
+
+    // Apply max lifetime.
+    {
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 1, sizeof(double), (void*)&ocl_scatter.simulation_settings);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+        double default_max_lifetime = GetDefaultMaxLifetime(tau);
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 2, sizeof(double), (void*)&default_max_lifetime);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+        clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 3, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+        clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_max_lifetime, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Couldn't start apply_max_lifetime execution.");
+
+#ifdef _DEBUG
+        clFinish(ocl.queue);
+        std::vector<double> truncated_lifetimes(work_size.total_particles);
+        clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes, CL_TRUE, 0, sizeof(double) * work_size.total_particles, truncated_lifetimes.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+#endif
+    }
+
+    // Apply sigma components.
+    {
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 2, sizeof(cl_mem), (void*)&ocl_scatter.particle_settings);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+        clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 3, sizeof(double), (void*)&tau);
+        CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+        int mode = 0;
+
+        {
+            mode = MODE_SIGMA_XX;
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
+            CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
+            CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xx execution.");
+        }
+
+        {
+            mode = MODE_SIGMA_XY;
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 4, sizeof(int), (void*)&mode);
+            CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+            clStatus = clSetKernelArg(ocl_integration.apply_sigma_comp_kernel, 5, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
+            CL_FAIL_CONDITION(clStatus, "Couldn't set argument to kernel.");
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_sigma_comp_kernel, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_sigma_comp_kernel xy execution.");
+        }
+
+#ifdef _DEBUG
+        clFinish(ocl.queue);
+        std::vector<double> sigma_xx_lifetimes(work_size.total_particles);
+        clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+
+        std::vector<double> sigma_xy_lifetimes(work_size.total_particles);
+        clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes.data(), 0, nullptr, nullptr);
+        CL_FAIL_CONDITION(clStatus, "Failed to read back lifetimes.");
+#endif
+    }
+
+    // Apply simpson weights.
+    {
+        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
+        clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 2, sizeof(int), (void*)&ss.particles_per_quadrant);
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
+        }
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.apply_simpson_weights, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.apply_simpson_weights, 3, nullptr, work_size.particles_global, NULL, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start apply_simpson_weights execution.");
+        }
+    }
+
+    {
+        // Integrate to position for images.
+        clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
+
+        size_t p = min(work_size.positions_per_row, 256);
+        size_t positions_global[2] = { work_size.positions_per_row, work_size.positions_per_row };
+        size_t positions_local[2] = { p, max(1, 256/p) };
+        
+        
+        {
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_positions);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.integrate_position_kernel, 2, nullptr, positions_global, positions_local, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start integrate_position_kernel execution.");
+        } 
+        
+        {
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.sigma_xx_positions);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.integrate_position_kernel, 2, nullptr, positions_global, positions_local, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start integrate_position_kernel execution.");
+        }
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
+            clStatus = clSetKernelArg(ocl_integration.integrate_position_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.sigma_xy_positions);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.integrate_position_kernel, 2, nullptr, positions_global, positions_local, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start integrate_position_kernel execution.");
+        }
+    }
+
+    clFinish(ocl.queue);
+
     IterationResult ir;
+    std::vector<double> lifetimes_positions(total_positions);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_positions, CL_TRUE, 0, sizeof(double) * total_positions, lifetimes_positions.data(), 0, nullptr, nullptr);
+    
+    std::vector<double> lifetime_image(ss.total_positions);
+    for (int j = 0; j < ss.positions_per_row; j++)
+        for (int i = 0; i < ss.positions_per_row; i++) {
+            lifetime_image[j * ss.positions_per_row + i] = lifetimes_positions[j * work_size.positions_per_row + i];
+        }
+    
+    ir.particle_lifetimes = lifetime_image;
+
+    std::vector<double> sigma_xx_positions(total_positions);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_xx_positions, CL_TRUE, 0, sizeof(double) * total_positions, sigma_xx_positions.data(), 0, nullptr, nullptr);
+    std::vector<double> xx_image(ss.total_positions);
+    for (int j = 0; j < ss.positions_per_row; j++)
+        for (int i = 0; i < ss.positions_per_row; i++)
+            xx_image[j * ss.positions_per_row + i] = sigma_xx_positions[j * work_size.positions_per_row + i];
+
+    ir.sigmas.xx_buffer = xx_image;
+
+    std::vector<double> sigma_xy_positions(total_positions);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.sigma_xy_positions, CL_TRUE, 0, sizeof(double) * total_positions, sigma_xy_positions.data(), 0, nullptr, nullptr);
+
+    std::vector<double> xy_image(ss.total_positions);
+    for (int j = 0; j < ss.positions_per_row; j++)
+        for (int i = 0; i < ss.positions_per_row; i++)
+            xy_image[j * ss.positions_per_row + i] = sigma_xy_positions[j * work_size.positions_per_row + i];
+
+    ir.sigmas.xy_buffer = xy_image;
+
+    // @Temporary, gebruik sum kernel.
+    std::vector<double> sigma_xx_lifetimes_weighted(work_size.total_particles);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes_weighted.data(), 0, nullptr, nullptr);
+
+    std::vector<double> sigma_xy_lifetimes_weighted(work_size.total_particles);
+    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes_weighted.data(), 0, nullptr, nullptr);
+
+    for (int i = 0; i < sigma_xx_lifetimes_weighted.size(); i++)
+        ir.result.xx += sigma_xx_lifetimes_weighted[i];
+
+    for (int i = 0; i < sigma_xy_lifetimes_weighted.size(); i++)
+        ir.result.xy += sigma_xy_lifetimes_weighted[i];
+
+    double factor = GetSigmaIntegrandFactor(tau);
+    ir.result.xx *= factor;
+    ir.result.xy *= factor;
+    
     return ir;
 }
 
@@ -377,13 +605,20 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     if (false)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
+    LARGE_INTEGER compileBegin, compileEnd;
+    QueryPerformanceCounter(&compileBegin);
     std::cout << "\nBuilding main program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/scatter.cl", &ocl_scatter.program_lifetimes);
-    std::cout << "Compilation succeeded!" << std::endl;
+    QueryPerformanceCounter(&compileEnd);
+    double elapsed = GetElapsedTime(compileBegin, compileEnd);
+    std::cout << "Compilation succeeded! (" << elapsed << "s)" << std::endl;
 
+    QueryPerformanceCounter(&compileBegin);
     std::cout << "\nBuilding integration program..." << std::endl;
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);
-    std::cout << "Compilation succeeded!" << std::endl;
+    QueryPerformanceCounter(&compileEnd);
+    elapsed = GetElapsedTime(compileBegin, compileEnd);
+    std::cout << "Compilation succeeded! (" << elapsed << "s)" << std::endl;
 
     /*
     //auto clStatus = clBuildProgram(program, 1, &devices[0], "-cl-mad-enable", NULL, NULL); //build the program
@@ -424,8 +659,8 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant) :
     ocl_integration.apply_simpson_weights     = clCreateKernel(ocl_integration.program_integration, "apply_simpson_weights", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create apply_simpson_weights kernel.");
 
-    ocl_integration.integrate_particle_kernel = clCreateKernel(ocl_integration.program_integration, "integrate_to_particle", &clStatus);
-    CL_FAIL_CONDITION(clStatus, "Couldn't create integrate_to_particle kernel.");
+    ocl_integration.integrate_position_kernel = clCreateKernel(ocl_integration.program_integration, "integrate_to_position", &clStatus);
+    CL_FAIL_CONDITION(clStatus, "Couldn't create integrate_to_position kernel.");
 
     ocl_integration.sum_kernel                = clCreateKernel(ocl_integration.program_integration, "sum", &clStatus);
     CL_FAIL_CONDITION(clStatus, "Couldn't create sum kernel.");
@@ -444,12 +679,12 @@ SimulationCL::~SimulationCL()
     clReleaseKernel(ocl_scatter.lifetimes_kernel);
     clReleaseProgram(ocl_scatter.program_lifetimes);
 
-    clReleaseMemObject(ocl_integration.sigma_xx);
-    clReleaseMemObject(ocl_integration.sigma_xy);
+    clReleaseMemObject(ocl_integration.lifetimes_sigma_xx);
+    clReleaseMemObject(ocl_integration.lifetimes_sigma_xy);
     clReleaseMemObject(ocl_integration.incomplete_sum);
     clReleaseKernel(ocl_integration.apply_sigma_comp_kernel);
     clReleaseKernel(ocl_integration.apply_simpson_weights);
-    clReleaseKernel(ocl_integration.integrate_particle_kernel);
+    clReleaseKernel(ocl_integration.integrate_position_kernel);
     clReleaseKernel(ocl_integration.sum_kernel);
     clReleaseProgram(ocl_integration.program_integration);
 

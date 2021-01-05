@@ -1,6 +1,7 @@
 bin/
 ES Logs/
 ESLogs/
+verification/
 
 .vs/
 *.filters

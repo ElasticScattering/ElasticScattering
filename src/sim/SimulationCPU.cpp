@@ -13,21 +13,41 @@
 
 std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
-	LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
-
 	Metrics metrics;
 
-	QueryPerformanceCounter(&beginLifetimesClock);
+	QueryPerformanceCounter(&pc.lifetimeBegin);
 	auto lifetimes = ComputeLifetimes(magnetic_field, grid, metrics);
-	QueryPerformanceCounter(&endLifetimesClock);
-	metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
-	
+	QueryPerformanceCounter(&pc.lifetimeEnd);
+	metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
 	metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
-	sample_metrics.iteration_metrics.push_back(metrics);
 
+	std::ofstream file;
+	file.open("verification/cpu_lt.txt");
+	file << std::setprecision(12);
+	for (int j = 0; j < ss.positions_per_row; j++) {
+		file << std::endl << "R" << j << std::endl;
+		for (int i = 0; i < ss.positions_per_row; i++) {
+			file << std::endl;
+			for (int q = 0; q < 4; q++) {
+				for (int p = 0; p < ss.particles_per_quadrant; p++) {
+					int idx = j * ss.positions_per_row * ss.particles_per_position + i * ss.particles_per_position + q * ss.particles_per_quadrant + p;
+
+					file << lifetimes[idx] << std::endl;
+				}
+			}
+		}
+	}
+
+
+	QueryPerformanceCounter(&pc.temperaturesBegin);
 	std::vector<Sigma> results(temperatures.size());
 	for (int i = 0; i < temperatures.size(); i++)
 		results[i] = DeriveTemperature(temperatures[i], lifetimes);
+
+	QueryPerformanceCounter(&pc.temperaturesEnd);
+	metrics.time_elapsed_temperatures = GetElapsedTime(pc.temperaturesBegin, pc.temperaturesEnd);
+
+	sample_metrics.iteration_metrics.push_back(metrics);
 
 	return results;
 }
@@ -35,20 +55,23 @@ std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, con
 
 std::vector<IterationResult> SimulationCPU::ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
 {
-	LARGE_INTEGER beginLifetimesClock, endLifetimesClock;
 	Metrics metrics;
 
-	QueryPerformanceCounter(&beginLifetimesClock);
+	QueryPerformanceCounter(&pc.lifetimeBegin);
 	auto lifetimes = ComputeLifetimes(magnetic_field, grid, metrics);
-	QueryPerformanceCounter(&endLifetimesClock);
-	metrics.time_elapsed_lifetimes = GetElapsedTime(beginLifetimesClock, endLifetimesClock);
-
+	QueryPerformanceCounter(&pc.lifetimeEnd);
+	metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
 	metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
-	sample_metrics.iteration_metrics.push_back(metrics);
 
+	QueryPerformanceCounter(&pc.temperaturesBegin);
 	std::vector<IterationResult> results(temperatures.size());
 	for (int i = 0; i < temperatures.size(); i++)
 		results[i] = DeriveTemperatureWithImages(temperatures[i], lifetimes);
+
+	QueryPerformanceCounter(&pc.temperaturesEnd);
+	metrics.time_elapsed_temperatures = GetElapsedTime(pc.temperaturesBegin, pc.temperaturesEnd);
+
+	sample_metrics.iteration_metrics.push_back(metrics);
 
 	return results;
 }
@@ -66,15 +89,9 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 
 	ParticleMetrics pm;
 
-
 	for (int j = 0; j < ss.positions_per_row; j++) {
 		for (int i = 0; i < ss.positions_per_row; i++) {
 			const v2 position = v2(i, j) * ss.distance_between_positions + ss.small_offset;
-
-			/*
-			if (i < 5)
-				printf("x: %e y: %e\n", position.x, position.y);
-			*/
 
 			for (int q = 0; q < 4; q++) {
 				for (int p = 0; p < ss.particles_per_quadrant; p++) {
@@ -96,8 +113,6 @@ std::vector<double> SimulationCPU::ComputeLifetimes(const double magnetic_field,
 			}
 		}
 	}
-
-	//printf("<<<CPU DONE>>>\n");
 
 	metrics.particle_metrics = pm;
 	metrics.avg_particle_lifetime = AverageLifetime(lifetimes);
