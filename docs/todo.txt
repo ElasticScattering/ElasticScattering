@@ -32,3 +32,57 @@ for (int i = 0; i < metrics.size(); i++)                        \
 } \
 file << L'│' << std::endl;
 */
+
+
+Optimaliseer som
+
+   //Sigma sigma;
+    // Sum sigma xx/xy buffers.
+    // @Optimize, voer de som nog vaker uit tot een aantal elementen.
+    /*
+    {
+        const size_t half_size = work_size.total_particles / 2;
+        const size_t incomplete_sum_size = half_size / work_size.particles_per_position; //Items in een WI....
+        ocl_integration.incomplete_sum = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * incomplete_sum_size, nullptr, &clStatus);
+        CL_FAIL_CONDITION(clStatus, "Couldn't create metrics buffer.");
+
+        clStatus = clSetKernelArg(ocl_integration.sum_kernel, 1, sizeof(double) * work_size.particles_per_position, nullptr);
+        clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.incomplete_sum);
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &half_size, &work_size.particles_per_position, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
+
+            std::vector<double> incomplete_sum(incomplete_sum_size);
+            clEnqueueReadBuffer(ocl.queue, ocl_integration.incomplete_sum, CL_TRUE, 0, sizeof(double) * incomplete_sum_size, incomplete_sum.data(), 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Failed to read back incomplete sum XX.");
+
+            for (int i = 0; i < incomplete_sum.size(); i++)
+                sigma.xx += incomplete_sum[i];
+        }
+
+        //clEnqueueFillBuffer(ocl.queue, ocl_scatter.incomplete_sum, 0, 0, 0, sizeof(double) * work_size.total_particles, 0, 0, 0);
+
+        {
+            clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
+
+            clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &half_size, &work_size.particles_per_position, 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Couldn't start sum_kernel execution.");
+
+            std::vector<double> incomplete_sum(incomplete_sum_size);
+            clEnqueueReadBuffer(ocl.queue, ocl_integration.incomplete_sum, CL_TRUE, 0, sizeof(double) * incomplete_sum_size, incomplete_sum.data(), 0, nullptr, nullptr);
+            CL_FAIL_CONDITION(clStatus, "Failed to read back incomplete sum XY.");
+
+            for (int i = 0; i < incomplete_sum.size(); i++)
+                sigma.xy += incomplete_sum[i];
+        }
+    }
+
+    double factor = GetSigmaIntegrandFactor(tau);
+    sigma.xx *= factor;
+    sigma.xy *= factor;
+
+    return sigma;
+    */

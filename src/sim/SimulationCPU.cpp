@@ -21,6 +21,7 @@ std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, con
 	metrics.time_elapsed_lifetimes = GetElapsedTime(pc.lifetimeBegin, pc.lifetimeEnd);
 	metrics.real_particles = ss.total_particles - metrics.particle_metrics.particles_inside_impurity;
 
+	/*
 	std::ofstream file;
 	file.open("verification/cpu_lt.txt");
 	file << std::setprecision(12);
@@ -37,7 +38,7 @@ std::vector<Sigma> SimulationCPU::ComputeSigmas(const double magnetic_field, con
 			}
 		}
 	}
-
+	*/
 
 	QueryPerformanceCounter(&pc.temperaturesBegin);
 	std::vector<Sigma> results(temperatures.size());

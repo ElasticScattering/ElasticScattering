@@ -72,6 +72,8 @@ public:
 		return is;
 	}
 
+
+
 	Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell);
 	Grid(std::vector<v2> impurities, double region_size, double region_extends, double impurity_radius, int target_impurity_count_per_cell);
 };

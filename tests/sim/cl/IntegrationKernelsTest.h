@@ -10,6 +10,56 @@
 
 #include <vector>
 
+
+TEST_CASE("Apply max lifetime test")
+{
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	InitializeOpenCL(true, &device, &context, &queue);
+
+	cl_program program;
+	CompileOpenCLProgram(device, context, "src/sim/cl/integration.cl", &program);
+
+	cl_int clStatus;
+	cl_kernel main_kernel = clCreateKernel(program, "apply_max_lifetime", &clStatus);
+	CL_FAIL_CONDITION(clStatus, "");
+
+	size_t global_size = 100;
+
+	double default_max_lifetime = 1e-13;
+	cl_double initial_value = 1e-14;
+	cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(double) * global_size, nullptr, &clStatus);
+	clStatus = clEnqueueFillBuffer(queue, buffer, &initial_value, sizeof(double), 0, sizeof(double) * global_size, 0, NULL, NULL);
+
+	cl_mem out_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(double) * global_size, nullptr, &clStatus);
+
+	clStatus = clSetKernelArg(main_kernel, 0, sizeof(cl_mem), (void*)&buffer);
+	clStatus = clSetKernelArg(main_kernel, 1, sizeof(double), (void*)&default_max_lifetime);
+	clStatus = clSetKernelArg(main_kernel, 2, sizeof(cl_mem), (void*)&out_buffer);
+	
+	clStatus = clEnqueueNDRangeKernel(queue, main_kernel, 1, nullptr, &global_size, NULL, 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "");
+	clStatus = clFinish(queue);
+
+	std::vector<double> gpu_results(global_size);
+	clEnqueueReadBuffer(queue, out_buffer, CL_TRUE, 0, sizeof(double) * global_size, gpu_results.data(), 0, nullptr, nullptr);
+	CL_FAIL_CONDITION(clStatus, "");
+
+	double cpu_total = 0;
+	double gpu_total = 0;
+	for (int i = 0; i < global_size; i++) {
+		double cpu_result = default_max_lifetime < initial_value ? default_max_lifetime : initial_value;
+		cpu_total += cpu_result;
+		gpu_total += gpu_results[i];
+		printf("RES: CPU: %e, GPU: %e\n", cpu_result, gpu_results[i]);
+	}
+
+	printf("MIN: CPU: %e, GPU: %e\n", cpu_total, gpu_total);
+	CHECK_RELATIVE(cpu_total, gpu_total, "CPU and CL results should be the same");
+}
+
+
 TEST_CASE("sum kernel test")
 {
 	cl_device_id device;
@@ -212,3 +262,4 @@ TEST_CASE("3D apply sigma component test")
 
 	CHECK_RELATIVE(cpu_total, gpu_total, "CPU and CL results should be the same");
 }
+

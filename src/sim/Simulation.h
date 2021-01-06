@@ -91,11 +91,6 @@ public:
 	{
 		is = grid.GetSettings();
 
-		ss.region_size                = s.region_size;
-		ss.region_extended_area       = s.region_extends;
-		ss.distance_between_positions = ss.region_size / (double)(ss.positions_per_row - 1);
-		ss.small_offset               = v2(is.cell_size * 0.01, is.cell_size * 0.005);
-
 		const double base_area  = s.alpha * 2.0;
 		ss.integrand_angle_area = !coherent ? base_area : (HALF_PI - base_area);
 		ss.phi_integrand_factor = ss.integrand_angle_area / ((ss.particles_per_quadrant - 1) * 3.0);
@@ -109,10 +104,10 @@ public:
 		ps.phi_step_size  = ss.integrand_angle_area / (ss.particles_per_quadrant - 1);
 	}
 
-	virtual std::vector<Sigma> ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
+	virtual std::vector<Sigma>			 ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) = 0;
 
-	Simulation(int p_positions_per_row, int p_particles_per_quadrant)
+	Simulation(int p_positions_per_row, int p_particles_per_quadrant, const GridInformation& grid_info)
 	{
 		ss.positions_per_row      = p_positions_per_row;
 		ss.particles_per_quadrant = p_particles_per_quadrant;
@@ -121,8 +116,12 @@ public:
 		ss.total_particles        = ss.positions_per_row * ss.particles_per_row;
 		ss.total_positions	      = ss.positions_per_row * ss.positions_per_row;
 
-		QueryPerformanceFrequency(&clockFrequency);
+		ss.region_size                = grid_info.region_size;
+		ss.region_extended_area       = grid_info.region_extends;
+		ss.distance_between_positions = grid_info.region_size / (double)(ss.positions_per_row - 1);
+		ss.small_offset               = v2(grid_info.cell_size * 0.01, grid_info.cell_size * 0.005);
 
+		QueryPerformanceFrequency(&clockFrequency);
 		//raw_lifetimes.resize(ss.particles_per_row * ss.particles_per_row);
 	}
 };
@@ -142,7 +141,7 @@ public:
 	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 
-	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant) : Simulation(p_particles_per_row, p_values_per_quadrant) {};
+	SimulationCPU(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info) : Simulation(p_particles_per_row, p_values_per_quadrant, grid_info) {};
 };
 
 class SimulationCL : public Simulation {
@@ -153,12 +152,19 @@ class SimulationCL : public Simulation {
 	Sigma			DeriveTemperature(const double temperature) const;
 	IterationResult DeriveTemperatureWithImages(const double temperature) const;
 
-	void UploadImpurities(const Grid& grid);
+	void ApplyMaxLifetime(const double tau) const;
+	void ApplySigmaComponent(const double tau) const;
+	void ApplySimpsonWeights() const;
+	Sigma SumBuffers(const double tau) const;
+	
+	void IntegrateToPositions() const;
+	std::vector<double> ConvertToImage(std::vector<double> results) const;
+
 public:
 	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 
-	SimulationCL(int p_particles_per_row, int p_values_per_quadrant);
+	SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info);
 	~SimulationCL();
 };
 

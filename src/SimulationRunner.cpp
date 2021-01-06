@@ -36,38 +36,45 @@ SimulationResult SimulationRunner::RunSimulation() const
     std::random_device random_device;
     const Settings& ss = cfg.settings;
 
+    LARGE_INTEGER beginGridClock, endGridClock;
+    QueryPerformanceCounter(&beginGridClock);
+    auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
+    QueryPerformanceCounter(&endGridClock);
+    double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
+
+    if (cfg.output_type != OutputType::Nothing) {
+        GlobalMetrics gm;
+        gm.particles_per_row     = cfg.positions_per_row;
+        gm.phi_steps             = 4 * cfg.particles_per_quadrant;
+        gm.cells_per_row         = grid.GetCellsPerRow();
+        gm.unique_impurity_count = grid.GetUniqueImpurityCount();
+        gm.grid_creation_time    = grid_creation_time;
+
+        Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
+    }
+
+    GridInformation gi;
+    gi.cell_size              = grid.GetSettings().cell_size;
+    gi.indexed_impurity_count = grid.GetTotalImpurityCount();
+    gi.index_size             = grid.GetIndex().size();
+    gi.region_size            = ss.region_size;
+    gi.region_extends         = ss.region_extends;
+
     Simulation* es;
-    if (cfg.use_gpu) es = new SimulationCL(cfg.positions_per_row, cfg.particles_per_quadrant);
-    else             es = new SimulationCPU(cfg.positions_per_row, cfg.particles_per_quadrant);
+    if (cfg.use_gpu) es = new SimulationCL(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
+    else             es = new SimulationCPU(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
 
     SimulationResult sr(cfg.num_samples);
 
     for (int i = 0; i < cfg.num_samples; i++) {
-        LARGE_INTEGER beginGridClock, endGridClock;
-        QueryPerformanceCounter(&beginGridClock);
-        auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
-        QueryPerformanceCounter(&endGridClock);
-        double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
+        if (cfg.output_type == OutputType::All) CreateSampleOutputDirectory(i);
 
-        if (cfg.output_type == OutputType::All)
-            CreateSampleOutputDirectory(i);
-
-        if (i == 0 && cfg.output_type != OutputType::Nothing) {
-            GlobalMetrics gm;
-            gm.particles_per_row = cfg.positions_per_row;
-            gm.phi_steps = 4 * cfg.particles_per_quadrant;
-            gm.cells_per_row = grid.GetCellsPerRow();
-            gm.unique_impurity_count = grid.GetUniqueImpurityCount();
-            gm.grid_creation_time = grid_creation_time;
-
-            Logger::CreateSampleMetricsLog(GetMetricsPath(), gm);
-        }
-
-        sr.coherent.push_back(RunSample(*es, ss, i, true, grid));
+        sr.coherent.push_back(  RunSample(*es, ss, i, true,  grid));
         sr.incoherent.push_back(RunSample(*es, ss, i, false, grid));
 
-        if (cfg.output_type == OutputType::All)
-            Logger::LogSampleResults(GetSampleResultsPath(i), sr.coherent[i], sr.incoherent[i]);
+        if (cfg.output_type == OutputType::All) Logger::LogSampleResults(GetSampleResultsPath(i), sr.coherent[i], sr.incoherent[i]);
+
+        grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
     }
 
     return sr;
@@ -112,7 +119,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
                 Logger::LogImages(GetImagePath(j, i, sample_index, coherent), cfg.positions_per_row, iteration[j]);
             }
         }
-            
+
         std::cout << "x";
     }
 

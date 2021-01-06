@@ -7,7 +7,7 @@
 #include "constants.h"
 #include "cell_grid.h"
 
-#include "src/Metrics.h"
+#include "particle_metrics.h"
 
 #ifndef DEVICE_PROGRAM
     #include <vector>
@@ -55,6 +55,7 @@ cell. To prevent this, only the impurities that happen before the particle
 will leave the cell are considered.
 */
 /// </summary>
+
 
 ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER_ARGS)
 {
@@ -131,6 +132,5 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         METRIC_INC(particles_at_bound);
         return p->orbit.bound_time;
     }
-
     return lifetime;
 }

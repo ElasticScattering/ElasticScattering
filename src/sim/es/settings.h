@@ -3,6 +3,19 @@
     #include "v2.h"
 #endif
 
+
+#ifndef DEVICE_PROGRAM
+typedef struct GridInformation
+{
+    double region_size;
+    double region_extends;
+    double cell_size;
+    int indexed_impurity_count;
+    int index_size;
+}GridInformation;
+#endif
+
+
 typedef struct ImpuritySettings
 {
     double spawn_region_start;
@@ -17,14 +30,14 @@ typedef struct ImpuritySettings
 typedef struct ParticleSettings
 {
     double particle_speed;
-    double angular_speed;
+    double angular_speed; // !
     double alpha;
 
     int is_clockwise;
-    int is_coherent;
+    int is_coherent; // !
 
-    double phi_step_size;
-    double phi_start;
+    double phi_step_size; // !
+    double phi_start; // !
 } ParticleSettings;
 
 typedef struct SimulationSettings
@@ -37,10 +50,10 @@ typedef struct SimulationSettings
     int positions_per_row;
     int total_positions;
 
-    double signed_angular_speed; //?
+    double signed_angular_speed; // !
 
-    double integrand_angle_area;
-    double phi_integrand_factor;
+    double integrand_angle_area; // !
+    double phi_integrand_factor; // !
 
     double region_size;
     double region_extended_area;

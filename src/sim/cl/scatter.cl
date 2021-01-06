@@ -1,6 +1,6 @@
 #include "src/sim/es/lifetime.h"
 #include "src/sim/es/settings.h"
-#include "src/Metrics.h"
+#include "src/sim/es/particle_metrics.h"
 
 #include "src/sim/cl/cl_macros.h"
 
@@ -25,9 +25,9 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 
     double2 pos = (double2)(i, j) * ss->distance_between_positions + ss->small_offset;
 	int idx = GET_INDEX(i, j, v);
-
 	/*
-	if (idx == 54) {
+#ifdef DEBUGGING
+	if (idx < 100) {
 		printf("Particle:\n");
 		printf("i: %i j: %i v: %i\n", i, j, v);
 		printf("x: %.8e y: %.8e phi: %.4e\n", pos.x, pos.y, GET_PHI(v));
@@ -67,7 +67,8 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 		for (int imp_idx = 0; imp_idx < 20; imp_idx++)
 			printf("x: %.8e y: %.8e\n", impurities[imp_idx].x, impurities[imp_idx].y);
 	}
-	*/
+#endif
+*/
 
 	Particle particle = CreateParticle(q, p, pos, ps);
 	lifetimes[GET_INDEX(i, j, v)] = TraceOrbit(&particle, is, impurities, imp_index, metrics);
