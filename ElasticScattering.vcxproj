@@ -376,6 +376,9 @@
     <ClInclude Include="src\Metrics.h" />
     <ClInclude Include="src\sim\cl\cl_macros.h" />
     <ClInclude Include="src\sim\cl\shared_macros.h" />
+    <ClInclude Include="src\sim\es\datastructures.h" />
+    <ClInclude Include="src\sim\es\details2.h" />
+    <ClInclude Include="src\sim\es\lifetime2.h" />
     <ClInclude Include="src\sim\es\particle_metrics.h" />
     <ClInclude Include="src\sim\es\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
@@ -416,7 +419,6 @@
   <ItemGroup>
     <None Include="cpp.hint" />
     <None Include="src\sim\cl\integration.cl" />
-    <None Include="src\sim\cl\old.cl" />
     <None Include="src\sim\cl\scatter.cl" />
     <None Include="src\sim\cl\util_kernels.cl" />
     <None Include="tests\data\kernels\test_cpp.cl" />

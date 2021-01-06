@@ -71,7 +71,6 @@ std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, cons
     metrics.time_elapsed_temperatures = GetElapsedTime(pc.temperaturesBegin, pc.temperaturesEnd);
 
     sample_metrics.iteration_metrics.push_back(metrics);
-
     return results;
 }
 
@@ -141,22 +140,25 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
         metrics.avg_particle_lifetime = AverageLifetime(lifetimes);
 
         /*
+
+        std::string file_path = "verification/gpu_lt" + std::to_string(coh_idx) + ".txt";
+        coh_idx++;
+
         std::ofstream file;
-        file.open("verification/gpu_lt.txt");
-        file << std::setprecision(12);
+        file.open(file_path, std::ios::app);
+        file << std::setprecision(14);
         for (int j = 0; j < ss.positions_per_row; j++) {
-            file << std::endl << "R" << j << std::endl;
             for (int i = 0; i < ss.positions_per_row; i++) {
-                file << std::endl;
+                
                 for (int q = 0; q < 4; q++) {
                     for (int p = 0; p < ss.particles_per_quadrant; p++) {
                         int idx = j * work_size.positions_per_row * ss.particles_per_position + i * ss.particles_per_position + q * ss.particles_per_quadrant + p;
-
-                        file << lifetimes[idx] << std::endl;
+                        file << lifetimes[idx] << "\n";
                     }
                 }
             }
         }
+        file.close();
         */
     }
 }
@@ -182,12 +184,6 @@ IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperatu
 {
     cl_int clStatus;
     double tau = GetTau(temperature);
-    
-    std::ofstream file;
-    auto file_path = (ps.is_coherent == 1) ? "verification/tau_coherent.txt" : "verification/tau_incoherent.txt";
-    file.open(file_path, std::ios::app);
-    file << tau << std::endl;
-    file.close();
 
     int total_positions = work_size.positions_per_row * work_size.positions_per_row;
 

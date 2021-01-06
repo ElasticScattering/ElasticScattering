@@ -20,6 +20,7 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 	if (i >= ss->particles_per_row || j >= ss->particles_per_row)
 		return;
 
+
 	const int q = (int)(v / ss->particles_per_quadrant);
 	const int p =       v % ss->particles_per_quadrant;
 

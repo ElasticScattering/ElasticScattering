@@ -148,6 +148,8 @@ class SimulationCL : public Simulation {
 	WorkSize work_size;
 	unsigned int last_grid_seed = 0;
 
+	int coh_idx = 0;
+
 	void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics);
 	Sigma			DeriveTemperature(const double temperature) const;
 	IterationResult DeriveTemperatureWithImages(const double temperature) const;
