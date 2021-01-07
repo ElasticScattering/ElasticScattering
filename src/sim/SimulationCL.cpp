@@ -139,9 +139,7 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
         clFinish(ocl.queue);
         metrics.avg_particle_lifetime = AverageLifetime(lifetimes);
 
-        /*
-
-        std::string file_path = "verification/gpu_lt" + std::to_string(coh_idx) + ".txt";
+        std::string file_path = "gpu_lt" + std::to_string(coh_idx) + ".txt";
         coh_idx++;
 
         std::ofstream file;
@@ -159,7 +157,6 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
             }
         }
         file.close();
-        */
     }
 }
 
