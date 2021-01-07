@@ -134,6 +134,7 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
     
     //@Todo: remove?
     {
+        /*
         std::vector<double> lifetimes(work_size.total_particles);
         clStatus = clEnqueueReadBuffer(ocl.queue, ocl_scatter.raw_lifetimes, CL_TRUE, 0, sizeof(double) * work_size.total_particles, lifetimes.data(), 0, nullptr, nullptr);
         clFinish(ocl.queue);
@@ -157,6 +158,7 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
             }
         }
         file.close();
+        */
     }
 }
 
@@ -369,16 +371,9 @@ std::vector<double> SimulationCL::ConvertToImage(std::vector<double> results) co
 
 SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info) : Simulation(p_particles_per_row, p_values_per_quadrant, grid_info)
 {
-    InitializeOpenCL(true, &ocl.deviceID, &ocl.context, &ocl.queue);
-    if (false)
+    InitializeOpenCL(false, &ocl.deviceID, &ocl.context, &ocl.queue);
+    if (true)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
-
-    std::ofstream file;
-    file.open("verification/tau_coherent.txt");
-    file.close();
-    
-    file.open("verification/tau_incoherent.txt");
-    file.close();
 
     LARGE_INTEGER compileBegin, compileEnd;
     QueryPerformanceCounter(&compileBegin);

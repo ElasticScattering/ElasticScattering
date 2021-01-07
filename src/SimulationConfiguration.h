@@ -12,6 +12,7 @@
 #include <filesystem>
 
 #include <unordered_map>
+#include <random>
 
 enum class ProgramMode {
     Test,
@@ -39,6 +40,8 @@ typedef struct SimulationConfiguration
     int num_samples;
     int positions_per_row;
     int particles_per_quadrant;
+    
+    bool print_info;
 
     OutputType output_type;
     bool use_gpu;
@@ -48,6 +51,8 @@ typedef struct SimulationConfiguration
 
     std::vector<double> magnetic_fields;
     std::vector<double> temperatures;
+
+    std::vector<unsigned int> sample_seeds;
     
     std::string config_path;
     std::string base_output_directory;
@@ -124,6 +129,7 @@ typedef struct SimulationConfiguration
         cfg.use_gpu = device_selected ? values.at("device") == "gpu" : false;
 
         cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
+        cfg.print_info = values.find("print_info") == values.end() || atoi(values.at("print_info").c_str()) == 1;
 
         cfg.num_samples = atoi(values.at("num_samples").c_str());
         CFG_EXIT_CONDITION(cfg.num_samples <= 0, "Samples must be greater than 0.");
@@ -170,6 +176,13 @@ typedef struct SimulationConfiguration
         cfg.settings.tau                    = atof(values.at("tau").c_str());
         cfg.settings.alpha                  = atof(values.at("alpha").c_str());
         cfg.settings.is_clockwise           = atoi(values.at("clockwise").c_str()) > 0;
+
+        std::random_device random_device;
+        cfg.sample_seeds.resize(cfg.num_samples);
+        unsigned int seed = values.find("start_seed") != values.end() ? atoi(values.at("start_seed").c_str()) : random_device();
+
+        for (int i = 0; i < cfg.num_samples; i++)
+            cfg.sample_seeds[i] = (seed+100) * (i+1);
 
         cfg.settings.region_size            = atof(values.at("region_size").c_str());
         cfg.settings.region_extends         = atof(values.at("region_extends").c_str());

@@ -29,15 +29,15 @@ private:
 	std::vector<v2> ordered_impurities;
 	std::vector<int> imp_index;
 
-	long unique_impurity_count;
-	int total_indexed_impurities;
+	long unique_impurity_count = 0;
+	int total_indexed_impurities = 0;
 	
 	v2 spawn_range;
-	int cells_per_row;
-	double cell_size;
+	int cells_per_row = 0;
+	double cell_size = 0;
 
-	double impurity_radius;
-	unsigned int seed_used;
+	double impurity_radius = 0;
+	unsigned int seed_used = 0;
 
 	int add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const double impurity_radius);
 	v2i get_cell(const double x, double y);

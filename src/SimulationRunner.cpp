@@ -33,12 +33,11 @@ void SimulationRunner::Run(const InitParameters& init)
 
 SimulationResult SimulationRunner::RunSimulation() const
 {
-    std::random_device random_device;
     const Settings& ss = cfg.settings;
 
     LARGE_INTEGER beginGridClock, endGridClock;
     QueryPerformanceCounter(&beginGridClock);
-    auto grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
+    auto grid = Grid(cfg.sample_seeds[0], ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
     QueryPerformanceCounter(&endGridClock);
     double grid_creation_time = GetElapsedTime(beginGridClock, endGridClock);
 
@@ -74,7 +73,8 @@ SimulationResult SimulationRunner::RunSimulation() const
 
         if (cfg.output_type == OutputType::All) Logger::LogSampleResults(GetSampleResultsPath(i), sr.coherent[i], sr.incoherent[i]);
 
-        grid = Grid(random_device(), ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
+        if ( i < (cfg.num_samples-1))
+            grid = Grid(cfg.sample_seeds[i+1], ss.region_size, ss.region_extends, ss.impurity_density, ss.impurity_radius, ss.target_cell_population);
     }
 
     return sr;
