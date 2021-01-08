@@ -30,6 +30,7 @@ typedef struct WorkSize
 
 	size_t sum_global;
 	size_t sum_local;
+	size_t summed_data_size;
 };
 
 class Simulation {

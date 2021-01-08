@@ -52,10 +52,8 @@ TEST_CASE("Apply max lifetime test")
 		double cpu_result = default_max_lifetime < initial_value ? default_max_lifetime : initial_value;
 		cpu_total += cpu_result;
 		gpu_total += gpu_results[i];
-		printf("RES: CPU: %e, GPU: %e\n", cpu_result, gpu_results[i]);
 	}
 
-	printf("MIN: CPU: %e, GPU: %e\n", cpu_total, gpu_total);
 	CHECK_RELATIVE(cpu_total, gpu_total, "CPU and CL results should be the same");
 }
 

@@ -46,7 +46,7 @@ typedef struct
     cl_mem sigma_xx_positions;
     cl_mem sigma_xy_positions;
 
-    cl_mem incomplete_sum;
+    cl_mem summed_data;
 } OCLIntegrationResources;
 
 OCLResources ocl;
@@ -302,27 +302,35 @@ void SimulationCL::ApplySimpsonWeights() const
 }
 
 Sigma SimulationCL::SumBuffers(const double tau) const
-{
-    // @Temporary, gebruik sum kernel hieronder.
-    std::vector<double> sigma_xx_lifetimes_weighted(work_size.total_particles);
-    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xx_lifetimes_weighted.data(), 0, nullptr, nullptr);
-
-    std::vector<double> sigma_xy_lifetimes_weighted(work_size.total_particles);
-    clEnqueueReadBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, CL_TRUE, 0, sizeof(double) * work_size.total_particles, sigma_xy_lifetimes_weighted.data(), 0, nullptr, nullptr);
+{    std::vector<double> summed_data(work_size.summed_data_size);
 
     Sigma sigma;
-    sigma.xx = 0;
-    sigma.xy = 0;
-    for (int i = 0; i < sigma_xx_lifetimes_weighted.size(); i++)
-        sigma.xx += sigma_xx_lifetimes_weighted[i];
+    cl_int clStatus;
 
-    for (int i = 0; i < sigma_xy_lifetimes_weighted.size(); i++)
-        sigma.xy += sigma_xy_lifetimes_weighted[i];
+    clStatus = clSetKernelArg(ocl_integration.sum_kernel, 1, sizeof(double) * work_size.sum_local, nullptr);
+    clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.summed_data);
+
+    clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
+    CL_FAIL_CONDITION(clStatus, ""); 
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &work_size.sum_global, &work_size.sum_local, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "");
+
+    clStatus = clEnqueueReadBuffer(ocl.queue, ocl_integration.summed_data, CL_TRUE, 0, sizeof(double) * work_size.summed_data_size, summed_data.data(), 0, nullptr, nullptr);
+
+    for (int i = 0; i < summed_data.size(); i++)
+        sigma.xx += summed_data[i];
+
+    clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
+    clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &work_size.sum_global, &work_size.sum_local, 0, nullptr, nullptr);
+
+    clStatus = clEnqueueReadBuffer(ocl.queue, ocl_integration.summed_data, CL_TRUE, 0, sizeof(double) * work_size.summed_data_size, summed_data.data(), 0, nullptr, nullptr);
+
+    for (int i = 0; i < summed_data.size(); i++)
+        sigma.xy += summed_data[i];
 
     double factor = GetSigmaIntegrandFactor(tau);
     sigma.xx *= factor;
     sigma.xy *= factor;
-
     return sigma;
 }
 
@@ -416,6 +424,10 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
         work_size.particles_local[1] = 1;
         work_size.particles_local[2] = values_in_work_group;
 
+        work_size.sum_global = work_size.total_particles / 2;
+        work_size.sum_local = 256;
+        work_size.summed_data_size = work_size.sum_global / work_size.sum_local;
+
         std::cout << "Self determined work size:" << std::endl;
         std::cout << "Global: " << work_size.particles_global[0] << " " << work_size.particles_global[1] << " " << work_size.particles_global[2] << std::endl;
         std::cout << "Local:  " << work_size.particles_local[0] << " " << work_size.particles_local[1] << " " << work_size.particles_local[2] << std::endl;
@@ -445,6 +457,8 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
     CL_FAIL_CONDITION(clStatus, "");
     ocl_integration.lifetimes_sigma_xy = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "");
+
+    ocl_integration.summed_data = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.summed_data_size, nullptr, &clStatus);
 }
 
 SimulationCL::~SimulationCL()
@@ -464,7 +478,7 @@ SimulationCL::~SimulationCL()
     clReleaseMemObject(ocl_integration.lifetimes);
     clReleaseMemObject(ocl_integration.lifetimes_sigma_xx);
     clReleaseMemObject(ocl_integration.lifetimes_sigma_xy);
-    clReleaseMemObject(ocl_integration.incomplete_sum);
+    clReleaseMemObject(ocl_integration.summed_data);
     clReleaseMemObject(ocl_integration.lifetimes_positions);
     clReleaseMemObject(ocl_integration.sigma_xx_positions);
     clReleaseMemObject(ocl_integration.sigma_xy_positions);
