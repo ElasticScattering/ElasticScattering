@@ -2,9 +2,6 @@
 #include "Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 
-#include <iostream> // @Todo, remove.
-#include <iomanip>
-
 typedef struct
 {
     cl_device_id deviceID;
@@ -119,7 +116,6 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 0, sizeof(cl_mem), (void*)&ocl_scatter.simulation_settings);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 1, sizeof(cl_mem), (void*)&ocl_scatter.particle_settings);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 2, sizeof(cl_mem), (void*)&ocl_scatter.impurity_settings);
-
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 3, sizeof(cl_mem), (void*)&ocl_scatter.impurities);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 4, sizeof(cl_mem), (void*)&ocl_scatter.cell_indices);
         clStatus = clSetKernelArg(ocl_scatter.lifetimes_kernel, 5, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
@@ -166,11 +162,6 @@ Sigma SimulationCL::DeriveTemperature(const double temperature) const
 {
     double tau = GetTau(temperature);
 
-    double clear_value = 1;
-    clEnqueueFillBuffer(ocl.queue, ocl_integration.lifetimes,          &clear_value, sizeof(double) * work_size.total_particles, 0, 1, 0, NULL, NULL);
-    clEnqueueFillBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xx, &clear_value, sizeof(double) * work_size.total_particles, 0, 1, 0, NULL, NULL);
-    clEnqueueFillBuffer(ocl.queue, ocl_integration.lifetimes_sigma_xy, &clear_value, sizeof(double) * work_size.total_particles, 0, 1, 0, NULL, NULL);
-
     ApplyMaxLifetime(tau);
     ApplySigmaComponent(tau);
     ApplySimpsonWeights();
@@ -186,7 +177,7 @@ IterationResult SimulationCL::DeriveTemperatureWithImages(const double temperatu
 
     int total_positions = work_size.positions_per_row * work_size.positions_per_row;
 
-    // Make this one time init instead of per function call.
+    // @Todo Make this one time init instead of per function call.
     ocl_integration.lifetimes_positions = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(double) * total_positions, nullptr, &clStatus);
     ocl_integration.sigma_xx_positions  = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(double) * total_positions, nullptr, &clStatus);
     ocl_integration.sigma_xy_positions  = clCreateBuffer(ocl.context, CL_MEM_READ_ONLY, sizeof(double) * total_positions, nullptr, &clStatus);
@@ -220,10 +211,7 @@ void SimulationCL::ApplyMaxLifetime(const double tau) const
 {
     double default_max_lifetime = GetDefaultMaxLifetime(tau);
     
-    cl_int clStatus;
-    clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
-    clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 1, sizeof(double), (void*)&default_max_lifetime);
-    clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 2, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+    cl_int clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 1, sizeof(double), (void*)&default_max_lifetime);
 
     size_t total_size = work_size.total_particles;
     clFinish(ocl.queue);
@@ -311,9 +299,8 @@ Sigma SimulationCL::SumBuffers(const double tau) const
     clStatus = clSetKernelArg(ocl_integration.sum_kernel, 2, sizeof(cl_mem), (void*)&ocl_integration.summed_data);
 
     clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xx);
-    CL_FAIL_CONDITION(clStatus, ""); 
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &work_size.sum_global, &work_size.sum_local, 0, nullptr, nullptr);
-    CL_FAIL_CONDITION(clStatus, "");
+    CL_FAIL_CONDITION(clStatus, "Could not start sum kernel.");
 
     clStatus = clEnqueueReadBuffer(ocl.queue, ocl_integration.summed_data, CL_TRUE, 0, sizeof(double) * work_size.summed_data_size, summed_data.data(), 0, nullptr, nullptr);
 
@@ -322,6 +309,7 @@ Sigma SimulationCL::SumBuffers(const double tau) const
 
     clStatus = clSetKernelArg(ocl_integration.sum_kernel, 0, sizeof(cl_mem), (void*)&ocl_integration.lifetimes_sigma_xy);
     clStatus = clEnqueueNDRangeKernel(ocl.queue, ocl_integration.sum_kernel, 1, nullptr, &work_size.sum_global, &work_size.sum_local, 0, nullptr, nullptr);
+    CL_FAIL_CONDITION(clStatus, "Could not start sum kernel.");
 
     clStatus = clEnqueueReadBuffer(ocl.queue, ocl_integration.summed_data, CL_TRUE, 0, sizeof(double) * work_size.summed_data_size, summed_data.data(), 0, nullptr, nullptr);
 
@@ -453,10 +441,14 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
 
     ocl_integration.lifetimes          = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "");
+    
     ocl_integration.lifetimes_sigma_xx = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "");
     ocl_integration.lifetimes_sigma_xy = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.total_particles, nullptr, &clStatus);
     CL_FAIL_CONDITION(clStatus, "");
+
+    clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 2, sizeof(cl_mem), (void*)&ocl_integration.lifetimes);
+    clStatus = clSetKernelArg(ocl_integration.apply_max_lifetime, 0, sizeof(cl_mem), (void*)&ocl_scatter.raw_lifetimes);
 
     ocl_integration.summed_data = clCreateBuffer(ocl.context, CL_MEM_READ_WRITE, sizeof(double) * work_size.summed_data_size, nullptr, &clStatus);
 }
