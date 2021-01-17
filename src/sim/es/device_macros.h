@@ -11,15 +11,15 @@
 	#define MAKE_DOUBLE2(px, py) (double2)(px, py)
 	#define MAKE_INT2(px, py) (int2)(px, py)
 
-	#define METRIC_INC_COND(cond, metric_name) ((cond)) atom_inc(&metrics->metric_name)
-	#define METRIC_INC(metric_name)						atom_inc(&metrics->metric_name);
+	#define METRIC_INC_COND(cond, metric_name) ((cond)) atomic_inc(&metrics->metric_name)
+	#define METRIC_INC(metric_name)						atomic_inc(&metrics->metric_name);
 
-	#define METRIC_ADD(metric_name, m_value)			atom_add(&metrics->metric_name, (m_value))
+	#define METRIC_ADD(metric_name, m_value)			atomic_add(&metrics->metric_name, (m_value))
 
 #else
 	#include "v2.h"
 
-	#define IMPURITY_SETTINGS const ImpuritySettings * const is
+	#define IMPURITY_SETTINGS const ImpuritySettings* const is
 	#define PARTICLE_SETTINGS const ParticleSettings* const ps
 	#define BUFFER_ARGS const std::vector<v2> &impurities, const std::vector<int> &cell_indices, ParticleMetrics &metrics
 

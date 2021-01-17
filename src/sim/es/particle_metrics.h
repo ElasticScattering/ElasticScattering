@@ -1,15 +1,15 @@
 #pragma once
 
 typedef struct ParticleMetrics {
-    long cells_passed;
-    long impurities_tested;
+    int cells_passed;
+    int impurities_tested;
 
-    long particles_inside_impurity;
-    long particles_escaped;
-    long particles_at_bound;
+    int particles_inside_impurity;
+    int particles_escaped;
+    int particles_at_bound;
 
-    long max_impurities_tested;
-    long max_cells_passed;
+    int max_impurities_tested;
+    int max_cells_passed;
 
 #ifndef DEVICE_PROGRAM
     ParticleMetrics() {

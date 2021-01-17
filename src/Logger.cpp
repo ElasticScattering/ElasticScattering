@@ -209,9 +209,11 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         }
         file << L'│' << std::endl;
 
+        /*
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
         for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << std::setprecision(4) << (double)metrics[i].particle_metrics.max_impurities_tested;
         file << L'│' << std::endl;
+        */
     }
 
     file << L'│' << std::wstring(metric_width, ' '); // Empty line.
@@ -240,10 +242,11 @@ void Logger::LogSampleMetrics(const std::string file_path, const SampleMetrics& 
         }
         file << L'│' << std::endl;
 
+        /*
         file << L'│' << std::setw(metric_width - 2) << std::left << "\t Max";
         for (int i = 0; i < metrics.size(); i++) file << L'│' << std::setw(value_width) << std::right << (double)metrics[i].particle_metrics.max_cells_passed;
         file << L'│' << std::endl;
-
+        */
     }
 
     // Table end.

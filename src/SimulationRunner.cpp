@@ -96,6 +96,7 @@ SampleResult SimulationRunner::RunSample(Simulation& es, const Settings &setting
     sample_metrics.impurity_count           = grid.GetUniqueImpurityCount();
     sample_metrics.total_cells              = pow(grid.GetCellsPerRow(), 2);
     sample_metrics.seed                     = grid.GetSeed();
+    sample_metrics.iteration_metrics.reserve(N);
 
     {
         auto raw_sample_string = std::to_string(sample_index + 1);
