@@ -13,13 +13,13 @@ typedef struct ParticleMetrics {
 
 #ifndef DEVICE_PROGRAM
     ParticleMetrics() {
-        cells_passed = 0;
-        impurities_tested = 0;
+        cells_passed              = 0;
+        impurities_tested         = 0;
         particles_inside_impurity = 0;
-        particles_escaped = 0;
-        particles_at_bound = 0;
-        max_impurities_tested = 0;
-        max_cells_passed = 0;
+        particles_escaped         = 0;
+        particles_at_bound        = 0;
+        max_impurities_tested     = 0;
+        max_cells_passed          = 0;
     }
 #endif
 } ParticleMetrics;
