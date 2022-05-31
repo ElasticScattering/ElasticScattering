@@ -15,9 +15,10 @@ void SimulationRunner::Run(const InitParameters& init)
     QueryPerformanceFrequency(&clockFrequency);
 
     cfg = SimulationConfiguration::ParseFromeFile(init.config_file);
-    std::cout << "Starting simulation (" << init.config_file << ")";
-    if (cfg.output_type != OutputType::Nothing) {
-        std::cout << " | Output: " << cfg.output_directory << "\n";
+    std::cout << "Starting simulation (" << init.config_file << ")" << std::endl;
+    if (cfg.output_type != OutputType::Nothing) 
+    {
+        std::cout << "Output directory: \x1B[95m" << cfg.output_directory << "\x1B[0m" << std::endl;
         CreateOutputDirectory();
     }
     std::cout << std::endl;
@@ -60,7 +61,7 @@ SimulationResult SimulationRunner::RunSimulation() const
     gi.region_extends         = ss.region_extends;
 
     Simulation* es;
-    if (cfg.use_gpu) es = new SimulationCL(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
+    if (cfg.use_gpu) es = new SimulationCL(cfg.positions_per_row, cfg.particles_per_quadrant, gi, cfg.print_info);
     else             es = new SimulationCPU(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
 
     SimulationResult sr(cfg.num_samples);
@@ -145,7 +146,7 @@ void SimulationRunner::FinishResults(const SimulationResult& sr) const
             double dxx_squared = 0;
 
             for (int s = 0; s < cfg.num_samples; s++) {
-                auto coh = sr.coherent[s].results[i][j];
+                auto coh = sr.coherent  [s].results[i][j];
                 auto inc = sr.incoherent[s].results[i][j];
 
                 coherent    += coh;
@@ -160,10 +161,12 @@ void SimulationRunner::FinishResults(const SimulationResult& sr) const
 
             DataRow row(temperature, cfg.magnetic_fields[i], coherent, incoherent);
 
-            if (cfg.num_samples == 1) {
+            if (cfg.num_samples == 1) 
+            {
                 row.xxd = 0;
             }
-            else {
+            else 
+            {
                 double sxx_sq_exp = dxx_squared / S;
                 double sxx_exp = coherent.xx + incoherent.xx;
                 double sxx_std = sqrt((sxx_sq_exp - sxx_exp * sxx_exp) / (S - 1.0));
@@ -197,4 +200,3 @@ void SimulationRunner::CreateOutputDirectory() const
 
     std::filesystem::copy_file(cfg.config_path, cfg.output_directory + "/" + config_name);
 }
-

@@ -3,7 +3,6 @@
     #include "v2.h"
 #endif
 
-
 #ifndef DEVICE_PROGRAM
 typedef struct GridInformation
 {
@@ -14,7 +13,6 @@ typedef struct GridInformation
     int index_size;
 }GridInformation;
 #endif
-
 
 typedef struct ImpuritySettings
 {

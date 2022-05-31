@@ -2,14 +2,14 @@
 #include "Simulation.h"
 #include "src/utils/OpenCLUtils.h"
 
-typedef struct
+struct OCLResources
 {
     cl_device_id deviceID;
     cl_context context;
     cl_command_queue queue;
-} OCLResources;
+};
 
-typedef struct
+struct OCLScatterResources
 {
     cl_program program_lifetimes;
     cl_kernel lifetimes_kernel;
@@ -23,9 +23,9 @@ typedef struct
     cl_mem impurities;
     cl_mem cell_indices;
     cl_mem metrics;
-} OCLSimResources;
+};
 
-typedef struct
+struct OCLIntegrationResources
 {
     cl_program program_integration;
 
@@ -44,10 +44,10 @@ typedef struct
     cl_mem sigma_xy_positions;
 
     cl_mem summed_data;
-} OCLIntegrationResources;
+};
 
-OCLResources ocl;
-OCLSimResources ocl_scatter;
+OCLResources            ocl;
+OCLScatterResources     ocl_scatter;
 OCLIntegrationResources ocl_integration;
 
 std::vector<Sigma> SimulationCL::ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics)
@@ -128,9 +128,8 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
 
     clEnqueueReadBuffer(ocl.queue, ocl_scatter.metrics, CL_TRUE, 0, sizeof(ParticleMetrics), &metrics.particle_metrics, 0, nullptr, nullptr);
     
-    //@Todo: remove?
+    /*
     {
-        /*
         std::vector<double> lifetimes(work_size.total_particles);
         clStatus = clEnqueueReadBuffer(ocl.queue, ocl_scatter.raw_lifetimes, CL_TRUE, 0, sizeof(double) * work_size.total_particles, lifetimes.data(), 0, nullptr, nullptr);
         clFinish(ocl.queue);
@@ -154,8 +153,8 @@ void SimulationCL::ComputeLifetimes(const double magnetic_field, const Grid& gri
             }
         }
         file.close();
-        */
     }
+    */
 }
 
 Sigma SimulationCL::DeriveTemperature(const double temperature) const
@@ -365,27 +364,28 @@ std::vector<double> SimulationCL::ConvertToImage(std::vector<double> results) co
     return image;
 }
 
-SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info) : Simulation(p_particles_per_row, p_values_per_quadrant, grid_info)
+SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info, bool p_print_info) : Simulation(p_particles_per_row, p_values_per_quadrant, grid_info)
 {
     InitializeOpenCL(false, &ocl.deviceID, &ocl.context, &ocl.queue);
-    if (true)
+
+    print_info = p_print_info;
+    if (print_info)
         PrintOpenCLDeviceInfo(ocl.deviceID, ocl.context);
 
     LARGE_INTEGER compileBegin, compileEnd;
     QueryPerformanceCounter(&compileBegin);
-    std::cout << "\nBuilding main program..." << std::endl;
+    std::cout << "Building main program...        ";
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/scatter.cl", &ocl_scatter.program_lifetimes);
     QueryPerformanceCounter(&compileEnd);
     double elapsed = GetElapsedTime(compileBegin, compileEnd);
-    std::cout << "Compilation succeeded! (" << elapsed << "s)" << std::endl;
+    std::cout << "(" << elapsed << "s)" << std::endl;
 
     QueryPerformanceCounter(&compileBegin);
-    std::cout << "\nBuilding integration program..." << std::endl;
+    std::cout << "Building integration program... ";
     CompileOpenCLProgram(ocl.deviceID, ocl.context, "src/sim/cl/integration.cl", &ocl_integration.program_integration);
     QueryPerformanceCounter(&compileEnd);
     elapsed = GetElapsedTime(compileBegin, compileEnd);
-    std::cout << "Compilation succeeded! (" << elapsed << "s)" << std::endl;
-
+    std::cout << "(" << elapsed << "s)" << std::endl;
     cl_int clStatus;
     ocl_scatter.lifetimes_kernel              = clCreateKernel(ocl_scatter.program_lifetimes, "lifetime", &clStatus);
     ocl_integration.apply_max_lifetime        = clCreateKernel(ocl_integration.program_integration, "apply_max_lifetime", &clStatus);
@@ -394,8 +394,6 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
     ocl_integration.integrate_position_kernel = clCreateKernel(ocl_integration.program_integration, "integrate_to_position", &clStatus);
     ocl_integration.sum_kernel                = clCreateKernel(ocl_integration.program_integration, "sum", &clStatus);
 
-    // Ipv WI te maken die elk een positie behandelt, laten we elk WI één particle doen.
-    // @Optimize Verifiëer dat dit ook daadwerkelijk achtereenvolgende phi's berekend in één WG.
     {
         work_size.positions_per_row = (size_t)ss.positions_per_row + 1;
         work_size.particles_per_position = (size_t)ss.particles_per_position;
@@ -405,7 +403,7 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
         work_size.particles_global[1] = work_size.positions_per_row;
         work_size.particles_global[2] = work_size.particles_per_position;
 
-        const size_t values_in_work_group = min(work_size.particles_per_position, 256); // @Todo, dit kan anders zijn voor andere devices.
+        const size_t values_in_work_group = min(work_size.particles_per_position, 256);
 
         size_t other = 256 / values_in_work_group;
         work_size.particles_local[0] = max(1, (other % 2 == 0) ? other : other - 1);
@@ -416,10 +414,14 @@ SimulationCL::SimulationCL(int p_particles_per_row, int p_values_per_quadrant, c
         work_size.sum_local = 256;
         work_size.summed_data_size = work_size.sum_global / work_size.sum_local;
 
-        std::cout << "Self determined work size:" << std::endl;
-        std::cout << "Global: " << work_size.particles_global[0] << " " << work_size.particles_global[1] << " " << work_size.particles_global[2] << std::endl;
-        std::cout << "Local:  " << work_size.particles_local[0] << " " << work_size.particles_local[1] << " " << work_size.particles_local[2] << std::endl;
+        if (print_info)
+        {
+            std::cout << "Self determined work size:" << std::endl;
+            std::cout << "Global: " << work_size.particles_global[0] << " " << work_size.particles_global[1] << " " << work_size.particles_global[2] << std::endl;
+            std::cout << "Local:  " << work_size.particles_local[0] << " " << work_size.particles_local[1] << " " << work_size.particles_local[2] << std::endl;
+        }
     }
+    std::cout << std::endl;
 
     CL_FAIL_CONDITION(clStatus, "");
 
@@ -482,7 +484,6 @@ SimulationCL::~SimulationCL()
     clReleaseKernel(ocl_integration.sum_kernel);
     clReleaseProgram(ocl_integration.program_integration);
     
-
     clReleaseCommandQueue(ocl.queue);
     clReleaseContext(ocl.context);
 }

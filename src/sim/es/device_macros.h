@@ -15,7 +15,6 @@
 	#define METRIC_INC(metric_name)						atomic_inc(&metrics->metric_name);
 
 	#define METRIC_ADD(metric_name, m_value)			atomic_add(&metrics->metric_name, (m_value))
-
 #else
 	#include "v2.h"
 

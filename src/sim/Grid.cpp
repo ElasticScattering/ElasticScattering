@@ -70,7 +70,6 @@ void Grid::GenerateImpurityCells(std::vector<v2> impurities, double impurity_rad
 	}
 }
 
-// Move impurities back to single array and build an index.
 void Grid::ConvertToIndex()
 {
 	ordered_impurities.resize(total_indexed_impurities);
@@ -122,27 +121,6 @@ int Grid::add_to_overlapping_cells(std::vector<Cell>& cells, const v2 pos, const
 	double ir2 = impurity_radius * impurity_radius;
 	auto cell = get_cell(pos.x, pos.y);
 
-	/*
-	std::vector<v2> possible_overlapping_diagonals = {
-		low_left,
-		low_left + v2(cell_size, 0),
-		low_left + v2(0, cell_size),
-		low_left + v2(cell_size, cell_size)
-	};
-
-	for (int i = 0; i < possible_overlapping_diagonals.size(); i++) {
-		auto cell_world_pos = possible_overlapping_diagonals[i];
-		double d_squared = pow(cell_world_pos.x - pos.x, 2) + pow(cell_world_pos.y - pos.y, 2);
-		if (d_squared < ir2) {
-			auto new_cell = get_cell(cell_world_pos.x, cell_world_pos.y);
-			if (within_bounds(v2i(new_cell))) {
-				cells[new_cell.y * cells_per_row + new_cell.x].impurities.push_back(pos);
-				cells_added++;
-			}
-		}
-	}
-	*/
-	
 	double d_topleft_squared = pow(top_left.x - pos.x, 2) + pow(top_left.y - pos.y, 2);
 	if (d_topleft_squared < ir2) {
 		auto new_cell = v2i(cell.x - 1, cell.y + 1);

@@ -21,7 +21,7 @@ TEST_CASE("CL Sigma integration should be identical to CPU sigma integration.")
 	gi.region_extends = s.region_extends;
 
 	SimulationCPU sim_cpu(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
-	SimulationCL  sim_cl(cfg.positions_per_row, cfg.particles_per_quadrant, gi);
+	SimulationCL  sim_cl(cfg.positions_per_row, cfg.particles_per_quadrant, gi, false);
 
 	sim_cpu.InitSample(grid, s, false);
 	sim_cl.InitSample (grid, s, false);

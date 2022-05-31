@@ -44,20 +44,19 @@ apply_simpson_weights(global double* sigma_lifetimes, constant SimulationSetting
     int j = get_global_id(1);
 	int v = get_global_id(2);
     
-	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->positions_per_row || j >= ss->positions_per_row)
 		return;
 
 	sigma_lifetimes[GET_INDEX(i, j, v)] *= (SimpsonWeight2D(i, j, ss->positions_per_row) * SimpsonWeight(v % ss->particles_per_quadrant, ss->particles_per_quadrant));
 }
 
-// @todo, eerste argument kan constant?
 kernel void 
 integrate_to_position(global double* values, constant SimulationSettings* ss, global double* position_values)
 {
 	int i = get_global_id(0);
     int j = get_global_id(1);
 	
-	if (i >= ss->positions_per_row || j >= ss->positions_per_row) //@Todo: zo of met simpsonweight 0.
+	if (i >= ss->positions_per_row || j >= ss->positions_per_row)
 		return;
 
 	int row_size = get_global_size(0);
@@ -78,7 +77,7 @@ sum(global double* A, local double* local_sums, global double* B)
 	uint id = get_global_id(0);
 	uint local_id = get_local_id(0);
 
-	local_sums[local_id] = A[id] + A[id + get_global_size(0)]; // Global size should be half the length of A
+	local_sums[local_id] = A[id] + A[id + get_global_size(0)]; // Global size must be half the length of A.
 	barrier(CLK_LOCAL_MEM_FENCE);
 	for (int stride = get_local_size(0) / 2; stride > 1; stride /= 2) {
 		if (local_id < stride) {

@@ -26,7 +26,8 @@ lifetime(constant SimulationSettings* ss, // Settings used for generic simulatio
 
     double2 pos = (double2)(i, j) * ss->distance_between_positions + ss->small_offset;
 	int idx = GET_INDEX(i, j, v);
-	/*
+	
+/*
 #ifdef DEBUGGING
 	if (idx < 100) {
 		printf("Particle:\n");

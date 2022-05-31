@@ -1,14 +1,11 @@
 #pragma once
 
-#ifndef DEVICE_PROGRAM
 #include <windows.h>
 #include <vector>
-#endif // !DEVICE_PROGRAM
 
 #include "src/sim/es/particle_metrics.h"
 
-#ifndef DEVICE_PROGRAM
-typedef struct Metrics {
+struct Metrics {
     ParticleMetrics particle_metrics;
     int real_particles;
 
@@ -25,10 +22,8 @@ typedef struct Metrics {
         time_elapsed_lifetimes = 0;
         time_elapsed_temperatures = 0;
     }
-} Metrics;
-#endif // !DEVICE_PROGRAM
+};
 
-#ifndef DEVICE_PROGRAM
 struct GlobalMetrics
 {
     int particles_per_row;
@@ -64,4 +59,3 @@ struct SampleMetrics
         impurity_count = 0;
     }
 };
-#endif // !DEVICE_PROGRAM

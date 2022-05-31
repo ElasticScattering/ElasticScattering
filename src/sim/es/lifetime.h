@@ -31,32 +31,31 @@ ESCL_INLINE Particle CreateParticle(const int quadrant, const int phi_step_index
     orbit.center         = GetCyclotronOrbitCenter(p.position, vel, orbit.radius, ps->particle_speed, ps->is_clockwise);
     orbit.bound_time     = GetBoundTime(p.phi, ps->alpha, ps->angular_speed, ps->is_coherent, ps->is_clockwise, false);
     orbit.bound_phi      = ps->is_coherent ? INF : GetCrossAngle(p.phi, bound_angle, ps->is_clockwise);
-    orbit.particle_angle = p.phi; //GetAngle(p.position, &orbit); //@Refactor: name?
+    orbit.particle_angle = p.phi;
 
     p.orbit = orbit;
 
     return p;
 }
 
-/// <summary>
-/// Returns the time at which the orbit collides with the first impurity, or INF if no collision happened.
 /*
-Instead of looping through all impurities, we subdivide the grid
-in a number of cells and only check impurities inside a single
-cell.
+Returns the time at which the orbit collides with the first impurity, or INF 
+if no collision happened.
 
-To ensure that the correct impurity is always the first intersection
-we encounter, we need to move through the cells following the
-particle's orbit.
+Instead of looping through all impurities, we use the grid cells to only check
+the impurities within cells that the particle will cross. Because we 
+follow the particle's orbit, the first intersection we find this way, is also 
+guaranteed to be the first actual intersection. This eliminates almost all
+checks needed in simulations with a dense field of impurities.
 
-Additionally, a particle might travel through a cell multiple times, which means
-an impurity intersection in a later cell could happen before one in this
-cell. To prevent this, only the impurities that happen before the particle
-will leave the cell are considered.
+There is an edge case where a particle might travel through a cell multiple times,
+for example: once in the beginning and once at the end. If we find an intersection 
+that actually happened in the end, we might conclude that that is the first 
+intersection. However, an intersection in a subsequent cell could actually be earlier.
+All this means is that if we do find an intersection, we must also verify that this 
+was actually a valid intersection at that current stage. This can be checked by only 
+consdering the impurities that could occur before the particle leaves the cell.
 */
-/// </summary>
-
-
 ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER_ARGS)
 {
     double lifetime = INF;
@@ -105,28 +104,22 @@ ESCL_INLINE double TraceOrbit(const Particle* const p, IMPURITY_SETTINGS, BUFFER
         }
 
         // Exit early if an intersection was found, or if no valid 
-        // intersection can occur anymore, because the orbit doesn't
-        // cross any more cells, or if the particle's lifetime has
-        // ended.
+        // intersection can occur anymore or because the orbit doesn't
+        // cross any more cells. 
         
-        //bool bound_reached = !ps->is_coherent && orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise);
-        //if (lifetime < INF || !next_cell_available)
-        if (lifetime < INF)
-            break;
+        if (lifetime < INF) break;
 
         if (!next_cell_available)
         {
-            //printf("Particle escaped! (%e, %e, %f)\n", p->position.x, p->position.y, p->phi);
-            //printf("Cells passed: %i\n", particle_metrics->cells_passed);
-            //printf("Last cell: (%i,%i)\n", entry_point.entering_cell.x, entry_point.entering_cell.y);
-
             METRIC_INC(particles_escaped);
             lifetime = 0;
             break;
         }
+
+        // It would also be possible to stop coherent particles early if the particle's lifetime has ended.
+        //bool bound_reached = !ps->is_coherent && orbit->bound_phi < GetCrossAngle(p->phi, next_intersection.dphi, orbit->clockwise);
     }
 
-    // @Refactor
     if (lifetime > p->orbit.bound_time)
     {
         METRIC_INC(particles_at_bound);

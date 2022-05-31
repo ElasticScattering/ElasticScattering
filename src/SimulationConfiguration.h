@@ -19,14 +19,11 @@ enum class ProgramMode {
     Simulation
 };
 
-typedef struct
+struct InitParameters
 {
     ProgramMode mode;
-    bool use_gpu;
-    bool dont_show_info;
-    bool write_images;
     std::string config_file;
-} InitParameters;
+};
 
 enum class OutputType
 {
@@ -35,7 +32,7 @@ enum class OutputType
     All
 };
 
-typedef struct SimulationConfiguration
+struct SimulationConfiguration
 {
     int num_samples;
     int positions_per_row;
@@ -45,7 +42,6 @@ typedef struct SimulationConfiguration
 
     OutputType output_type;
     bool use_gpu;
-    bool force_recompile;
 
     Settings settings;
 
@@ -65,7 +61,7 @@ typedef struct SimulationConfiguration
 
         std::filebuf fb;
         if (!fb.open(file_path, std::ios::in)) {
-            std::cout << "Could not load config file.";
+            std::cout << "Could not load config file '" << file_path << "'";
             exit(-1);
         }
 
@@ -128,8 +124,7 @@ typedef struct SimulationConfiguration
         bool device_selected = values.find("device") != values.end();
         cfg.use_gpu = device_selected ? values.at("device") == "gpu" : false;
 
-        cfg.force_recompile = values.find("force_recompile") == values.end() || atoi(values.at("force_recompile").c_str()) == 1;
-        cfg.print_info = values.find("print_info") == values.end() || atoi(values.at("print_info").c_str()) == 1;
+        cfg.print_info = values.find("print_info") != values.end() && atoi(values.at("print_info").c_str()) == 1;
 
         cfg.num_samples = atoi(values.at("num_samples").c_str());
         CFG_EXIT_CONDITION(cfg.num_samples <= 0, "Samples must be greater than 0.");
@@ -150,13 +145,23 @@ typedef struct SimulationConfiguration
             double mf_n         = atoi(values.at("magnetic_field_n").c_str());
 
             CFG_EXIT_CONDITION(mf_n < 2, "Tried to declare magnetic field range with n<2. Use 'magnetic_field x' when using only one value.");
+            cfg.magnetic_fields.resize(mf_n);
 
             double mf_step_size = (mf_max - mf_min) / (double)(mf_n - 1);
-
-            cfg.magnetic_fields.resize(mf_n);
+            
+            if (cfg.print_info) std::cout << "Using magnetic fields: [";
             for (int i = 0; i < mf_n; i++) {
                 cfg.magnetic_fields[i] = mf_min + i * mf_step_size;
+                if (cfg.print_info) 
+                {
+                    std::cout << cfg.magnetic_fields[i];
+                    if (i != (mf_n - 1)) {
+                        std::cout << ", ";
+                    }
+                }
             }
+
+            if (cfg.print_info) std::cout << "]." << std::endl;
         }
 
         {
@@ -180,6 +185,7 @@ typedef struct SimulationConfiguration
         std::random_device random_device;
         cfg.sample_seeds.resize(cfg.num_samples);
         unsigned int seed = values.find("start_seed") != values.end() ? atoi(values.at("start_seed").c_str()) : random_device();
+        if (cfg.print_info) std::cout << "RNG seed: " << seed << std::endl;
 
         for (int i = 0; i < cfg.num_samples; i++)
             cfg.sample_seeds[i] = (seed+100) * (i+1);
@@ -188,7 +194,7 @@ typedef struct SimulationConfiguration
         cfg.settings.region_extends         = atof(values.at("region_extends").c_str());
         cfg.settings.impurity_density       = atof(values.at("impurity_density").c_str());
         cfg.settings.impurity_radius        = atof(values.at("impurity_radius").c_str());
-        cfg.settings.target_cell_population = atoi(values.at("target_cell_population").c_str());
+        cfg.settings.target_cell_population = values.find("target_cell_population") != values.end() ? atoi(values.at("target_cell_population").c_str()) : 15;
 
         int x = cfg.num_samples;
         cfg.digits_in_sample_num = 0;
@@ -197,7 +203,9 @@ typedef struct SimulationConfiguration
             x = floor(x / 10);
             cfg.digits_in_sample_num++;
         }
+        
+        std::cout << std::endl;
 
         return cfg;
     }
-} SimulationConfiguration;
+};

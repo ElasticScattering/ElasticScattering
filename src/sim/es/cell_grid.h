@@ -111,7 +111,8 @@ UpdateFirstBoundaryIntersect(
 
 
 ESCL_INLINE bool 
-GetNextCell(const Orbit* orbit,
+GetNextCell(
+	const Orbit* orbit,
 	const double phi,
 	IMPURITY_SETTINGS,
 	Intersection* const last_intersection,
@@ -133,22 +134,22 @@ GetNextCell(const Orbit* orbit,
 
 	{
 		double delta = 1e-7 * L;
-		bool is_xlow = (next_intersection->position.x - low_left.x) < delta;
+		bool is_xlow = ( next_intersection->position.x     - low_left.x) < delta;
 		bool is_xtop = (-next_intersection->position.x + L + low_left.x) < delta;
-		bool is_ylow = (next_intersection->position.y - low_left.y) < delta;
+		bool is_ylow = ( next_intersection->position.y     - low_left.y) < delta;
 		bool is_ytop = (-next_intersection->position.y + L + low_left.y) < delta;
 
 		int2 offset = next_intersection->entering_cell - last_intersection->entering_cell;
-		if (is_xtop && is_ylow) offset = MAKE_INT2(1, -1);
+		if (is_xtop && is_ylow) offset = MAKE_INT2( 1, -1);
 		if (is_xlow && is_ylow) offset = MAKE_INT2(-1, -1);
-		if (is_xlow && is_ytop) offset = MAKE_INT2(-1, 1);
-		if (is_xtop && is_ytop) offset = MAKE_INT2(1, 1);
+		if (is_xlow && is_ytop) offset = MAKE_INT2(-1,  1);
+		if (is_xtop && is_ytop) offset = MAKE_INT2( 1,  1);
 		next_intersection->entering_cell = last_intersection->entering_cell + offset;
 	}
 
 	// Return whether we moved to a new valid cell.
 	// Stop conditions:
-	//	1. Progress: didn't move to a new cell
+	//	1. Progress: next cell is the same as current cell.
 	//  2. Inside:   next cell would be outside of grid.
 	//  3. Done:     next intersection would come full circle and move past the starting point.
 	#define SAME_CELL(c1, c2) c1.x == c2.x && c1.y == c2.y

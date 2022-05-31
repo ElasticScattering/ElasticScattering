@@ -375,12 +375,7 @@
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\Metrics.h" />
     <ClInclude Include="src\sim\cl\cl_macros.h" />
-    <ClInclude Include="src\sim\cl\shared_macros.h" />
-    <ClInclude Include="src\sim\es\datastructures.h" />
-    <ClInclude Include="src\sim\es\details2.h" />
-    <ClInclude Include="src\sim\es\lifetime2.h" />
     <ClInclude Include="src\sim\es\particle_metrics.h" />
-    <ClInclude Include="src\sim\es\ScatteringParameters.h" />
     <ClInclude Include="src\SimulationConfiguration.h" />
     <ClInclude Include="src\SimulationResult.h" />
     <ClInclude Include="src\sim\es\settings.h" />
@@ -395,11 +390,8 @@
     <ClInclude Include="src\sim\es\util.h" />
     <ClInclude Include="src\sim\Grid.h" />
     <ClInclude Include="src\SimulationRunner.h" />
-    <ClInclude Include="src\Settings.h" />
     <ClInclude Include="src\utils\ErrorMacros.h" />
     <ClInclude Include="src\utils\OpenCLUtils.h" />
-    <ClInclude Include="tests\BasicOpenCLTest.h" />
-    <ClInclude Include="tests\ElasticScatteringTests.h" />
     <ClInclude Include="tests\es\AngleTests.h" />
     <ClInclude Include="tests\es\GridMovementTests.h" />
     <ClInclude Include="tests\es\IndexTests.h" />
@@ -417,10 +409,8 @@
     <ClInclude Include="tests\test_main.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cpp.hint" />
     <None Include="src\sim\cl\integration.cl" />
     <None Include="src\sim\cl\scatter.cl" />
-    <None Include="src\sim\cl\util_kernels.cl" />
     <None Include="tests\data\kernels\test_cpp.cl" />
     <None Include="tests\data\kernels\test_precision.cl" />
     <None Include="tests\data\kernels\test_double2.cl" />

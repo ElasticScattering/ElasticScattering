@@ -102,8 +102,6 @@ void Logger::LogSampleResults(const std::string file_path, const SampleResult& c
     }
 }
 
-
-
 void Logger::CreateSampleMetricsLog(const std::string file_path, const GlobalMetrics& gm)
 {
     std::ofstream file;

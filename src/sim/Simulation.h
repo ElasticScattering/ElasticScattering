@@ -12,14 +12,13 @@
 
 #include <vector>
 
-typedef struct PerformanceCounters
+struct PerformanceCounters
 {
 	LARGE_INTEGER lifetimeBegin, lifetimeEnd;
 	LARGE_INTEGER temperaturesBegin, temperaturesEnd;
+};
 
-} PerformanceCounters;
-
-typedef struct WorkSize
+struct WorkSize
 {
 	size_t positions_per_row;
 	size_t particles_per_position;
@@ -33,6 +32,8 @@ typedef struct WorkSize
 	size_t summed_data_size;
 };
 
+// A Simulation operates on a generated impurity field.
+// It can be run on the CPU, or on the GPU (OpenCL).
 class Simulation {
 
 protected:
@@ -74,14 +75,14 @@ protected:
 	{
 		if (ss.total_particles == 0) return 0;
 
-		int total_valid = 0;
+		int total_particles_started_outside_impurity = 0;
 		double total = 0;
 		for (int i = 0; i < ss.total_particles; i++) {
 			total += lifetimes[i];
-			if (lifetimes[i] > 0) total_valid++;
+			
+			if (lifetimes[i] > 0) total_particles_started_outside_impurity++;
 		}
 		
-		//@Todo, kan ook total_valid gebruiken.
 		return total / (double)ss.total_particles;
 	}
 
@@ -123,7 +124,6 @@ public:
 		ss.small_offset               = v2(grid_info.cell_size * 0.01, grid_info.cell_size * 0.005);
 
 		QueryPerformanceFrequency(&clockFrequency);
-		//raw_lifetimes.resize(ss.particles_per_row * ss.particles_per_row);
 	}
 };
 
@@ -151,6 +151,8 @@ class SimulationCL : public Simulation {
 
 	int coh_idx = 0;
 
+	bool print_info = false;
+
 	void			ComputeLifetimes(const double magnetic_field, const Grid& grid, Metrics& metrics);
 	Sigma			DeriveTemperature(const double temperature) const;
 	IterationResult DeriveTemperatureWithImages(const double temperature) const;
@@ -167,7 +169,7 @@ public:
 	virtual std::vector<Sigma>           ComputeSigmas(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 	virtual std::vector<IterationResult> ComputeSigmasWithImages(const double magnetic_field, const std::vector<double>& temperatures, const Grid& grid, SampleMetrics& sample_metrics) override;
 
-	SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info);
+	SimulationCL(int p_particles_per_row, int p_values_per_quadrant, const GridInformation& grid_info, bool p_print_info);
 	~SimulationCL();
 };
 

@@ -8,21 +8,20 @@ struct Cell {
 	int x;
 	int y;
 
-	Cell()
-	{
-		x = 0;
-		y = 0;
-	}
-
 	Cell(int _x, int _y)
 	{
 		x = _x;
 		y = _y;
 	}
 
+	Cell() : Cell(0, 0)
+	{}
+
 	std::vector<v2> impurities;
 };
 
+// Creates impurities distributed over a field, then builds an index that makes it possible 
+// to lookup nearby impurities at a position in the field.
 class Grid {
 private:
 	std::vector<Cell> cells;
@@ -71,8 +70,6 @@ public:
 		is.cell_size          = is.spawn_region_size / (double)cells_per_row;
 		return is;
 	}
-
-
 
 	Grid(unsigned int seed, double region_size, double region_extends, double density, double _impurity_radius, int target_impurity_count_per_cell);
 	Grid(std::vector<v2> impurities, double region_size, double region_extends, double impurity_radius, int target_impurity_count_per_cell);

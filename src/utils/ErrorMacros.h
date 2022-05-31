@@ -17,3 +17,4 @@
 		std::cout << "\x1B[95mConfig Error\x1B[0m: " << msg << std::endl; \
 		exit(0);                                                          \
 	}
+
