@@ -417,9 +417,6 @@
     <None Include="tests\data\kernels\test_printf.cl" />
     <None Include="tests\sim\cl\kernels\cell_grid_test.cl" />
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="docs\todo.txt" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
