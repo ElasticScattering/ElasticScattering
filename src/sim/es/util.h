@@ -1,7 +1,7 @@
 /* -------------------------------------------------------------------------
 	This code is part of ElasticScattering.
 
-	Copyright(C) 2022 Stijn Hinlopen
+	Copyright(C) 2022 Elastic Scattering developers
 
 	This program is free software : you can redistribute it and /or modify
 	it under the terms of the GNU General Public License as published by
