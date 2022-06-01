@@ -2,7 +2,8 @@
 
 This repository serves two purposes.
 
-The first purpose is to share the C++/OpenCL code used to compute the real space impurity scattering. Here, we share both the full code (see the README how to build the code and the dependencies required) as well as an executable version (see XXXXXX)
+The first purpose is to share the C++/OpenCL code used to compute the real space impurity scattering. Here, we share both the full code (see the README how to build the code and the dependencies required) as well as a (see [release version](https://github.com/ElasticScattering/ElasticScattering/releases/tag/release-v1))
+that allows you to run simulations without compiling the code.
 
 The second purpose is to show the python code used to generate the graphs throughout the paper 'B^2 to B-linear magnetoresistance due to impeded orbital motion'. This includes calculations for the simple model shown in the main text, as well as transforming the data exported by the elastic impurity scattering program into figures for the supplementary material. The python files are themselves executables, the dependencies are given below.
 
@@ -32,5 +33,3 @@ The python code was executed with the following dependencies:
 - SciPy 1.4.1
 - Numba 0.49.0
 - Matplotlib 3.5.1
-
-
