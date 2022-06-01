@@ -1,3 +1,18 @@
+# /* -------------------------------------------------------------------------
+#     This code is part of ElasticScattering.
+#     Copyright(C) 2022 Elastic Scattering developers
+#     This program is free software : you can redistribute it and /or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+#     GNU General Public License for more details.
+#     You should have received a copy of the GNU General Public License
+#     along with this program.If not, see < http://www.gnu.org/licenses/>.
+#    ------------------------------------------------------------------------ */
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,12 +27,21 @@ high_residual = False
 
 
 plt.rc('font', size=50)
-maindir = os.path.join(os.path.dirname(__file__))
-if high_residual:
-    maindir = os.path.join(maindir, 'high residual')
-else:
-    maindir = os.path.join(maindir, 'low residual')
-assert(os.path.isdir(maindir))
+
+
+def set_global_high_residual(high_res: bool):
+
+    global maindir
+    maindir = os.path.join(os.path.dirname(__file__))
+    if high_res:
+        maindir = os.path.join(maindir, 'high residual')
+    else:
+        maindir = os.path.join(maindir, 'low residual')
+
+set_global_high_residual(True)
+
+
+###################
 
 
 def get_resfiles(maindir):

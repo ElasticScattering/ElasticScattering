@@ -16,4 +16,4 @@ This project was developed and tested on Windows 10, it might not work on anothe
 
 ## Reproduction
 
-Once setup, you can run any simulations you would like. To create the figures shown in the paper, we used settings and code which are documented in the ```research``` folder. See the readme in that folder for more information.
+Once setup, you can run any simulations you would like. To create the figures shown in the paper, we used settings and code which are documented in the ```reproduce_graphs``` folder. This folder also contains the code used to generate the graphs in the main text.
