@@ -2,7 +2,7 @@
 
 This repository serves two purposes.
 
-The first purpose is to share the C++/OpenCL code used to compute the real space impurity scattering. Here, we share both the full code (see the README how to build the code and the dependencies required) as well as a (see [release version](https://github.com/ElasticScattering/ElasticScattering/releases/tag/release-v1))
+The first purpose is to share the C++/OpenCL code used to compute the real space impurity scattering. Here, we share both the full code (see the README how to build the code and the dependencies required) as well as a [release version](https://github.com/ElasticScattering/ElasticScattering/releases/tag/release-v1)
 that allows you to run simulations without compiling the code.
 
 The second purpose is to show the python code used to generate the graphs throughout the paper 'B^2 to B-linear magnetoresistance due to impeded orbital motion'. This includes calculations for the simple model shown in the main text, as well as transforming the data exported by the elastic impurity scattering program into figures for the supplementary material. The python files are themselves executables, the dependencies are given below.
@@ -11,9 +11,9 @@ The second purpose is to show the python code used to generate the graphs throug
 
 ![T3 MF0](https://user-images.githubusercontent.com/25907608/170357566-d476233d-febd-4996-9374-0275faa2c3e2.png)
 
-Program to computes the lifetime of particles scattering around in a field of impurities.
+CLI tool to simulate the lifetime of particles scattering around in a field of impurities.
 
-The project can be run by giving it a config file, for example: `cl-es.exe examples/small.config`. The config allows you to tune various parameters of the simulation, such as the magnetic field strength and temperature, and the scale of the simulation. 
+The project can be run by giving it a config file, for example: `cl-es.exe examples/small.config`. The config allows you to tune various parameters of the simulation, such as the magnetic field strength and temperature, and the scale of the simulation. This config can also be used to execute multiple simulations in a row, in order to use multiple samples, or compute a range of magnetic fields in one go.
 
 The results of a simulation are put inside a folder, with optional visualizations of intermediate results (see image above) and performance metrics.
 
